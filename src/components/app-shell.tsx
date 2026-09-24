@@ -139,7 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const match = [...nav, ...secondary].find(
       (n) => n.to === pathname || (n.to !== "/" && pathname.startsWith(n.to)),
     );
-    return match?.label ?? "Classflow";
+      return match?.label ?? "TeachDesk";
   }, [pathname]);
 
   return (
