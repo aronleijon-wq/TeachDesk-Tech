@@ -10,33 +10,193 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AiToolsRouteImport } from './routes/ai-tools'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as AssignmentsRouteImport } from './routes/assignments'
+import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as GradebookRouteImport } from './routes/gradebook'
+import { Route as HelpRouteImport } from './routes/help'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ExamsIndexRouteImport } from './routes/exams.index'
+import { Route as ExamsExamIdRouteImport } from './routes/exams.$examId'
+import { Route as StudentsIndexRouteImport } from './routes/students.index'
+import { Route as StudentsStudentIdRouteImport } from './routes/students.$studentId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiToolsRoute = AiToolsRouteImport.update({
+  id: '/ai-tools',
+  path: '/ai-tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssignmentsRoute = AssignmentsRouteImport.update({
+  id: '/assignments',
+  path: '/assignments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarRoute = CalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GradebookRoute = GradebookRouteImport.update({
+  id: '/gradebook',
+  path: '/gradebook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExamsIndexRoute = ExamsIndexRouteImport.update({
+  id: '/exams/',
+  path: '/exams/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExamsExamIdRoute = ExamsExamIdRouteImport.update({
+  id: '/exams/$examId',
+  path: '/exams/$examId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentsIndexRoute = StudentsIndexRouteImport.update({
+  id: '/students/',
+  path: '/students/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentsStudentIdRoute = StudentsStudentIdRouteImport.update({
+  id: '/students/$studentId',
+  path: '/students/$studentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-tools': typeof AiToolsRoute
+  '/analytics': typeof AnalyticsRoute
+  '/assignments': typeof AssignmentsRoute
+  '/calendar': typeof CalendarRoute
+  '/gradebook': typeof GradebookRoute
+  '/help': typeof HelpRoute
+  '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
+  '/exams/$examId': typeof ExamsExamIdRoute
+  '/students/$studentId': typeof StudentsStudentIdRoute
+  '/exams/': typeof ExamsIndexRoute
+  '/students/': typeof StudentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-tools': typeof AiToolsRoute
+  '/analytics': typeof AnalyticsRoute
+  '/assignments': typeof AssignmentsRoute
+  '/calendar': typeof CalendarRoute
+  '/gradebook': typeof GradebookRoute
+  '/help': typeof HelpRoute
+  '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
+  '/exams/$examId': typeof ExamsExamIdRoute
+  '/students/$studentId': typeof StudentsStudentIdRoute
+  '/exams': typeof ExamsIndexRoute
+  '/students': typeof StudentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-tools': typeof AiToolsRoute
+  '/analytics': typeof AnalyticsRoute
+  '/assignments': typeof AssignmentsRoute
+  '/calendar': typeof CalendarRoute
+  '/gradebook': typeof GradebookRoute
+  '/help': typeof HelpRoute
+  '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
+  '/exams/$examId': typeof ExamsExamIdRoute
+  '/students/$studentId': typeof StudentsStudentIdRoute
+  '/exams/': typeof ExamsIndexRoute
+  '/students/': typeof StudentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/ai-tools'
+    | '/analytics'
+    | '/assignments'
+    | '/calendar'
+    | '/gradebook'
+    | '/help'
+    | '/pricing'
+    | '/settings'
+    | '/exams/$examId'
+    | '/students/$studentId'
+    | '/exams/'
+    | '/students/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/ai-tools'
+    | '/analytics'
+    | '/assignments'
+    | '/calendar'
+    | '/gradebook'
+    | '/help'
+    | '/pricing'
+    | '/settings'
+    | '/exams/$examId'
+    | '/students/$studentId'
+    | '/exams'
+    | '/students'
+  id:
+    | '__root__'
+    | '/'
+    | '/ai-tools'
+    | '/analytics'
+    | '/assignments'
+    | '/calendar'
+    | '/gradebook'
+    | '/help'
+    | '/pricing'
+    | '/settings'
+    | '/exams/$examId'
+    | '/students/$studentId'
+    | '/exams/'
+    | '/students/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiToolsRoute: typeof AiToolsRoute
+  AnalyticsRoute: typeof AnalyticsRoute
+  AssignmentsRoute: typeof AssignmentsRoute
+  CalendarRoute: typeof CalendarRoute
+  GradebookRoute: typeof GradebookRoute
+  HelpRoute: typeof HelpRoute
+  PricingRoute: typeof PricingRoute
+  SettingsRoute: typeof SettingsRoute
+  ExamsExamIdRoute: typeof ExamsExamIdRoute
+  StudentsStudentIdRoute: typeof StudentsStudentIdRoute
+  ExamsIndexRoute: typeof ExamsIndexRoute
+  StudentsIndexRoute: typeof StudentsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +208,107 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai-tools': {
+      id: '/ai-tools'
+      path: '/ai-tools'
+      fullPath: '/ai-tools'
+      preLoaderRoute: typeof AiToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assignments': {
+      id: '/assignments'
+      path: '/assignments'
+      fullPath: '/assignments'
+      preLoaderRoute: typeof AssignmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendar': {
+      id: '/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof CalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gradebook': {
+      id: '/gradebook'
+      path: '/gradebook'
+      fullPath: '/gradebook'
+      preLoaderRoute: typeof GradebookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exams/': {
+      id: '/exams/'
+      path: '/exams'
+      fullPath: '/exams/'
+      preLoaderRoute: typeof ExamsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exams/$examId': {
+      id: '/exams/$examId'
+      path: '/exams/$examId'
+      fullPath: '/exams/$examId'
+      preLoaderRoute: typeof ExamsExamIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/students/': {
+      id: '/students/'
+      path: '/students'
+      fullPath: '/students/'
+      preLoaderRoute: typeof StudentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/students/$studentId': {
+      id: '/students/$studentId'
+      path: '/students/$studentId'
+      fullPath: '/students/$studentId'
+      preLoaderRoute: typeof StudentsStudentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiToolsRoute: AiToolsRoute,
+  AnalyticsRoute: AnalyticsRoute,
+  AssignmentsRoute: AssignmentsRoute,
+  CalendarRoute: CalendarRoute,
+  GradebookRoute: GradebookRoute,
+  HelpRoute: HelpRoute,
+  PricingRoute: PricingRoute,
+  SettingsRoute: SettingsRoute,
+  ExamsExamIdRoute: ExamsExamIdRoute,
+  StudentsStudentIdRoute: StudentsStudentIdRoute,
+  ExamsIndexRoute: ExamsIndexRoute,
+  StudentsIndexRoute: StudentsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
