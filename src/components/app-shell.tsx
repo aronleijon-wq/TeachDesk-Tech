@@ -155,7 +155,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <GraduationCap className="size-4" />
             </div>
-            {!collapsed && <span className="text-[15px] font-semibold tracking-tight">Classflow</span>}
+            {!collapsed && <span className="text-[15px] font-semibold tracking-tight">TeachDesk</span>}
           </div>
 
           <nav className="flex-1 space-y-0.5 px-2 py-2">
