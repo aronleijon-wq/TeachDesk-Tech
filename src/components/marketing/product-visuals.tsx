@@ -93,7 +93,7 @@ export function HeroProduct() {
                       <p className="text-[11px] text-muted-foreground">{c}</p>
                     </div>
                     <span className="ml-auto">
-                      <StatusPill tone={st === "upcoming" ? "info" : "warning"}>{st === "upcoming" ? "Upcoming" : "Grading"}</StatusPill>
+                      <StatusPill tone={st === "upcoming" ? "primary" : "warning"}>{st === "upcoming" ? "Upcoming" : "Grading"}</StatusPill>
                     </span>
                   </div>
                 ))}
@@ -191,7 +191,7 @@ export function RetakeFlow() {
               <ExamPaneInner
                 label="Version B"
                 pill={step >= 3 ? (step >= 4 ? "Approved" : "In review") : "Draft"}
-                tone={step >= 4 ? "success" : step >= 3 ? "warning" : "info"}
+                tone={step >= 4 ? "success" : step >= 3 ? "warning" : "primary"}
                 q={["Differentiate g(x) = 4x² − 7x + 1", "A cyclist's position is s(t) = 2t³. Find v(3).", "Find the slope of y = x³ at x = 2."]}
               />
             )}
@@ -216,7 +216,7 @@ function ExamPane(props: { label: string; tone: "neutral"; active: boolean; q: s
   );
 }
 
-function ExamPaneInner({ label, pill, tone, q }: { label: string; pill: string; tone: "neutral" | "info" | "warning" | "success"; q: string[] }) {
+function ExamPaneInner({ label, pill, tone, q }: { label: string; pill: string; tone: "neutral" | "primary" | "warning" | "success"; q: string[] }) {
   return (
     <div className="td-in space-y-2.5">
       <div className="flex items-center justify-between">
