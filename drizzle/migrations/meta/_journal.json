@@ -15,6 +15,13 @@
       "when": 1790352000000,
       "tag": "0001_admin_demo_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790361701130,
+      "tag": "0002_admin_emails_and_demo_request_status",
+      "breakpoints": true
     }
   ]
 }
