@@ -183,6 +183,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="border-t border-sidebar-border p-2">
             <Link
               to="/app/settings"
+              aria-label={collapsed ? `${teacher.name} — settings` : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-sidebar-accent",
                 collapsed && "justify-center",
@@ -214,7 +215,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
             </Button>
-            <h1 className="truncate text-sm font-semibold">{title}</h1>
+            <p className="truncate text-sm font-semibold">{title}</p>
 
             <div className="ml-auto flex items-center gap-1">
               <button
@@ -343,6 +344,7 @@ function NavLink({
   const link = (
     <Link
       to={to}
+      aria-label={collapsed ? label : undefined}
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
         active
