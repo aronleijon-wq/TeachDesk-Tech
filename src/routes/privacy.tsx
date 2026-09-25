@@ -7,6 +7,8 @@ export const Route = createFileRoute("/privacy")({
     meta: [
       { title: "Privacy policy — TeachDesk" },
       { name: "description", content: "How TeachDesk collects, uses and protects personal data." },
+      { property: "og:title", content: "Privacy policy — TeachDesk" },
+      { property: "og:description", content: "How TeachDesk collects, uses and protects personal data." },
     ],
   }),
   component: PrivacyPage,
