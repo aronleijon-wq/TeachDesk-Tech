@@ -80,7 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       // Site-wide fallback title/description; pages that set their own override these.
-      { title: "TeachDesk — The workspace for modern teachers" },
+      { title: "TeachDesk" },
       {
         name: "description",
         content:
