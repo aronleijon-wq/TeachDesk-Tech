@@ -83,7 +83,7 @@ const FOOTER = [
   { title: "Product", links: [["Product", "/#product"], ["Features", "/#features"], ["How it works", "/#how-it-works"], ["Integrations", "/#integrations"]] },
   { title: "Company", links: [["About", "/#schools"], ["Contact", "/demo"], ["Book a demo", "/demo"]] },
   { title: "Resources", links: [["Help", "/app/help"], ["Security", "/#security"], ["Documentation", "/app/help"]] },
-  { title: "Legal", links: [["Privacy", "/#security"], ["Terms", "/#security"]] },
+  { title: "Legal", links: [["Privacy", "/privacy"], ["Terms", "/terms"]] },
 ];
 
 export function SiteFooter() {
