@@ -209,7 +209,7 @@ export const exams: Exam[] = [
     time: "08:30",
     durationMin: 90,
     room: "B214",
-    totalPoints: 38,
+    totalPoints: 42,
     status: "needs-grading",
     objectives: [
       "Apply power rule",
