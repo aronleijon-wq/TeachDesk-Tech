@@ -7,12 +7,12 @@ import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/compon
 import { classById } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/assignments")({
+export const Route = createFileRoute("/app/assignments")({
   head: () => ({
     meta: [
-      { title: "Assignments — Classflow" },
+      { title: "Assignments — TeachDesk" },
       { name: "description", content: "Track submissions, grading queues and rubrics for every assignment." },
-      { property: "og:title", content: "Assignments — Classflow" },
+      { property: "og:title", content: "Assignments — TeachDesk" },
       { property: "og:description", content: "Submissions, grading queues and rubrics." },
     ],
   }),

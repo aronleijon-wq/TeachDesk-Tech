@@ -11,8 +11,6 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { AppShell } from "@/components/app-shell";
-import { StoreProvider } from "@/lib/store";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -80,21 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Classflow — Less administration. More teaching." },
-      {
-        name: "description",
-        content:
-          "Classflow is the operating system for teachers: exams, attendance, retakes, AI-generated equivalent versions, grading and follow-up in one place.",
-      },
-      { name: "author", content: "Classflow" },
-      { property: "og:title", content: "Classflow — Less administration. More teaching." },
-      {
-        property: "og:description",
-        content: "An AI-powered operating system for teachers.",
-      },
+      { name: "author", content: "Teachdesk" },
+      { property: "og:site_name", content: "Teachdesk" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
@@ -135,13 +122,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StoreProvider>
-        <AppShell>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-        </AppShell>
-        <Toaster position="bottom-right" />
-      </StoreProvider>
+      <Outlet />
+      <Toaster position="bottom-right" />
     </QueryClientProvider>
   );
 }

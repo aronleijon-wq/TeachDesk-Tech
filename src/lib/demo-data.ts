@@ -1,4 +1,4 @@
-// Demo dataset for Classflow. Clearly separated from production data:
+// Demo dataset for TeachDesk. Clearly separated from production data:
 // this module is the single source of seeded demo content.
 
 export type ExamStatus = "draft" | "upcoming" | "completed" | "needs-grading";

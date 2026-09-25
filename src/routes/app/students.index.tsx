@@ -6,12 +6,12 @@ import { PageHeader, StatusPill } from "@/components/primitives";
 import { classById, classes, students } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/students/")({
+export const Route = createFileRoute("/app/students/")({
   head: () => ({
     meta: [
-      { title: "Students — Classflow" },
+      { title: "Students — TeachDesk" },
       { name: "description", content: "Track every student's progress, missing work, attendance and follow-ups." },
-      { property: "og:title", content: "Students — Classflow" },
+      { property: "og:title", content: "Students — TeachDesk" },
       { property: "og:description", content: "Track progress, missing work and follow-ups." },
     ],
   }),
@@ -72,7 +72,7 @@ function StudentsPage() {
             {visible.map((s) => (
               <tr key={s.id} className="transition-colors hover:bg-accent/50">
                 <td className="px-4 py-2.5">
-                  <Link to="/students/$studentId" params={{ studentId: s.id }} className="font-medium hover:text-primary">
+                  <Link to="/app/students/$studentId" params={{ studentId: s.id }} className="font-medium hover:text-primary">
                     {s.name}
                   </Link>
                 </td>

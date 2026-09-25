@@ -5,12 +5,12 @@ import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/compon
 import { classById, studentById } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/students/$studentId")({
+export const Route = createFileRoute("/app/students/$studentId")({
   head: () => ({
     meta: [
-      { title: "Student profile — Classflow" },
+      { title: "Student profile — TeachDesk" },
       { name: "description", content: "Results, attendance, missing work and retake history for one student." },
-      { property: "og:title", content: "Student profile — Classflow" },
+      { property: "og:title", content: "Student profile — TeachDesk" },
       { property: "og:description", content: "Results, attendance and follow-up in one view." },
     ],
   }),
@@ -30,7 +30,7 @@ function StudentProfile() {
   return (
     <div className="mx-auto max-w-5xl">
       <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2 text-muted-foreground">
-        <Link to="/students"><ArrowLeft className="size-4" /> Students</Link>
+        <Link to="/app/students"><ArrowLeft className="size-4" /> Students</Link>
       </Button>
 
       <PageHeader title={student.name} subtitle={`${klass?.name} · ${student.email}`} />
@@ -50,7 +50,7 @@ function StudentProfile() {
               return (
                 <li key={e.id}>
                   <div className="flex items-center justify-between gap-2 text-sm">
-                    <Link to="/exams/$examId" params={{ examId: e.id }} className="font-medium hover:text-primary">
+                    <Link to="/app/exams/$examId" params={{ examId: e.id }} className="font-medium hover:text-primary">
                       {e.title}
                     </Link>
                     {record.status === "absent" ? (

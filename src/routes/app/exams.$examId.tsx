@@ -11,12 +11,12 @@ import { GenerateVersionDialog } from "@/components/generate-version-dialog";
 import { classById, studentById, type Question } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/exams/$examId")({
+export const Route = createFileRoute("/app/exams/$examId")({
   head: () => ({
     meta: [
-      { title: "Exam — Classflow" },
+      { title: "Exam — TeachDesk" },
       { name: "description", content: "Exam overview, questions, versions, attendance, retakes and grading." },
-      { property: "og:title", content: "Exam — Classflow" },
+      { property: "og:title", content: "Exam — TeachDesk" },
       { property: "og:description", content: "Manage one exam end to end." },
     ],
   }),
@@ -41,7 +41,7 @@ function ExamDetail() {
   return (
     <div className="mx-auto max-w-6xl">
       <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2 text-muted-foreground">
-        <Link to="/exams"><ArrowLeft className="size-4" /> Exams</Link>
+        <Link to="/app/exams"><ArrowLeft className="size-4" /> Exams</Link>
       </Button>
 
       <PageHeader

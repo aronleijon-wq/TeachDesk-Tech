@@ -2,12 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Panel, StatusPill, formatDate } from "@/components/primitives";
 import { todayEvents, upcomingWeek, classById } from "@/lib/demo-data";
 
-export const Route = createFileRoute("/calendar")({
+export const Route = createFileRoute("/app/calendar")({
   head: () => ({
     meta: [
-      { title: "Calendar — Classflow" },
+      { title: "Calendar — TeachDesk" },
       { name: "description", content: "Lessons, exams, retakes and deadlines in one teaching calendar." },
-      { property: "og:title", content: "Calendar — Classflow" },
+      { property: "og:title", content: "Calendar — TeachDesk" },
       { property: "og:description", content: "Lessons, exams, retakes and deadlines." },
     ],
   }),

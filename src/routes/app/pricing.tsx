@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { PageHeader, StatusPill } from "@/components/primitives";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/pricing")({
+export const Route = createFileRoute("/app/pricing")({
   head: () => ({
     meta: [
-      { title: "Plans — Classflow" },
+      { title: "Plans — TeachDesk" },
       { name: "description", content: "Plans for individual teachers, departments and whole schools." },
-      { property: "og:title", content: "Plans — Classflow" },
+      { property: "og:title", content: "Plans — TeachDesk" },
       { property: "og:description", content: "Plans for teachers, departments and schools." },
     ],
   }),

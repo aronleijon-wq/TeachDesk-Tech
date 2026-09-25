@@ -8,12 +8,12 @@ import { PageHeader, Panel, StatusPill } from "@/components/primitives";
 import { classes, teacher } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/settings")({
+export const Route = createFileRoute("/app/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — Classflow" },
+      { title: "Settings — TeachDesk" },
       { name: "description", content: "Profile, school, classes, notifications and data settings." },
-      { property: "og:title", content: "Settings — Classflow" },
+      { property: "og:title", content: "Settings — TeachDesk" },
       { property: "og:description", content: "Profile, school, classes and data settings." },
     ],
   }),
