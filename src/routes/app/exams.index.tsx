@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/app/exams/")({
   head: () => ({
     meta: [
-      { title: "Exams — Classflow" },
+      { title: "Exams — TeachDesk" },
       { name: "description", content: "Create, manage and track exams, versions, attendance and retakes." },
-      { property: "og:title", content: "Exams — Classflow" },
+      { property: "og:title", content: "Exams — TeachDesk" },
       { property: "og:description", content: "Create, manage and track your exams." },
     ],
   }),

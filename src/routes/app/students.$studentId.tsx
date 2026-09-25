@@ -8,9 +8,9 @@ import { useStore } from "@/lib/store";
 export const Route = createFileRoute("/app/students/$studentId")({
   head: () => ({
     meta: [
-      { title: "Student profile — Classflow" },
+      { title: "Student profile — TeachDesk" },
       { name: "description", content: "Results, attendance, missing work and retake history for one student." },
-      { property: "og:title", content: "Student profile — Classflow" },
+      { property: "og:title", content: "Student profile — TeachDesk" },
       { property: "og:description", content: "Results, attendance and follow-up in one view." },
     ],
   }),

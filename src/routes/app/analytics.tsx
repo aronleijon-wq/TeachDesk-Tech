@@ -7,9 +7,9 @@ import { useStore } from "@/lib/store";
 export const Route = createFileRoute("/app/analytics")({
   head: () => ({
     meta: [
-      { title: "Analytics — Classflow" },
+      { title: "Analytics — TeachDesk" },
       { name: "description", content: "Class performance, topic mastery and workload trends." },
-      { property: "og:title", content: "Analytics — Classflow" },
+      { property: "og:title", content: "Analytics — TeachDesk" },
       { property: "og:description", content: "Class performance and topic mastery." },
     ],
   }),

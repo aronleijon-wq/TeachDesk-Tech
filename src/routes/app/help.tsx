@@ -4,10 +4,10 @@ import { PageHeader, Panel } from "@/components/primitives";
 export const Route = createFileRoute("/app/help")({
   head: () => ({
     meta: [
-      { title: "Help — Classflow" },
-      { name: "description", content: "How the Classflow teaching workflow works, from exam creation to retakes and follow-up." },
-      { property: "og:title", content: "Help — Classflow" },
-      { property: "og:description", content: "How the Classflow workflow works." },
+      { title: "Help — TeachDesk" },
+      { name: "description", content: "How the TeachDesk teaching workflow works, from exam creation to retakes and follow-up." },
+      { property: "og:title", content: "Help — TeachDesk" },
+      { property: "og:description", content: "How the TeachDesk workflow works." },
     ],
   }),
   component: HelpPage,
@@ -25,7 +25,7 @@ const steps = [
 function HelpPage() {
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Help" subtitle="The Classflow workflow, end to end." />
+      <PageHeader title="Help" subtitle="The TeachDesk workflow, end to end." />
       <Panel>
         <ol className="space-y-4">
           {steps.map(([title, body], i) => (

@@ -12,9 +12,9 @@ import { PageHeader, Panel, StatusPill } from "@/components/primitives";
 export const Route = createFileRoute("/app/ai-tools")({
   head: () => ({
     meta: [
-      { title: "AI Tools — Classflow" },
+      { title: "AI Tools — TeachDesk" },
       { name: "description", content: "AI assistance placed inside the teaching workflow: equivalent exams, rubrics, grading suggestions and summaries." },
-      { property: "og:title", content: "AI Tools — Classflow" },
+      { property: "og:title", content: "AI Tools — TeachDesk" },
       { property: "og:description", content: "AI assistance inside the teaching workflow." },
     ],
   }),

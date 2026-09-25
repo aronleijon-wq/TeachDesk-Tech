@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/app/gradebook")({
   head: () => ({
     meta: [
-      { title: "Gradebook — Classflow" },
+      { title: "Gradebook — TeachDesk" },
       { name: "description", content: "Every result for every student and exam in one grid." },
-      { property: "og:title", content: "Gradebook — Classflow" },
+      { property: "og:title", content: "Gradebook — TeachDesk" },
       { property: "og:description", content: "Every result for every student and exam." },
     ],
   }),

@@ -16,9 +16,9 @@ import { useAttentionSummary, useStore } from "@/lib/store";
 export const Route = createFileRoute("/app/")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Classflow" },
+      { title: "Dashboard — TeachDesk" },
       { name: "description", content: "See what needs your attention today: missed exams, grading, retakes and missing work." },
-      { property: "og:title", content: "Dashboard — Classflow" },
+      { property: "og:title", content: "Dashboard — TeachDesk" },
       { property: "og:description", content: "See what needs your attention today across your classes." },
     ],
   }),

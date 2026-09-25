@@ -14,9 +14,9 @@ import { useStore } from "@/lib/store";
 export const Route = createFileRoute("/app/exams/$examId")({
   head: () => ({
     meta: [
-      { title: "Exam — Classflow" },
+      { title: "Exam — TeachDesk" },
       { name: "description", content: "Exam overview, questions, versions, attendance, retakes and grading." },
-      { property: "og:title", content: "Exam — Classflow" },
+      { property: "og:title", content: "Exam — TeachDesk" },
       { property: "og:description", content: "Manage one exam end to end." },
     ],
   }),

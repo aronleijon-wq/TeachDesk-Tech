@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/app/students/")({
   head: () => ({
     meta: [
-      { title: "Students — Classflow" },
+      { title: "Students — TeachDesk" },
       { name: "description", content: "Track every student's progress, missing work, attendance and follow-ups." },
-      { property: "og:title", content: "Students — Classflow" },
+      { property: "og:title", content: "Students — TeachDesk" },
       { property: "og:description", content: "Track progress, missing work and follow-ups." },
     ],
   }),
