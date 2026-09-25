@@ -74,6 +74,7 @@ function Home() {
         <Retake />
         <HowItWorks />
         <Integrations />
+        <ForSwedishSchools />
         <Teachers />
         <AI />
         <Schools />
