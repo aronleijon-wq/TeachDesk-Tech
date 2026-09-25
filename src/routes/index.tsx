@@ -10,21 +10,53 @@ import { SITE_URL } from "@/lib/site";
 import { PlanFeatures } from "@/components/plan-features";
 import { PLANS, PRICE_NOTE, formatPrice, yearlyOffer, type Plan } from "@/lib/pricing";
 
-const title = "TeachDesk — The workspace for modern teachers";
-const description = "TeachDesk brings exams, grading, retakes, assignments and teacher workflows into one intelligent workspace.";
+const title = "TeachDesk — Lärarverktyget för prov, omprov och rättning";
+const description =
+  "Minska läraradministrationen. TeachDesk samlar prov, likvärdiga omprov, rättning, bedömning och elevuppföljning i ett arbetsflöde — vid sidan av SchoolSoft, Vklass och Unikum.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title },
       { name: "description", content: description },
+      {
+        name: "keywords",
+        content:
+          "lärarverktyg, prov, omprov, rättning, bedömning, betygsunderlag, SchoolSoft, Vklass, Unikum, Skolon, digitala prov, läraradministration, skolplattform",
+      },
       { property: "og:title", content: title },
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
+      { property: "og:locale", content: "sv_SE" },
       { property: "og:url", content: `${SITE_URL}/` },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/` }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "TeachDesk",
+          url: `${SITE_URL}/`,
+          applicationCategory: "EducationalApplication",
+          operatingSystem: "Web",
+          inLanguage: "sv-SE",
+          description,
+          audience: { "@type": "Audience", audienceType: "Lärare och skolor i Sverige" },
+          areaServed: { "@type": "Country", name: "Sverige" },
+          featureList: [
+            "Skapa prov och prövningar",
+            "Likvärdiga omprov med AI-stöd som läraren godkänner",
+            "Rättning, bedömning och betygsunderlag",
+            "Elevuppföljning och frånvaro vid prov",
+            "Fungerar vid sidan av SchoolSoft, Vklass, Unikum och Google Classroom",
+          ],
+          publisher: { "@type": "Organization", name: "TeachDesk", url: `${SITE_URL}/` },
+        }),
+      },
+    ],
   }),
   component: Home,
 });
@@ -42,6 +74,7 @@ function Home() {
         <Retake />
         <HowItWorks />
         <Integrations />
+        <ForSwedishSchools />
         <Teachers />
         <AI />
         <Schools />
@@ -252,7 +285,55 @@ function Flow() {
   );
 }
 
-const TEACHER_POINTS = ["Less repetitive administration", "One workspace for every class", "Faster exam workflows", "Simpler retakes", "AI-assisted work you approve", "A clear overview of every student"];
+const SWEDISH_POINTS: [string, string][] = [
+  ["Prov och prövningar", "Skapa prov, håll koll på närvaro vid provtillfället och se direkt vilka elever som saknar inlämning."],
+  ["Omprov som är likvärdiga", "Gör ett nytt, likvärdigt omprov utifrån det ursprungliga provet. Samma område, samma svårighetsgrad, nya uppgifter — och du godkänner varje fråga innan eleven ser den."],
+  ["Rättning och betygsunderlag", "Samlad rättning med bedömningsmatris och poäng, så att betygsunderlaget finns dokumenterat på ett ställe."],
+  ["Vid sidan av skolans system", "TeachDesk ersätter inte SchoolSoft, Vklass, Unikum eller Google Classroom — det tar hand om lärarens arbete runt proven."],
+];
+
+function ForSwedishSchools() {
+  return (
+    <section id="for-svenska-skolor" className="scroll-mt-16 border-y border-border bg-surface">
+      <div className="mx-auto max-w-6xl px-5 py-24 md:py-32">
+        <SectionHeading eyebrow="För svenska skolor" title="Mindre administration för lärare i den svenska skolan.">
+          TeachDesk är byggt för hur lärare i Sverige faktiskt arbetar — prov, omprov, rättning, bedömning och uppföljning av elever, i ett och samma flöde.
+        </SectionHeading>
+        <div className="mt-14 grid gap-6 md:grid-cols-2">
+          {SWEDISH_POINTS.map(([t, b], i) => (
+            <Reveal key={t} delay={i * 80} className="rounded-xl border border-border bg-background p-7">
+              <h3 className="font-semibold">{t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{b}</p>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={200} className="mt-10 rounded-xl border border-border bg-background p-7">
+          <h3 className="font-semibold">Vanliga frågor från lärare</h3>
+          <dl className="mt-5 grid gap-6 md:grid-cols-2">
+            <div>
+              <dt className="text-sm font-medium">Måste vi byta ut SchoolSoft eller Vklass?</dt>
+              <dd className="mt-1.5 text-sm text-muted-foreground">Nej. Skolan behåller sin plattform. TeachDesk är lärarens arbetsyta för prov, omprov och rättning.</dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium">Hur fungerar omprov i TeachDesk?</dt>
+              <dd className="mt-1.5 text-sm text-muted-foreground">Du utgår från det ursprungliga provet och får ett likvärdigt omprov med nya uppgifter. Inget används förrän du har godkänt det.</dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium">Bestämmer AI:n betygen?</dt>
+              <dd className="mt-1.5 text-sm text-muted-foreground">Nej. AI:n föreslår, läraren bedömer och beslutar. Varje förslag måste godkännas.</dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium">Kan jag flytta in mina klasser?</dt>
+              <dd className="mt-1.5 text-sm text-muted-foreground">Ja. Du kan klistra in klasslistan direkt från SchoolSoft eller ett kalkylark.</dd>
+            </div>
+          </dl>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+const TEACHER_POINTS =  ["Less repetitive administration", "One workspace for every class", "Faster exam workflows", "Simpler retakes", "AI-assisted work you approve", "A clear overview of every student"];
 
 function Teachers() {
   return (

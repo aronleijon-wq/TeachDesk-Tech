@@ -84,9 +84,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "TeachDesk brings exams, grading, retakes, assignments and teacher workflows into one intelligent workspace.",
+          "TeachDesk samlar prov, omprov, rättning, bedömning och elevuppföljning i ett arbetsflöde för lärare — vid sidan av SchoolSoft, Vklass och Unikum.",
       },
       { name: "author", content: "TeachDesk" },
+      { property: "og:locale", content: "sv_SE" },
       // Proves site ownership to Google (Search Console / OAuth verification). Keep it.
       { name: "google-site-verification", content: "7Tiesj9cEqnTToWa_ntV7O4nKeObdvoqH6_faxVsH7U" },
       { property: "og:site_name", content: "TeachDesk" },
@@ -117,7 +118,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="sv">
       <head>
         <HeadContent />
       </head>
