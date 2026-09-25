@@ -10,7 +10,15 @@ import { useAuth } from "@/lib/auth";
 
 // The reset email links here; Supabase signs the user in from the link first.
 export const Route = createFileRoute("/reset-password")({
-  head: () => ({ meta: [{ title: "Choose a new password — TeachDesk" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Choose a new password — TeachDesk" },
+      { name: "description", content: "Set a new password for your TeachDesk account." },
+      { property: "og:title", content: "Choose a new password — TeachDesk" },
+      { property: "og:description", content: "Set a new password for your TeachDesk account." },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: ResetPasswordPage,
 });
 

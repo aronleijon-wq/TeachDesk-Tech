@@ -7,6 +7,8 @@ export const Route = createFileRoute("/terms")({
     meta: [
       { title: "Terms of service — TeachDesk" },
       { name: "description", content: "The terms for using TeachDesk." },
+      { property: "og:title", content: "Terms of service — TeachDesk" },
+      { property: "og:description", content: "The terms for using TeachDesk." },
     ],
   }),
   component: TermsPage,

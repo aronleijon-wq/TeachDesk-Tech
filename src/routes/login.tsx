@@ -15,7 +15,15 @@ export const Route = createFileRoute("/login")({
     const redirect = search["redirect"];
     return typeof redirect === "string" && redirect.startsWith("/app") ? { redirect } : {};
   },
-  head: () => ({ meta: [{ title: "Sign in — TeachDesk" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign in — TeachDesk" },
+      { name: "description", content: "Sign in to your TeachDesk account to plan exams, grade work and follow up with students." },
+      { property: "og:title", content: "Sign in — TeachDesk" },
+      { property: "og:description", content: "Sign in to your TeachDesk account to plan exams, grade work and follow up with students." },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: LoginPage,
 });
 
