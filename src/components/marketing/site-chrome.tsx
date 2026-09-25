@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Wordmark } from "@/components/brand";
 import { cn } from "@/lib/utils";
 
 export const NAV = [
@@ -15,13 +16,8 @@ export const NAV = [
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <Link to="/" className={cn("flex items-center gap-2 font-semibold tracking-tight", className)} aria-label="Teachdesk home">
-      <span className="grid size-7 place-items-center rounded-md bg-foreground text-background">
-        <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
-          <path d="M2 3h12v2.5H9.25V13h-2.5V5.5H2z" fill="currentColor" />
-        </svg>
-      </span>
-      <span className="text-[15px]">Teachdesk</span>
+    <Link to="/" className={className} aria-label="TeachDesk home">
+      <Wordmark />
     </Link>
   );
 }
@@ -87,7 +83,7 @@ const FOOTER = [
   { title: "Product", links: [["Product", "/#product"], ["Features", "/#features"], ["How it works", "/#how-it-works"], ["Integrations", "/#integrations"]] },
   { title: "Company", links: [["About", "/#schools"], ["Contact", "/demo"], ["Book a demo", "/demo"]] },
   { title: "Resources", links: [["Help", "/app/help"], ["Security", "/#security"], ["Documentation", "/app/help"]] },
-  { title: "Legal", links: [["Privacy", "/#security"], ["Terms", "/#security"]] },
+  { title: "Legal", links: [["Privacy", "/privacy"], ["Terms", "/terms"]] },
 ];
 
 export function SiteFooter() {
@@ -112,7 +108,7 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="mx-auto flex max-w-6xl flex-col justify-between gap-2 border-t border-border px-5 py-6 text-xs text-muted-foreground sm:flex-row">
-        <span>© {new Date().getFullYear()} Teachdesk</span>
+        <span>© {new Date().getFullYear()} TeachDesk</span>
         <span>Made in Sweden</span>
       </div>
     </footer>

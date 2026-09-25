@@ -1,94 +1,156 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { AuthLayout, GoogleIcon } from "@/components/auth-layout";
 import { Button } from "@/components/ui/button";
-import { lovable } from "@/integrations/lovable/index";
-import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/lib/auth";
+
+type Mode = "sign-in" | "sign-up" | "forgot";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({
-    meta: [
-      { title: "Sign in — TeachDesk" },
-      { name: "description", content: "Sign in to your TeachDesk workspace." },
-      { property: "og:title", content: "Sign in — TeachDesk" },
-      { property: "og:description", content: "Sign in to your TeachDesk workspace." },
-    ],
-  }),
+  // Only allow redirects back into the app, never to another site.
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
+    const redirect = search["redirect"];
+    return typeof redirect === "string" && redirect.startsWith("/app") ? { redirect } : {};
+  },
+  head: () => ({ meta: [{ title: "Sign in — TeachDesk" }, { name: "robots", content: "noindex" }] }),
   component: LoginPage,
 });
 
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"
-      />
-    </svg>
-  );
-}
+const copy: Record<Mode, { title: string; subtitle: string; submit: string }> = {
+  "sign-in": { title: "Sign in", subtitle: "Welcome back to TeachDesk.", submit: "Sign in" },
+  "sign-up": { title: "Create your account", subtitle: "Start using TeachDesk in a minute.", submit: "Create account" },
+  forgot: { title: "Reset your password", subtitle: "We'll email you a link to choose a new one.", submit: "Send reset link" },
+};
 
 function LoginPage() {
+  const { redirect = "/app" } = Route.useSearch();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const auth = useAuth();
+  const [mode, setMode] = useState<Mode>("sign-in");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  // Already signed in? Go straight to the app.
+  // Already signed in (or just signed in): go to the app.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/app" });
-    });
-  }, [navigate]);
+    if (auth.user) void navigate({ to: redirect });
+  }, [auth.user, navigate, redirect]);
 
-  async function signInWithGoogle() {
-    setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setLoading(false);
-      toast.error("Sign-in failed", { description: result.error.message ?? "Please try again." });
-      return;
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError(null);
+    setNotice(null);
+  };
+
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await action();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
     }
-    if (result.redirected) return; // browser is heading to Google
-    navigate({ to: "/app" });
-  }
+  };
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    void run(async () => {
+      if (mode === "sign-in") return auth.signInWithPassword(form.email, form.password);
+      if (mode === "forgot") {
+        await auth.sendPasswordReset(form.email);
+        return setNotice("If an account exists for that email, a reset link is on its way.");
+      }
+      const { needsConfirmation } = await auth.signUpWithPassword(form.name.trim(), form.email, form.password);
+      if (needsConfirmation) setNotice("Check your inbox and click the link to confirm your email.");
+    });
+  };
+
+  const field = (key: keyof typeof form) => ({
+    id: key,
+    value: form[key],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [key]: e.target.value })),
+  });
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        <div className="rounded-lg border border-border bg-card p-8 shadow-sm">
-          <p className="text-center text-lg font-semibold tracking-tight">TeachDesk</p>
-          <p className="mt-1 text-center text-sm text-muted-foreground">
-            Sign in to your workspace
-          </p>
+    <AuthLayout title={copy[mode].title} subtitle={copy[mode].subtitle}>
+      {mode !== "forgot" && (
+        <>
           <Button
+            type="button"
             variant="outline"
-            className="mt-6 w-full"
-            onClick={signInWithGoogle}
-            disabled={loading}
+            className="w-full"
+            disabled={busy}
+            onClick={() => void run(auth.signInWithGoogle)}
           >
-            <GoogleIcon />
-            {loading ? "Opening Google…" : "Continue with Google"}
+            <GoogleIcon /> Continue with Google
           </Button>
+          <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" /> or with email <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      )}
+
+      <form onSubmit={submit} className="space-y-4">
+        {mode === "sign-up" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="name">Your name</Label>
+            <Input {...field("name")} autoComplete="name" required />
+          </div>
+        )}
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input {...field("email")} type="email" autoComplete="email" required />
         </div>
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          <Link to="/" className="underline underline-offset-2 hover:text-foreground">
-            Back to teachdesk.com
-          </Link>
-        </p>
-      </div>
-    </div>
+        {mode !== "forgot" && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              {mode === "sign-in" && (
+                <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => switchMode("forgot")}>
+                  Forgot password?
+                </button>
+              )}
+            </div>
+            <Input
+              {...field("password")}
+              type="password"
+              autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+              minLength={mode === "sign-up" ? 8 : undefined}
+              required
+            />
+          </div>
+        )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {notice && <p className="text-sm text-success">{notice}</p>}
+
+        <Button type="submit" className="w-full" disabled={busy}>
+          {busy && <Loader2 className="size-4 animate-spin" />}
+          {copy[mode].submit}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        {mode === "sign-in" ? (
+          <>
+            New to TeachDesk?{" "}
+            <button type="button" className="font-medium text-foreground hover:underline" onClick={() => switchMode("sign-up")}>
+              Create an account
+            </button>
+          </>
+        ) : (
+          <button type="button" className="font-medium text-foreground hover:underline" onClick={() => switchMode("sign-in")}>
+            Back to sign in
+          </button>
+        )}
+      </p>
+    </AuthLayout>
   );
 }

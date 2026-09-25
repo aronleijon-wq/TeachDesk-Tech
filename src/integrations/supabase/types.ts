@@ -23,6 +23,7 @@ export type Database = {
           name: string
           organization: string
           role: string
+          status: string
         }
         Insert: {
           created_at?: string
@@ -32,6 +33,7 @@ export type Database = {
           name: string
           organization: string
           role: string
+          status?: string
         }
         Update: {
           created_at?: string
@@ -41,6 +43,7 @@ export type Database = {
           name?: string
           organization?: string
           role?: string
+          status?: string
         }
         Relationships: []
       }
@@ -49,7 +52,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

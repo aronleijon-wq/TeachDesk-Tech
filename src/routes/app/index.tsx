@@ -33,12 +33,12 @@ function greeting() {
 }
 
 function Dashboard() {
-  const { exams } = useStore();
+  const { exams, profile } = useStore();
   const { missedExams, toGrade, needsScheduling, missingWork, upcoming, retakes } = useAttentionSummary();
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title={`${greeting()}, Anna`} subtitle="Here's what needs your attention." />
+      <PageHeader title={`${greeting()}, ${profile.name.trim().split(/\s+/)[0] || "there"}`} subtitle="Here's what needs your attention." />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Upcoming exams" value={upcoming.length} hint="Next 6 weeks" icon={BookOpen} />

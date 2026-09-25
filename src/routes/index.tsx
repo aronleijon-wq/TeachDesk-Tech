@@ -7,8 +7,8 @@ import { Reveal, SectionHeading, SiteFooter, SiteNav } from "@/components/market
 import { HeroProduct, RetakeFlow } from "@/components/marketing/product-visuals";
 import { cn } from "@/lib/utils";
 
-const title = "Teachdesk — The workspace for modern teachers";
-const description = "Teachdesk brings exams, grading, retakes, assignments and teacher workflows into one intelligent workspace.";
+const title = "TeachDesk — The workspace for modern teachers";
+const description = "TeachDesk brings exams, grading, retakes, assignments and teacher workflows into one intelligent workspace.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -63,7 +63,7 @@ function Hero() {
           </p>
           <h1 className="display-xl mx-auto mt-6 max-w-4xl text-balance">Teaching shouldn't come with a second job.</h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-pretty text-muted-foreground md:text-xl">
-            Teachdesk brings the work behind teaching into one intelligent workspace — from exams and grading to retakes, assignments and follow-up.
+            TeachDesk brings the work behind teaching into one intelligent workspace — from exams and grading to retakes, assignments and follow-up.
           </p>
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild size="lg" className={primaryBtn}><Link to="/demo">Book a demo <ArrowRight className="size-4" /></Link></Button>
@@ -103,12 +103,12 @@ function Problem() {
           <p className="mt-6 text-sm text-muted-foreground">Eight hand-offs. Every one a chance to lose track of a student.</p>
         </Reveal>
         <Reveal delay={120} className="rounded-xl border border-primary/25 bg-primary-soft/60 p-6">
-          <p className="label-xs !text-primary">With Teachdesk</p>
+          <p className="label-xs !text-primary">With TeachDesk</p>
           <div className="mt-5 flex items-center gap-3">
-            <span className="rounded-md bg-foreground px-3 py-1.5 text-sm font-medium text-background">Teachdesk</span>
+            <span className="rounded-md bg-foreground px-3 py-1.5 text-sm font-medium text-background">TeachDesk</span>
             <span className="text-sm text-muted-foreground">exam → attendance → grading → retake → results</span>
           </div>
-          <p className="mt-6 text-lg font-medium">Teachdesk brings the workflow together.</p>
+          <p className="mt-6 text-lg font-medium">TeachDesk brings the workflow together.</p>
           <p className="mt-1 text-sm text-muted-foreground">One place to work. Connected to the systems your school already uses.</p>
         </Reveal>
       </div>
@@ -129,7 +129,7 @@ function Features() {
   return (
     <section id="features" className="border-y border-border bg-surface">
       <div className="mx-auto max-w-6xl px-5 py-24 md:py-32">
-        <SectionHeading eyebrow="What Teachdesk does" title="One workspace for the work behind teaching." />
+        <SectionHeading eyebrow="What TeachDesk does" title="One workspace for the work behind teaching." />
         <div className="mt-14 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f, i) => (
             <Reveal key={f.title} delay={i * 60} className="group bg-surface p-7 transition-colors hover:bg-background">
@@ -148,7 +148,7 @@ function Retake() {
   return (
     <section id="retakes" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-24 md:py-32">
       <SectionHeading eyebrow="Equivalent retakes" title="A missed exam shouldn't mean more administration.">
-        Teachdesk keeps topics, difficulty, points and question types — and changes numbers, contexts and wording. You review every question before a student sees it.
+        TeachDesk keeps topics, difficulty, points and question types — and changes numbers, contexts and wording. You review every question before a student sees it.
       </SectionHeading>
       <Reveal className="mt-14"><RetakeFlow /></Reveal>
     </section>
@@ -156,9 +156,9 @@ function Retake() {
 }
 
 const HOW = [
-  ["01", "Connect", "Connect Teachdesk with the school's existing systems."],
-  ["02", "Set up", "Classes, students and relevant information are available in Teachdesk."],
-  ["03", "Work", "Teachers manage their workflows inside Teachdesk."],
+  ["01", "Connect", "Connect TeachDesk with the school's existing systems."],
+  ["02", "Set up", "Classes, students and relevant information are available in TeachDesk."],
+  ["03", "Work", "Teachers manage their workflows inside TeachDesk."],
   ["04", "Sync", "Relevant information can be synchronized back to connected systems."],
 ];
 
@@ -197,7 +197,7 @@ function Integrations() {
       <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
         <div>
           <SectionHeading eyebrow="Integrations" title="Keep the systems your school already uses.">
-            Teachdesk is designed to work alongside your existing school systems — not force schools to replace them.
+            TeachDesk is designed to work alongside your existing school systems — not force schools to replace them.
           </SectionHeading>
           <Reveal className="mt-10">
             <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
@@ -217,7 +217,7 @@ function Integrations() {
             <Tier label="Existing school systems" items={["SchoolSoft", "Classroom", "Teams", "Vklass"]} />
             <Flow />
             <div className="mx-auto w-fit rounded-lg bg-foreground px-6 py-3 text-center text-background shadow-[var(--shadow-panel)]">
-              <p className="font-semibold">Teachdesk</p>
+              <p className="font-semibold">TeachDesk</p>
               <p className="text-[11px] opacity-70">Sync · permissions · data mapping</p>
             </div>
             <Flow />
@@ -263,7 +263,7 @@ function Teachers() {
                 <li key={p} className="flex gap-2.5 text-sm"><Check className="mt-0.5 size-4 shrink-0 text-primary" />{p}</li>
               ))}
             </ul>
-            <Button asChild size="lg" variant="outline" className="mt-10"><a href="#product">Explore Teachdesk <ArrowRight className="size-4" /></a></Button>
+            <Button asChild size="lg" variant="outline" className="mt-10"><a href="#product">Explore TeachDesk <ArrowRight className="size-4" /></a></Button>
           </Reveal>
         </div>
         <Reveal delay={120}>
@@ -299,8 +299,8 @@ const AI_EXAMPLES = ["Generating equivalent exams", "Analyzing exam structure", 
 function AI() {
   return (
     <section className="mx-auto max-w-6xl px-5 py-24 md:py-32">
-      <SectionHeading eyebrow="AI in Teachdesk" title="AI that handles the repetitive work.">
-        Teachdesk uses AI to assist with repetitive tasks while teachers remain in control.
+      <SectionHeading eyebrow="AI in TeachDesk" title="AI that handles the repetitive work.">
+        TeachDesk uses AI to assist with repetitive tasks while teachers remain in control.
       </SectionHeading>
       <div className="mt-14 grid gap-10 lg:grid-cols-[1fr_1.2fr]">
         <Reveal>
@@ -337,7 +337,7 @@ const SCHOOL_POINTS = [
   ["Easier teacher workflows", "Exams, retakes and grading in one place."],
   ["Less administrative overhead", "Fewer manual hand-offs between systems."],
   ["Centralized tools", "One workspace instead of scattered tools."],
-  ["Existing systems stay", "Teachdesk connects to your infrastructure."],
+  ["Existing systems stay", "TeachDesk connects to your infrastructure."],
   ["Controlled AI usage", "Teachers approve every AI output."],
   ["Permissions", "Role-based access for teachers and staff."],
   ["Scales with you", "From one department to a whole organization."],
@@ -435,10 +435,10 @@ function FinalCta() {
       <div className="bg-grid pointer-events-none absolute inset-0 opacity-50 [mask-image:radial-gradient(60%_60%_at_50%_50%,black,transparent)]" />
       <Reveal className="relative mx-auto max-w-3xl px-5 py-28 text-center md:py-36">
         <h2 className="display-xl text-balance">Spend less time managing teaching.</h2>
-        <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">See what Teachdesk could look like at your school.</p>
+        <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">See what TeachDesk could look like at your school.</p>
         <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
           <Button asChild size="lg" className={primaryBtn}><Link to="/demo">Book a demo</Link></Button>
-          <Button asChild size="lg" variant="outline"><Link to="/app">Log in</Link></Button>
+          <Button asChild size="lg" variant="outline"><Link to="/login">Log in</Link></Button>
         </div>
       </Reveal>
     </section>

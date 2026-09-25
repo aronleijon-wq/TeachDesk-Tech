@@ -1,5 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import logoAsset from "@/assets/teachdesk-logo.png.asset.json";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
   Bell,
@@ -7,6 +6,7 @@ import {
   CalendarDays,
   ClipboardList,
   HelpCircle,
+  Inbox,
   LayoutDashboard,
   LifeBuoy,
   Moon,
@@ -41,8 +41,10 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { classById, students, teacher } from "@/lib/demo-data";
-import { useAttentionSummary, useStore } from "@/lib/store";
+import { LogoMark, Wordmark } from "@/components/brand";
+import { useAuth } from "@/lib/auth";
+import { classById, students } from "@/lib/demo-data";
+import { initialsOf, useAttentionSummary, useStore } from "@/lib/store";
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
@@ -54,6 +56,9 @@ const nav = [
   { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/app/ai-tools", label: "AI Tools", icon: Sparkles },
 ] as const;
+
+// Only shown to admins; the database enforces access either way.
+const adminNav = { to: "/app/admin", label: "Demo requests", icon: Inbox } as const;
 
 const secondary = [
   { to: "/app/settings", label: "Settings", icon: Settings },
@@ -123,6 +128,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { dark, setDark } = useDarkMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { missedExams, toGrade, needsScheduling } = useAttentionSummary();
+  const { profile } = useStore();
+  const { isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
+  const teacher = { ...profile, initials: initialsOf(profile.name) };
+  const subtitle = [teacher.school, teacher.plan].filter(Boolean).join(" · ");
+  const handleSignOut = async () => {
+    await signOut();
+    await navigate({ to: "/login" });
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -136,7 +150,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   const title = useMemo(() => {
-    const match = [...nav, ...secondary].find(
+    const match = [...nav, adminNav, ...secondary].find(
       (n) => n.to === pathname || (n.to !== "/app" && pathname.startsWith(n.to)),
     );
       return match?.label ?? "TeachDesk";
@@ -152,8 +166,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         >
           <div className={cn("flex h-14 items-center gap-2 px-4", collapsed && "justify-center px-0")}>
-            <img src={logoAsset.url} alt="TeachDesk logo" className="size-7 rounded-md" />
-            {!collapsed && <span className="text-[15px] font-semibold tracking-tight">TeachDesk</span>}
+            {collapsed ? <LogoMark /> : <Wordmark />}
           </div>
 
           <nav className="flex-1 space-y-0.5 px-2 py-2">
@@ -161,6 +174,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <NavLink key={item.to} {...item} collapsed={collapsed} />
             ))}
             <div className="my-3 border-t border-sidebar-border" />
+            {isAdmin && <NavLink {...adminNav} collapsed={collapsed} />}
             {secondary.map((item) => (
               <NavLink key={item.to} {...item} collapsed={collapsed} />
             ))}
@@ -181,7 +195,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">{teacher.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {teacher.school} · {teacher.plan}
+                    {subtitle}
                   </span>
                 </span>
               )}
@@ -266,13 +280,18 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <Link to="/app/settings">Profile & settings</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/app/settings">School — {teacher.school}</Link>
+                    <Link to="/app/settings">{teacher.school ? `School — ${teacher.school}` : "Add your school"}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/app/pricing">Plan — {teacher.plan}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Sign out</DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to={adminNav.to}>Demo requests</Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onSelect={() => void handleSignOut()}>Sign out</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
