@@ -1,5 +1,8 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import * as z4 from "zod/v4";
 
 const QuestionInput = z.object({
   number: z.number(),
@@ -20,136 +23,82 @@ const GenerateInput = z.object({
   questions: z.array(QuestionInput).min(1),
 });
 
-export type GeneratedQuestion = {
-  number: number;
-  type: string;
-  topic: string;
-  skill: string;
-  difficulty: string;
-  points: number;
-  prompt: string;
-  expectedAnswer: string;
-  gradingCriteria: string;
-  objective: string;
-};
+// Shape Claude must return. The SDK helper turns this into a JSON schema and
+// validates the response against it.
+const GenerateOutput = z4.object({
+  equivalenceScore: z4.number(),
+  equivalenceNotes: z4.string(),
+  questions: z4.array(
+    z4.object({
+      number: z4.number(),
+      type: z4.string(),
+      topic: z4.string(),
+      skill: z4.string(),
+      difficulty: z4.string(),
+      points: z4.number(),
+      prompt: z4.string(),
+      expectedAnswer: z4.string(),
+      gradingCriteria: z4.string(),
+      objective: z4.string(),
+    }),
+  ),
+});
 
-export type GenerateResult = {
-  questions: GeneratedQuestion[];
-  equivalenceScore: number;
-  equivalenceNotes: string;
-};
-
-const jsonSchema = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    equivalenceScore: { type: "number" },
-    equivalenceNotes: { type: "string" },
-    questions: {
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          number: { type: "number" },
-          type: { type: "string" },
-          topic: { type: "string" },
-          skill: { type: "string" },
-          difficulty: { type: "string" },
-          points: { type: "number" },
-          prompt: { type: "string" },
-          expectedAnswer: { type: "string" },
-          gradingCriteria: { type: "string" },
-          objective: { type: "string" },
-        },
-        required: [
-          "number", "type", "topic", "skill", "difficulty",
-          "points", "prompt", "expectedAnswer", "gradingCriteria", "objective",
-        ],
-      },
-    },
-  },
-  required: ["equivalenceScore", "equivalenceNotes", "questions"],
-} as const;
+export type GenerateResult = z4.infer<typeof GenerateOutput>;
+export type GeneratedQuestion = GenerateResult["questions"][number];
 
 /**
- * Generates an equivalent exam version with Lovable AI. Server-side only.
+ * Generates an equivalent exam version with Claude. Server-side only.
+ * Needs ANTHROPIC_API_KEY in the server environment (.env.local when running locally).
  */
 export const generateEquivalentVersion = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data }): Promise<GenerateResult> => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("AI is not configured for this workspace.");
+    if (!process.env["ANTHROPIC_API_KEY"]) {
+      throw new Error("AI is not configured. Add ANTHROPIC_API_KEY to .env.local and restart the server.");
+    }
+
+    const client = new Anthropic();
 
     const instruction = [
       `You are an experienced ${data.subject} teacher creating an equivalent version of the exam "${data.examTitle}".`,
       `Produce ${data.versionLabel}: keep topic, skill, difficulty, points, question type, objective and question count identical.`,
       "Change numbers, contexts, wording and examples so the version cannot be copied from the original.",
-      "Return json matching the schema, including a short expected answer and grading criteria for every question,",
+      "Include a short expected answer and grading criteria for every question,",
       "plus an equivalenceScore between 0 and 100 and one sentence of equivalence notes.",
+      "Write in the same language as the original questions.",
       "",
       "Original questions:",
       JSON.stringify(data.questions),
     ].join("\n");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-        "X-Lovable-AIG-SDK": "fetch",
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-6-astra",
-        input: instruction,
-        stream: true,
-        store: false,
-        reasoning: { effort: "low" },
-        text: {
-          format: { type: "json_schema", name: "equivalent_exam", strict: true, schema: jsonSchema },
-        },
-      }),
-    });
+    try {
+      const response = await client.beta.messages.parse({
+        model: "claude-opus-5",
+        max_tokens: 16000,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        output_config: { effort: "medium", format: betaZodOutputFormat(GenerateOutput) },
+        messages: [{ role: "user", content: instruction }],
+      });
 
-    if (!res.ok || !res.body) {
-      const detail = await res.text().catch(() => "");
-      if (res.status === 429) throw new Error("AI is busy right now. Please try again in a moment.");
-      if (res.status === 402) throw new Error("AI credits are exhausted. Add credits in workspace settings.");
-      throw new Error(`AI request failed (${res.status}). ${detail.slice(0, 200)}`);
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let text = "";
-
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const frames = buffer.split("\n\n");
-      buffer = frames.pop() ?? "";
-      for (const frame of frames) {
-        for (const line of frame.split("\n")) {
-          if (!line.startsWith("data:")) continue;
-          const payload = line.slice(5).trim();
-          if (!payload || payload === "[DONE]") continue;
-          try {
-            const evt = JSON.parse(payload);
-            if (evt.type === "response.output_text.delta" && typeof evt.delta === "string") {
-              text += evt.delta;
-            } else if (evt.type === "response.completed" && typeof evt.response?.output_text === "string" && !text) {
-              text = evt.response.output_text;
-            }
-          } catch {
-            // ignore partial frames
-          }
-        }
+      if (response.stop_reason === "refusal") {
+        throw new Error("The AI declined to generate this version. Try rewording the questions.");
       }
+      if (response.stop_reason === "max_tokens" || !response.parsed_output) {
+        throw new Error("The AI returned an incomplete result. Please try again.");
+      }
+      return response.parsed_output;
+    } catch (err) {
+      if (err instanceof Anthropic.AuthenticationError) {
+        throw new Error("The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in .env.local.");
+      }
+      if (err instanceof Anthropic.RateLimitError) {
+        throw new Error("AI is busy right now. Please try again in a moment.");
+      }
+      if (err instanceof Anthropic.APIError) {
+        throw new Error(`AI request failed (${err.status ?? "network error"}). Please try again.`);
+      }
+      throw err;
     }
-
-    if (!text.trim()) throw new Error("The AI returned an empty result. Please try again.");
-
-    const parsed = JSON.parse(text) as GenerateResult;
-    return parsed;
   });
