@@ -1,11 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import logoAsset from "@/assets/teachdesk-logo.png.asset.json";
 import {
   BarChart3,
   Bell,
   BookOpen,
   CalendarDays,
   ClipboardList,
-  GraduationCap,
   HelpCircle,
   LayoutDashboard,
   LifeBuoy,
@@ -152,9 +152,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         >
           <div className={cn("flex h-14 items-center gap-2 px-4", collapsed && "justify-center px-0")}>
-            <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <GraduationCap className="size-4" />
-            </div>
+            <img src={logoAsset.url} alt="TeachDesk logo" className="size-7 rounded-md" />
             {!collapsed && <span className="text-[15px] font-semibold tracking-tight">TeachDesk</span>}
           </div>
 
