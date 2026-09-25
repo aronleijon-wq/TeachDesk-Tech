@@ -54,7 +54,7 @@ export function SiteNav() {
         </nav>
         <div className="ml-auto hidden items-center gap-2 lg:flex">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/app">Log in</Link>
+            <Link to="/login">Log in</Link>
           </Button>
           <Button asChild size="sm" className="bg-foreground text-background hover:bg-foreground/90">
             <Link to="/demo">Book a demo</Link>
@@ -74,7 +74,7 @@ export function SiteNav() {
             ))}
           </nav>
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <Button asChild variant="outline"><Link to="/app">Log in</Link></Button>
+            <Button asChild variant="outline"><Link to="/login">Log in</Link></Button>
             <Button asChild className="bg-foreground text-background hover:bg-foreground/90"><Link to="/demo">Book a demo</Link></Button>
           </div>
         </div>
