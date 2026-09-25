@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { lovable } from "@/integrations/lovable/index";
@@ -45,9 +45,11 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   // Already signed in? Go straight to the app.
-  supabase.auth.getSession().then(({ data }) => {
-    if (data.session) navigate({ to: "/app" });
-  });
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate({ to: "/app" });
+    });
+  }, [navigate]);
 
   async function signInWithGoogle() {
     setLoading(true);
