@@ -127,7 +127,7 @@ export function Reveal({ children, className, delay = 0 }: { children: ReactNode
     if (!el) return;
     const io = new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) {
+        if (e?.isIntersecting) {
           setVisible(true);
           io.disconnect();
         }
@@ -150,7 +150,7 @@ export function useInView<T extends Element>(threshold = 0.3) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold });
+    const io = new IntersectionObserver(([e]) => setInView(!!e?.isIntersecting), { threshold });
     io.observe(el);
     return () => io.disconnect();
   }, [threshold]);

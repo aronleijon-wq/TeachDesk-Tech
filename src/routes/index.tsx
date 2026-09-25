@@ -283,7 +283,7 @@ function Teachers() {
                 <div key={n} className="grid grid-cols-[1.4fr_1fr_1.2fr] items-center border-b border-border px-4 py-3 text-sm last:border-0 transition-colors hover:bg-muted/50">
                   <span className="font-medium">{n}</span>
                   <span className="tabular-nums text-muted-foreground">{s}</span>
-                  <span className={cn("justify-self-end text-xs", st === "Graded" ? "text-success" : st.startsWith("Needs") ? "text-destructive" : "text-muted-foreground")}>{st}</span>
+                  <span className={cn("justify-self-end text-xs", st === "Graded" ? "text-success" : st?.startsWith("Needs") ? "text-destructive" : "text-muted-foreground")}>{st}</span>
                 </div>
               ))}
             </div>

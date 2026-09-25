@@ -34,7 +34,7 @@ export function HeroProduct() {
     const t = setInterval(() => setTick((v) => (v + 1) % 3), 3200);
     return () => clearInterval(t);
   }, []);
-  const graded = [18, 22, 26][tick];
+  const graded = [18, 22, 26][tick] ?? 18;
 
   return (
     <Chrome>
