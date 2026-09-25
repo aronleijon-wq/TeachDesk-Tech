@@ -42,6 +42,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { LogoMark, Wordmark } from "@/components/brand";
+import { SaveStatus } from "@/components/save-status";
 import { useAuth } from "@/lib/auth";
 import { initialsOf, useAttentionSummary, useStore } from "@/lib/store";
 
@@ -127,12 +128,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { dark, setDark } = useDarkMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { missedExams, toGrade, needsScheduling } = useAttentionSummary();
-  const { profile } = useStore();
+  const { profile, flush } = useStore();
   const { isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const teacher = { ...profile, initials: initialsOf(profile.name) };
   const subtitle = [teacher.school, teacher.plan].filter(Boolean).join(" · ");
   const handleSignOut = async () => {
+    // Finish saving first; without internet, ask before leaving unsaved changes behind.
+    const saved = await flush();
+    if (!saved && !window.confirm("Some changes haven't been saved yet because there's no internet connection. Sign out anyway?")) {
+      return;
+    }
     await signOut();
     await navigate({ to: "/login" });
   };
@@ -215,6 +221,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
             </Button>
             <p className="truncate text-sm font-semibold">{title}</p>
+            <SaveStatus />
 
             <div className="ml-auto flex items-center gap-1">
               <button

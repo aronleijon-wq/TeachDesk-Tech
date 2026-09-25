@@ -12,7 +12,8 @@ import type {
   Workspace,
 } from "./types";
 
-export const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+export const newId = (prefix: string) =>
+  `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 const mapExam = (ws: Workspace, examId: string, fn: (e: Exam) => Exam): Workspace => ({
   ...ws,
@@ -22,7 +23,12 @@ const mapExam = (ws: Workspace, examId: string, fn: (e: Exam) => Exam): Workspac
 // --- Exams ------------------------------------------------------------------
 
 /** Marking a student absent puts them in the retake queue; marking them present takes them out. */
-export function setAttendance(ws: Workspace, examId: string, studentId: string, status: AttendanceStatus): Workspace {
+export function setAttendance(
+  ws: Workspace,
+  examId: string,
+  studentId: string,
+  status: AttendanceStatus,
+): Workspace {
   const next = mapExam(ws, examId, (e) => ({
     ...e,
     attendance: e.attendance.map((a) => (a.studentId === studentId ? { ...a, status } : a)),
@@ -31,19 +37,32 @@ export function setAttendance(ws: Workspace, examId: string, studentId: string, 
   if (status === "absent" && !queued) {
     return {
       ...next,
-      retakes: [...ws.retakes, { id: `r-${examId}-${studentId}`, examId, studentId, status: "needs-scheduling" }],
+      retakes: [
+        ...ws.retakes,
+        { id: `r-${examId}-${studentId}`, examId, studentId, status: "needs-scheduling" },
+      ],
     };
   }
   if (status !== "absent" && queued) {
-    return { ...next, retakes: ws.retakes.filter((r) => !(r.examId === examId && r.studentId === studentId)) };
+    return {
+      ...next,
+      retakes: ws.retakes.filter((r) => !(r.examId === examId && r.studentId === studentId)),
+    };
   }
   return next;
 }
 
-export const setScore = (ws: Workspace, examId: string, studentId: string, score: number): Workspace =>
+export const setScore = (
+  ws: Workspace,
+  examId: string,
+  studentId: string,
+  score: number,
+): Workspace =>
   mapExam(ws, examId, (e) => ({
     ...e,
-    attendance: e.attendance.map((a) => (a.studentId === studentId ? { ...a, score, status: "completed" } : a)),
+    attendance: e.attendance.map((a) =>
+      a.studentId === studentId ? { ...a, score, status: "completed" } : a,
+    ),
   }));
 
 export const scheduleRetake = (
@@ -54,39 +73,61 @@ export const scheduleRetake = (
   ...ws,
   retakes: ws.retakes.map((r) =>
     r.id === retakeId
-      ? { ...r, status: "scheduled", date: slot.date, time: slot.time, room: slot.room, ...(slot.versionId ? { versionId: slot.versionId } : {}) }
+      ? {
+          ...r,
+          status: "scheduled",
+          date: slot.date,
+          time: slot.time,
+          room: slot.room,
+          ...(slot.versionId ? { versionId: slot.versionId } : {}),
+        }
       : r,
   ),
 });
 
-export const addExam = (ws: Workspace, exam: Exam): Workspace => ({ ...ws, exams: [exam, ...ws.exams] });
+export const addExam = (ws: Workspace, exam: Exam): Workspace => ({
+  ...ws,
+  exams: [exam, ...ws.exams],
+});
 
 export const addVersion = (ws: Workspace, examId: string, version: ExamVersion): Workspace =>
   mapExam(ws, examId, (e) => ({ ...e, versions: [...e.versions, version] }));
 
 export const approveVersion = (ws: Workspace, examId: string, versionId: string): Workspace =>
-  mapExam(ws, examId, (e) => ({ ...e, versions: e.versions.map((v) => (v.id === versionId ? { ...v, approved: true } : v)) }));
+  mapExam(ws, examId, (e) => ({
+    ...e,
+    versions: e.versions.map((v) => (v.id === versionId ? { ...v, approved: true } : v)),
+  }));
 
-export const updateQuestion = (ws: Workspace, examId: string, versionId: string, question: Question): Workspace =>
+export const updateQuestion = (
+  ws: Workspace,
+  examId: string,
+  versionId: string,
+  question: Question,
+): Workspace =>
   mapExam(ws, examId, (e) => ({
     ...e,
     versions: e.versions.map((v) =>
-      v.id === versionId ? { ...v, questions: v.questions.map((q) => (q.id === question.id ? question : q)) } : v,
+      v.id === versionId
+        ? { ...v, questions: v.questions.map((q) => (q.id === question.id ? question : q)) }
+        : v,
     ),
   }));
 
-export const setRubric = (ws: Workspace, assignmentId: string, rubric: NonNullable<Assignment["rubric"]>): Workspace => ({
+export const setRubric = (
+  ws: Workspace,
+  assignmentId: string,
+  rubric: NonNullable<Assignment["rubric"]>,
+): Workspace => ({
   ...ws,
   assignments: ws.assignments.map((a) => (a.id === assignmentId ? { ...a, rubric } : a)),
 });
 
 // --- Classes and students -----------------------------------------------------
 
-export function addClass(ws: Workspace, details: Omit<ClassGroup, "id">, studentNames: string[]): { ws: Workspace; classId: string } {
-  const classId = newId("class");
-  const withClass = { ...ws, classes: [...ws.classes, { id: classId, ...details }] };
-  return { ws: addStudents(withClass, classId, studentNames), classId };
-}
+/** Adds a class together with its pasted student list (see addStudents). */
+export const addClass = (ws: Workspace, klass: ClassGroup, studentLines: string[]): Workspace =>
+  addStudents({ ...ws, classes: [...ws.classes, klass] }, klass.id, studentLines);
 
 /**
  * Reads one pasted line into a name and optional email. Handles the formats class lists
@@ -95,17 +136,23 @@ export function addClass(ws: Workspace, details: Omit<ClassGroup, "id">, student
  */
 export function parseStudentLine(line: string): { name: string; email: string } {
   const byTab = line.includes("\t");
-  const parts = line.split(byTab ? /\t/ : /[,;]/).map((p) => p.trim().replace(/\s+/g, " ")).filter(Boolean);
+  const parts = line
+    .split(byTab ? /\t/ : /[,;]/)
+    .map((p) => p.trim().replace(/\s+/g, " "))
+    .filter(Boolean);
   const email = parts.find((p) => p.includes("@")) ?? "";
   const nameParts = parts.filter((p) => p !== email);
   // Columns are read left to right; "Surname, First name" is turned around.
-  const name = !byTab && nameParts.length === 2 ? `${nameParts[1]} ${nameParts[0]}` : nameParts.join(" ");
+  const name =
+    !byTab && nameParts.length === 2 ? `${nameParts[1]} ${nameParts[0]}` : nameParts.join(" ");
   return { name, email };
 }
 
 /** Adds students from pasted lines (see parseStudentLine). Names already in the class are skipped. */
 export function addStudents(ws: Workspace, classId: string, lines: string[]): Workspace {
-  const existing = new Set(ws.students.filter((s) => s.classId === classId).map((s) => s.name.toLowerCase()));
+  const existing = new Set(
+    ws.students.filter((s) => s.classId === classId).map((s) => s.name.toLowerCase()),
+  );
   const added: Student[] = [];
   for (const line of lines) {
     const { name, email } = parseStudentLine(line);
@@ -117,20 +164,33 @@ export function addStudents(ws: Workspace, classId: string, lines: string[]): Wo
   // Students who join a class are also expected at its exams that haven't been held yet.
   const exams = ws.exams.map((e) =>
     e.classId === classId && e.status !== "completed"
-      ? { ...e, attendance: [...e.attendance, ...added.map((s) => ({ studentId: s.id, status: "pending" as const }))] }
+      ? {
+          ...e,
+          attendance: [
+            ...e.attendance,
+            ...added.map((s) => ({ studentId: s.id, status: "pending" as const })),
+          ],
+        }
       : e,
   );
   return { ...ws, students: [...ws.students, ...added], exams };
 }
 
 /** Parses a pasted student list into lines, ignoring blanks. */
-export const parseStudentList = (text: string) => text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+export const parseStudentList = (text: string) =>
+  text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
 
 export function removeStudent(ws: Workspace, studentId: string): Workspace {
   return {
     ...ws,
     students: ws.students.filter((s) => s.id !== studentId),
-    exams: ws.exams.map((e) => ({ ...e, attendance: e.attendance.filter((a) => a.studentId !== studentId) })),
+    exams: ws.exams.map((e) => ({
+      ...e,
+      attendance: e.attendance.filter((a) => a.studentId !== studentId),
+    })),
     retakes: ws.retakes.filter((r) => r.studentId !== studentId),
   };
 }
@@ -151,20 +211,28 @@ export function removeClass(ws: Workspace, classId: string): Workspace {
 
 // --- Figures ------------------------------------------------------------------
 
-export const classSize = (ws: Workspace, classId: string) => ws.students.filter((s) => s.classId === classId).length;
+export const classSize = (ws: Workspace, classId: string) =>
+  ws.students.filter((s) => s.classId === classId).length;
 
 /** A student's average and attendance: fixed figures for demo students, otherwise from their exam results. */
 export function studentStats(ws: Workspace, student: Student) {
   const records = ws.exams.flatMap((e) =>
-    e.attendance.filter((a) => a.studentId === student.id).map((a) => ({ ...a, total: e.totalPoints })),
+    e.attendance
+      .filter((a) => a.studentId === student.id)
+      .map((a) => ({ ...a, total: e.totalPoints })),
   );
   const scored = records.filter((r) => r.score != null && r.total > 0);
   const held = records.filter((r) => r.status !== "pending");
   const average =
-    student.average ?? (scored.length ? Math.round((scored.reduce((s, r) => s + r.score! / r.total, 0) / scored.length) * 1000) / 10 : undefined);
+    student.average ??
+    (scored.length
+      ? Math.round((scored.reduce((s, r) => s + r.score! / r.total, 0) / scored.length) * 1000) / 10
+      : undefined);
   const attendanceRate =
     student.attendanceRate ??
-    (held.length ? Math.round((held.filter((r) => r.status === "completed").length / held.length) * 100) : undefined);
+    (held.length
+      ? Math.round((held.filter((r) => r.status === "completed").length / held.length) * 100)
+      : undefined);
   return { average, attendanceRate, missingWork: student.missingWork };
 }
 

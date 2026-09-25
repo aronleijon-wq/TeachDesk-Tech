@@ -41,6 +41,10 @@ function PrivacyPage() {
             equivalent versions.
           </li>
           <li>
+            <strong>Class lists and results</strong> — the names (and optional email addresses) of students you add,
+            and their attendance, scores and retakes.
+          </li>
+          <li>
             <strong>Technical data</strong> — error reports when something breaks, so we can fix it.
           </li>
         </ul>
@@ -67,8 +71,9 @@ function PrivacyPage() {
       <section>
         <h2>Where your work is stored</h2>
         <p>
-          Exams, versions, attendance, retakes and your profile settings are currently saved in your own browser on the
-          device you use, not on our servers. Clearing your browser data removes them.
+          Your classes, students, exams, versions, attendance, retakes and profile are saved in our database, linked to
+          your account, so you can use them on any device. Only you can access them. The demo data used for exploring
+          TeachDesk is example data and is kept in your browser only.
         </p>
       </section>
 
@@ -109,7 +114,7 @@ function PrivacyPage() {
       <section>
         <h2>How long we keep data</h2>
         <p>
-          We keep account details for as long as you have an account, and demo requests for up to 24 months after our
+          We keep account details and your saved work for as long as you have an account, and demo requests for up to 24 months after our
           last contact. You can ask us to delete your data at any time.
         </p>
       </section>
@@ -117,8 +122,8 @@ function PrivacyPage() {
       <section>
         <h2>Cookies and local storage</h2>
         <p>
-          We use your browser's local storage to keep you signed in and to save your work. We do not use advertising or
-          tracking cookies.
+          We use your browser's local storage to keep you signed in and to keep the demo data. We do not use advertising
+          or tracking cookies.
         </p>
       </section>
 
