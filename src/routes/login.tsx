@@ -87,7 +87,7 @@ function LoginPage() {
             variant="outline"
             className="w-full"
             disabled={busy}
-            onClick={() => void run(() => auth.signInWithGoogle(redirect))}
+            onClick={() => void run(auth.signInWithGoogle)}
           >
             <GoogleIcon /> Continue with Google
           </Button>

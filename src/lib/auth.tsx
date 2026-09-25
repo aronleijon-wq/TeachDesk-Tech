@@ -1,5 +1,6 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthValue {
@@ -9,7 +10,8 @@ interface AuthValue {
   isAdmin: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (name: string, email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
-  signInWithGoogle: (redirectPath: string) => Promise<void>;
+  /** Resolves once signed in; if the browser is sent to Google instead, it never needs to. */
+  signInWithGoogle: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -76,12 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throwIf(error);
         return { needsConfirmation: !data.session };
       },
-      async signInWithGoogle(redirectPath) {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo: siteUrl(redirectPath) },
-        });
-        throwIf(error);
+      async signInWithGoogle() {
+        // Google sign-in is brokered by Lovable Cloud, which then sets the Supabase session.
+        const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+        if (result.error) throw friendly(result.error) ?? new Error("Google sign-in failed. Please try again.");
       },
       async sendPasswordReset(email) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: siteUrl("/reset-password") });
