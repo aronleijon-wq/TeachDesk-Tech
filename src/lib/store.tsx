@@ -14,7 +14,6 @@ import {
   exams as seedExams,
   retakes as seedRetakes,
   students,
-  teacher as seedTeacher,
   type Assignment,
   type AttendanceStatus,
   type Exam,
@@ -36,18 +35,14 @@ export function initialsOf(name: string) {
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")).toUpperCase() || "?";
 }
 
-const seedProfile: Profile = {
-  name: seedTeacher.name,
-  email: seedTeacher.email,
-  role: seedTeacher.role,
-  school: seedTeacher.school,
-  plan: seedTeacher.plan,
-};
+function profileFor(account: { name: string; email: string }): Profile {
+  return { name: account.name, email: account.email, role: "Teacher", school: "", plan: "Trial" };
+}
 
-// The whole workspace is saved in this browser under one key. Bump the version
-// when the saved shape changes incompatibly; older saves are then ignored.
-const STORAGE_KEY = "teachdesk:workspace";
+// Each account's workspace is saved in this browser under its own key. Bump the
+// version when the saved shape changes incompatibly; older saves are then ignored.
 const STORAGE_VERSION = 1;
+const storageKey = (userId: string) => `teachdesk:workspace:${userId}`;
 
 interface SavedWorkspace {
   version: number;
@@ -58,9 +53,9 @@ interface SavedWorkspace {
   profile: Profile;
 }
 
-function readSaved(): SavedWorkspace | null {
+function readSaved(key: string): SavedWorkspace | null {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return null;
     const saved = JSON.parse(raw) as SavedWorkspace;
     if (saved?.version !== STORAGE_VERSION || !Array.isArray(saved.exams)) return null;
@@ -91,12 +86,22 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+export function StoreProvider({
+  userId,
+  account,
+  children,
+}: {
+  userId: string;
+  account: { name: string; email: string };
+  children: ReactNode;
+}) {
+  const key = storageKey(userId);
+  const [defaultProfile] = useState(() => profileFor(account));
   const [exams, setExams] = useState<Exam[]>(seedExams);
   const [retakes, setRetakes] = useState<Retake[]>(seedRetakes);
   const [assignments, setAssignments] = useState<Assignment[]>(seedAssignments);
   const [demoMode, setDemoMode] = useState(true);
-  const [profile, setProfile] = useState<Profile>(seedProfile);
+  const [profile, setProfile] = useState<Profile>(defaultProfile);
   // False until the saved workspace has been read, so nothing renders (or is
   // edited) against seed data that is about to be replaced.
   const [loaded, setLoaded] = useState(false);
@@ -107,25 +112,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRetakes(saved?.retakes ?? seedRetakes);
     setAssignments(saved?.assignments ?? seedAssignments);
     setDemoMode(saved?.demoMode ?? true);
-    setProfile(saved?.profile ?? seedProfile);
-  }, []);
+    // The sign-in email always wins over a saved one.
+    setProfile({ ...(saved?.profile ?? defaultProfile), email: defaultProfile.email });
+  }, [defaultProfile]);
 
   useEffect(() => {
-    applySaved(readSaved());
+    applySaved(readSaved(key));
     setLoaded(true);
     // Keep other open tabs in sync.
     const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) applySaved(readSaved());
+      if (e.key === key) applySaved(readSaved(key));
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [applySaved]);
+  }, [applySaved, key]);
 
   useEffect(() => {
     if (!loaded) return;
     const saved: SavedWorkspace = { version: STORAGE_VERSION, exams, retakes, assignments, demoMode, profile };
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      window.localStorage.setItem(key, JSON.stringify(saved));
       saveFailed.current = false;
     } catch {
       if (!saveFailed.current) {
@@ -135,16 +141,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
       }
     }
-  }, [loaded, exams, retakes, assignments, demoMode, profile]);
+  }, [key, loaded, exams, retakes, assignments, demoMode, profile]);
 
   const resetWorkspace = useCallback(() => {
     try {
-      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(key);
     } catch {
       // Storage blocked: resetting the in-memory state is still useful.
     }
     applySaved(null);
-  }, [applySaved]);
+  }, [applySaved, key]);
 
   const setAttendance = useCallback((examId: string, studentId: string, status: AttendanceStatus) => {
     setExams((prev) =>

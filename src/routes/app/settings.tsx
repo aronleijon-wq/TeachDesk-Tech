@@ -55,7 +55,8 @@ function SettingsPage() {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Email</Label>
-            <Input {...field("email")} />
+            <Input value={profile.email} disabled />
+            <p className="text-xs text-muted-foreground">Your sign-in email.</p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Role</Label>

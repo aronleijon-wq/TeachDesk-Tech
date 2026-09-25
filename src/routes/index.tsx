@@ -438,7 +438,7 @@ function FinalCta() {
         <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">See what Teachdesk could look like at your school.</p>
         <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
           <Button asChild size="lg" className={primaryBtn}><Link to="/demo">Book a demo</Link></Button>
-          <Button asChild size="lg" variant="outline"><Link to="/app">Log in</Link></Button>
+          <Button asChild size="lg" variant="outline"><Link to="/login">Log in</Link></Button>
         </div>
       </Reveal>
     </section>

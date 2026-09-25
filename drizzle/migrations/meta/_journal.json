@@ -8,6 +8,13 @@
       "when": 1790341404355,
       "tag": "0000_create_demo_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790352000000,
+      "tag": "0001_admin_demo_requests",
+      "breakpoints": true
     }
   ]
 }
