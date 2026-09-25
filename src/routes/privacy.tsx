@@ -45,6 +45,24 @@ function PrivacyPage() {
       </section>
 
       <section>
+        <h2>Google user data</h2>
+        <p>
+          If you choose "Continue with Google", we receive your name, email address and profile picture from your
+          Google account. We use them only to create your TeachDesk account, sign you in and show your name in the app.
+          We do not access your Gmail, Google Drive, Calendar or any other Google data. We do not sell Google user data,
+          share it with third parties other than the service providers listed below, or use it for advertising. You can
+          remove TeachDesk's access at any time in your Google account settings.
+        </p>
+        <p className="mt-2">
+          TeachDesk's use of information received from Google APIs adheres to the{" "}
+          <a href="https://developers.google.com/terms/api-services-user-data-policy">
+            Google API Services User Data Policy
+          </a>
+          , including the Limited Use requirements.
+        </p>
+      </section>
+
+      <section>
         <h2>Where your work is stored</h2>
         <p>
           Exams, versions, attendance, retakes and your profile settings are currently saved in your own browser on the
