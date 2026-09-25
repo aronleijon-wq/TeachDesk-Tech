@@ -8,7 +8,7 @@ import { HeroProduct, RetakeFlow } from "@/components/marketing/product-visuals"
 import { cn } from "@/lib/utils";
 import { SITE_URL } from "@/lib/site";
 import { PlanFeatures } from "@/components/plan-features";
-import { PLANS, PRICE_NOTE, formatPrice, type Plan } from "@/lib/pricing";
+import { PLANS, PRICE_NOTE, formatPrice, yearlyOffer, type Plan } from "@/lib/pricing";
 
 const title = "TeachDesk — The workspace for modern teachers";
 const description = "TeachDesk brings exams, grading, retakes, assignments and teacher workflows into one intelligent workspace.";
@@ -396,9 +396,9 @@ function Security() {
   );
 }
 
-/** Schools are sold through a demo; individual teachers can sign up straight away. */
+/** Schools contact us for a quote; individual teachers can sign up straight away. */
 const planCta = (plan: Plan) =>
-  plan.name === "School" ? { label: "Book a demo", to: "/demo" as const } : { label: "Get started", to: "/login" as const };
+  plan.price == null ? { label: "Contact us", to: "/demo" as const } : { label: "Get started", to: "/login" as const };
 
 function Pricing() {
   return (
@@ -414,22 +414,23 @@ function Pricing() {
                 delay={i * 80}
                 className={cn(
                   "flex flex-col rounded-xl border p-7",
-                  p.featured ? "border-foreground bg-background shadow-[var(--shadow-panel)]" : "border-border bg-background",
+                  p.badge ? "border-foreground bg-background shadow-[var(--shadow-panel)]" : "border-border bg-background",
                 )}
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">{p.name}</h3>
-                  {p.featured && (
+                  {p.badge && (
                     <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary">
-                      Most common
+                      {p.badge}
                     </span>
                   )}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
                 <p className="mt-8 text-4xl font-semibold tracking-tight">{formatPrice(p.price)}</p>
-                <p className="h-5 text-xs text-muted-foreground">{p.unit}</p>
+                <p className="text-xs text-muted-foreground">{p.unit}</p>
+                <p className="h-4 text-xs font-medium text-primary">{yearlyOffer(p)}</p>
                 <PlanFeatures plan={p} className="mt-8 flex-1" />
-                <Button asChild className={cn("mt-8", p.featured && primaryBtn)} variant={p.featured ? "default" : "outline"}>
+                <Button asChild className={cn("mt-8", p.badge && primaryBtn)} variant={p.badge ? "default" : "outline"}>
                   <Link to={cta.to}>{cta.label}</Link>
                 </Button>
               </Reveal>

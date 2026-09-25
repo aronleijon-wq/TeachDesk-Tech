@@ -3,7 +3,7 @@ import { PageHeader, StatusPill } from "@/components/primitives";
 import { PlanFeatures } from "@/components/plan-features";
 import { Button } from "@/components/ui/button";
 import { LEGAL } from "@/lib/legal";
-import { PLANS, PRICE_NOTE, formatPrice, type Plan } from "@/lib/pricing";
+import { PLANS, PRICE_NOTE, formatPrice, yearlyOffer, type Plan } from "@/lib/pricing";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +22,12 @@ export const Route = createFileRoute("/app/pricing")({
 /** Until online payment exists, choosing a plan emails TeachDesk with the details filled in. */
 function planRequestLink(plan: Plan, teacher: { name: string; email: string; school: string }) {
   const subject = `TeachDesk ${plan.name} plan`;
+  const request =
+    plan.price == null
+      ? `Hi! I'd like to talk about ${plan.name} for our school.`
+      : `Hi! I'd like to start the ${plan.name} plan (${formatPrice(plan.price)} ${plan.unit}).`;
   const body = [
-    `Hi! I'd like to start the ${plan.name} plan (${formatPrice(plan.price)} ${plan.unit}).`,
+    request,
     "",
     `Name: ${teacher.name}`,
     `Email: ${teacher.email}`,
@@ -53,10 +57,11 @@ function Pricing() {
               <p className="mt-1 text-xs text-muted-foreground">{p.tagline}</p>
               <p className="stat-number mt-3">{formatPrice(p.price)}</p>
               <p className="text-xs text-muted-foreground">{p.unit}</p>
+              <p className="h-4 text-xs font-medium text-primary">{yearlyOffer(p)}</p>
               <PlanFeatures plan={p} className="mt-4 flex-1" />
               {!current && (
-                <Button asChild className="mt-5 w-full" variant={p.featured ? "default" : "outline"}>
-                  <a href={planRequestLink(p, profile)}>Choose {p.name}</a>
+                <Button asChild className="mt-5 w-full" variant={p.badge ? "default" : "outline"}>
+                  <a href={planRequestLink(p, profile)}>{p.price == null ? "Contact us" : `Choose ${p.name}`}</a>
                 </Button>
               )}
             </div>
