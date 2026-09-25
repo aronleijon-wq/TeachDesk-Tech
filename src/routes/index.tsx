@@ -7,6 +7,8 @@ import { Reveal, SectionHeading, SiteFooter, SiteNav } from "@/components/market
 import { HeroProduct, RetakeFlow } from "@/components/marketing/product-visuals";
 import { cn } from "@/lib/utils";
 import { SITE_URL } from "@/lib/site";
+import { PlanFeatures } from "@/components/plan-features";
+import { PLANS, PRICE_NOTE, formatPrice, yearlyOffer, type Plan } from "@/lib/pricing";
 
 const title = "TeachDesk — The workspace for modern teachers";
 const description = "TeachDesk brings exams, grading, retakes, assignments and teacher workflows into one intelligent workspace.";
@@ -394,12 +396,9 @@ function Security() {
   );
 }
 
-// Pricing values are placeholders — edit here when final pricing is set.
-const PLANS = [
-  { name: "Teacher", tagline: "For individual teachers.", price: "[PRICE]", unit: "per month", cta: "Get started", to: "/app" as const, points: ["Exams, grading and retakes", "AI-assisted equivalent versions", "Student follow-up"] },
-  { name: "School", tagline: "For schools and departments.", price: "[PRICE]", unit: "per teacher / month", cta: "Book a demo", to: "/demo" as const, featured: true, points: ["Everything in Teacher", "Shared classes and admin", "Integrations as they ship"] },
-  { name: "Enterprise", tagline: "For larger organizations.", price: "Let's talk", unit: "", cta: "Contact us", to: "/demo" as const, points: ["Everything in School", "Custom rollout and onboarding", "Data processing agreements"] },
-];
+/** Schools contact us for a quote; individual teachers can sign up straight away. */
+const planCta = (plan: Plan) =>
+  plan.price == null ? { label: "Contact us", to: "/demo" as const } : { label: "Get started", to: "/login" as const };
 
 function Pricing() {
   return (
@@ -407,24 +406,38 @@ function Pricing() {
       <div className="mx-auto max-w-6xl px-5 py-24 md:py-32">
         <SectionHeading eyebrow="Pricing" title="Simple pricing for teachers and schools." center />
         <div className="mt-14 grid gap-4 lg:grid-cols-3">
-          {PLANS.map((p, i) => (
-            <Reveal key={p.name} delay={i * 80} className={cn("flex flex-col rounded-xl border p-7", p.featured ? "border-foreground bg-background shadow-[var(--shadow-panel)]" : "border-border bg-background")}>
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{p.name}</h3>
-                {p.featured && <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary">Most common</span>}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
-              <p className="mt-8 text-4xl font-semibold tracking-tight">{p.price}</p>
-              <p className="h-5 text-xs text-muted-foreground">{p.unit}</p>
-              <ul className="mt-8 flex-1 space-y-2.5 text-sm">
-                {p.points.map((pt) => <li key={pt} className="flex gap-2.5"><Check className="mt-0.5 size-4 shrink-0 text-primary" />{pt}</li>)}
-              </ul>
-              <Button asChild className={cn("mt-8", p.featured && primaryBtn)} variant={p.featured ? "default" : "outline"}>
-                <Link to={p.to}>{p.cta}</Link>
-              </Button>
-            </Reveal>
-          ))}
+          {PLANS.map((p, i) => {
+            const cta = planCta(p);
+            return (
+              <Reveal
+                key={p.name}
+                delay={i * 80}
+                className={cn(
+                  "flex flex-col rounded-xl border p-7",
+                  p.badge ? "border-foreground bg-background shadow-[var(--shadow-panel)]" : "border-border bg-background",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">{p.name}</h3>
+                  {p.badge && (
+                    <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary">
+                      {p.badge}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
+                <p className="mt-8 text-4xl font-semibold tracking-tight">{formatPrice(p.price)}</p>
+                <p className="text-xs text-muted-foreground">{p.unit}</p>
+                <p className="h-4 text-xs font-medium text-primary">{yearlyOffer(p)}</p>
+                <PlanFeatures plan={p} className="mt-8 flex-1" />
+                <Button asChild className={cn("mt-8", p.badge && primaryBtn)} variant={p.badge ? "default" : "outline"}>
+                  <Link to={cta.to}>{cta.label}</Link>
+                </Button>
+              </Reveal>
+            );
+          })}
         </div>
+        <p className="mt-8 text-center text-sm text-muted-foreground">{PRICE_NOTE}</p>
       </div>
     </section>
   );

@@ -166,8 +166,8 @@ function SettingsPage() {
       <Panel title="Subscription">
         <div className="flex items-center justify-between">
           <p className="text-sm">Plan: <span className="font-medium">{profile.plan}</span></p>
-          <Button variant="outline" size="sm" onClick={() => toast.info("Billing opens in your school portal")}>
-            Manage plan
+          <Button asChild variant="outline" size="sm">
+            <Link to="/app/pricing">See plans</Link>
           </Button>
         </div>
       </Panel>
