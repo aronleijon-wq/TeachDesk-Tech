@@ -122,3 +122,24 @@ export const emptyWorkspace = (): Workspace => ({
   assignments: [],
   events: [],
 });
+
+/**
+ * Turns stored data back into a complete workspace. Saves made by an older version of
+ * TeachDesk may lack newer lists; those start empty instead of breaking the app.
+ */
+export function normalizeWorkspace(raw: unknown): Workspace {
+  const stored = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const list = <T>(key: keyof Workspace): T[] =>
+    Array.isArray(stored[key]) ? (stored[key] as T[]) : [];
+  return {
+    classes: list("classes"),
+    students: list("students"),
+    exams: list("exams"),
+    retakes: list("retakes"),
+    assignments: list("assignments"),
+    events: list("events"),
+  };
+}
+
+/** True when a workspace holds anything the teacher created. */
+export const hasContent = (ws: Workspace) => Object.values(ws).some((items) => items.length > 0);

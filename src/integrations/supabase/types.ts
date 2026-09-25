@@ -59,6 +59,57 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          name: string
+          plan: string
+          role: string
+          school: string
+          show_demo: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          name?: string
+          plan?: string
+          role?: string
+          school?: string
+          show_demo?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          name?: string
+          plan?: string
+          role?: string
+          school?: string
+          show_demo?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workspaces: {
+        Row: {
+          data: Json
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          data: Json
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          data?: Json
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

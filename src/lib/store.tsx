@@ -1,9 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { toast } from "sonner";
-import { createDemoWorkspace } from "./demo-data";
-import { emptyWorkspace, type Student, type Workspace } from "./types";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import type { SaveState } from "./autosave";
+import { clearLegacyAccount, readLegacyAccount } from "./browser-storage";
+import type { EditableProfile } from "./cloud";
+import type { ClassGroup, Student, Workspace } from "./types";
+import { useCloudWorkspace, useDemoWorkspace, useProfile } from "./use-saved-data";
 import * as rules from "./workspace";
 
+/** The signed-in teacher as shown in the app. */
 export interface Profile {
   name: string;
   email: string;
@@ -14,52 +18,33 @@ export interface Profile {
 
 export function initialsOf(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")).toUpperCase() || "?";
-}
-
-function profileFor(account: { name: string; email: string }): Profile {
-  return { name: account.name, email: account.email, role: "Teacher", school: "", plan: "Trial" };
-}
-
-// Each account is saved in this browser under its own key. It holds two workspaces —
-// the teacher's own and the demo — and which one is showing. Bump the version when the
-// saved shape changes incompatibly; older saves then keep only the profile.
-const STORAGE_VERSION = 2;
-const storageKey = (userId: string) => `teachdesk:workspace:${userId}`;
-
-type Mode = "own" | "demo";
-
-interface Saved {
-  version: number;
-  mode: Mode;
-  own: Workspace;
-  demo: Workspace;
-  profile: Profile;
-}
-
-function readSaved(key: string): Partial<Saved> | null {
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return null;
-    const saved = JSON.parse(raw) as Partial<Saved>;
-    if (saved.version === STORAGE_VERSION && saved.own && saved.demo) return saved;
-    return saved.profile ? { profile: saved.profile } : null;
-  } catch {
-    return null;
-  }
+  return (
+    (
+      (parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")
+    ).toUpperCase() || "?"
+  );
 }
 
 /** A workspace rule with the workspace argument filled in by the store. */
-type Bound<F> = F extends (ws: Workspace, ...args: infer A) => Workspace ? (...args: A) => void : never;
+type Bound<F> = F extends (ws: Workspace, ...args: infer A) => Workspace
+  ? (...args: A) => void
+  : never;
 
 interface StoreValue extends Workspace {
-  demoMode: boolean;
-  setDemoMode: (on: boolean) => void;
-  resetDemo: () => void;
   profile: Profile;
-  setProfile: (profile: Profile) => void;
+  saveProfile: (changes: Pick<EditableProfile, "name" | "role" | "school">) => Promise<void>;
 
-  classById: (id: string) => Workspace["classes"][number] | undefined;
+  /** True while the example workspace is showing instead of the teacher's own. */
+  demoMode: boolean;
+  setDemoMode: (on: boolean) => Promise<void>;
+  resetDemo: () => void;
+
+  /** Whether the teacher's own workspace has reached the database (always "saved" in the demo). */
+  saveState: SaveState;
+  /** Saves pending changes right away (e.g. before signing out); false if some couldn't be saved. */
+  flush: () => Promise<boolean>;
+
+  classById: (id: string) => ClassGroup | undefined;
   studentById: (id: string) => Student | undefined;
   classSize: (classId: string) => number;
   studentStats: (student: Student) => ReturnType<typeof rules.studentStats>;
@@ -76,7 +61,7 @@ interface StoreValue extends Workspace {
   removeStudent: Bound<typeof rules.removeStudent>;
   removeClass: Bound<typeof rules.removeClass>;
   /** Creates a class with its students and returns the new class id. */
-  addClass: (details: Parameters<typeof rules.addClass>[1], studentLines: string[]) => string;
+  addClass: (details: Omit<ClassGroup, "id">, studentLines: string[]) => string;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -90,78 +75,72 @@ export function StoreProvider({
   account: { name: string; email: string };
   children: ReactNode;
 }) {
-  const key = storageKey(userId);
-  const [defaultProfile] = useState(() => profileFor(account));
-  const [mode, setMode] = useState<Mode>("demo");
-  const [own, setOwn] = useState<Workspace>(emptyWorkspace);
-  const [demo, setDemo] = useState<Workspace>(createDemoWorkspace);
-  const [profile, setProfile] = useState<Profile>(defaultProfile);
-  // False until the saved data has been read, so nothing renders (or is edited)
-  // against defaults that are about to be replaced.
-  const [loaded, setLoaded] = useState(false);
-  const saveFailed = useRef(false);
+  // Data saved in this browser by earlier versions of TeachDesk, read once so it can move
+  // to the teacher's account.
+  const [legacy] = useState(() => readLegacyAccount(userId));
+  const [profileDefaults] = useState<EditableProfile>(() => ({
+    name: legacy?.profile.name ?? account.name,
+    role: legacy?.profile.role ?? "Teacher",
+    school: legacy?.profile.school ?? "",
+    // New teachers start in the demo so there is something to explore.
+    showDemo: legacy?.showDemo ?? true,
+  }));
 
-  const applySaved = useCallback(
-    (saved: Partial<Saved> | null) => {
-      // New accounts start in the demo so there is something to explore.
-      setMode(saved?.mode ?? "demo");
-      setOwn(saved?.own ?? emptyWorkspace());
-      setDemo(saved?.demo ?? createDemoWorkspace());
-      // The sign-in email always wins over a saved one.
-      setProfile({ ...(saved?.profile ?? defaultProfile), email: defaultProfile.email });
-    },
-    [defaultProfile],
+  const teacher = useProfile(userId, profileDefaults);
+  const own = useCloudWorkspace(userId, legacy?.own ?? null);
+  const demo = useDemoWorkspace(userId, legacy?.demo ?? null);
+
+  // Once everything from the old browser storage is safely in the database, remove it so
+  // students' details don't linger on this device.
+  const moved = teacher.status === "ready" && own.status === "ready" && own.saveState === "saved";
+  useEffect(() => {
+    if (legacy && moved) clearLegacyAccount(userId);
+  }, [legacy, moved, userId]);
+
+  const stored = teacher.profile;
+  const demoMode = stored?.showDemo ?? true;
+  const { workspace: ws, update } = demoMode ? demo : own;
+  const { save: saveTeacher } = teacher;
+  const { reset: resetDemo } = demo;
+  const { saveState: ownSaveState, flush } = own;
+
+  // Its own memo, so the profile only changes identity when the profile itself changes.
+  const shownProfile = useMemo<Profile | null>(
+    () =>
+      stored && {
+        name: stored.name,
+        email: account.email,
+        role: stored.role,
+        school: stored.school,
+        plan: stored.plan,
+      },
+    [stored, account.email],
   );
 
-  useEffect(() => {
-    applySaved(readSaved(key));
-    setLoaded(true);
-    // Keep other open tabs in sync.
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === key) applySaved(readSaved(key));
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [applySaved, key]);
-
-  useEffect(() => {
-    if (!loaded) return;
-    const saved: Saved = { version: STORAGE_VERSION, mode, own, demo, profile };
-    try {
-      window.localStorage.setItem(key, JSON.stringify(saved));
-      saveFailed.current = false;
-    } catch {
-      if (!saveFailed.current) {
-        saveFailed.current = true;
-        toast.error("Couldn't save your latest changes", {
-          description: "This browser's storage is full or blocked. Changes will be lost on refresh.",
-        });
-      }
-    }
-  }, [key, loaded, mode, own, demo, profile]);
-
-  const active = mode === "demo" ? demo : own;
-  const setActive = mode === "demo" ? setDemo : setOwn;
-
-  const value = useMemo<StoreValue>(() => {
+  const value = useMemo<StoreValue | null>(() => {
+    if (!shownProfile) return null;
     // Applies a workspace rule to whichever workspace is showing.
     const bind =
       <A extends unknown[]>(rule: (ws: Workspace, ...args: A) => Workspace) =>
       (...args: A) =>
-        setActive((ws) => rule(ws, ...args));
+        update((current) => rule(current, ...args));
 
     return {
-      ...active,
-      demoMode: mode === "demo",
-      setDemoMode: (on) => setMode(on ? "demo" : "own"),
-      resetDemo: () => setDemo(createDemoWorkspace()),
-      profile,
-      setProfile,
+      ...ws,
+      profile: shownProfile,
+      saveProfile: (changes) => saveTeacher(changes),
 
-      classById: (id) => active.classes.find((c) => c.id === id),
-      studentById: (id) => active.students.find((s) => s.id === id),
-      classSize: (classId) => rules.classSize(active, classId),
-      studentStats: (student) => rules.studentStats(active, student),
+      demoMode,
+      setDemoMode: (on) => saveTeacher({ showDemo: on }),
+      resetDemo,
+
+      saveState: demoMode ? "saved" : ownSaveState,
+      flush,
+
+      classById: (id) => ws.classes.find((c) => c.id === id),
+      studentById: (id) => ws.students.find((s) => s.id === id),
+      classSize: (classId) => rules.classSize(ws, classId),
+      studentStats: (student) => rules.studentStats(ws, student),
 
       setAttendance: bind(rules.setAttendance),
       setScore: bind(rules.setScore),
@@ -175,22 +154,43 @@ export function StoreProvider({
       removeStudent: bind(rules.removeStudent),
       removeClass: bind(rules.removeClass),
       addClass: (details, studentLines) => {
-        const { ws, classId } = rules.addClass(active, details, studentLines);
-        setActive(() => ws);
-        return classId;
+        const klass = { id: rules.newId("class"), ...details };
+        update((current) => rules.addClass(current, klass, studentLines));
+        return klass.id;
       },
     };
-  }, [active, setActive, mode, profile]);
+  }, [shownProfile, saveTeacher, demoMode, resetDemo, ownSaveState, flush, ws, update]);
 
-  if (!loaded) {
+  if (teacher.status === "error" || own.status === "error") {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-        Loading your workspace…
-      </div>
+      <FullPageMessage>
+        <p>Couldn't load your workspace. Check your internet connection and try again.</p>
+        <Button
+          className="mt-4"
+          onClick={() => {
+            if (teacher.status === "error") void teacher.reload();
+            if (own.status === "error") void own.reload();
+          }}
+        >
+          Try again
+        </Button>
+      </FullPageMessage>
     );
   }
 
+  if (!value || teacher.status !== "ready" || own.status !== "ready") {
+    return <FullPageMessage>Loading your workspace…</FullPageMessage>;
+  }
+
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+}
+
+function FullPageMessage({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center text-sm text-muted-foreground">
+      {children}
+    </div>
+  );
 }
 
 export function useStore() {
@@ -223,7 +223,13 @@ export function useCalendar() {
   const { classes, students, exams, retakes, assignments, events } = useStore();
   return useMemo(() => {
     const today = rules.todayIso();
-    const all = rules.calendarEvents({ classes, students, exams, retakes, assignments, events }, today);
-    return { today: all.filter((e) => e.date === today), upcoming: all.filter((e) => e.date > today) };
+    const all = rules.calendarEvents(
+      { classes, students, exams, retakes, assignments, events },
+      today,
+    );
+    return {
+      today: all.filter((e) => e.date === today),
+      upcoming: all.filter((e) => e.date > today),
+    };
   }, [classes, students, exams, retakes, assignments, events]);
 }

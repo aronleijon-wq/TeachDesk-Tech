@@ -31,13 +31,18 @@ export const Route = createFileRoute("/app/settings")({
   component: SettingsPage,
 });
 
+type ProfileForm = Pick<Profile, "name" | "role" | "school">;
+const FORM_FIELDS = ["name", "role", "school"] as const;
+const formFrom = (p: Profile): ProfileForm => ({ name: p.name, role: p.role, school: p.school });
+
 function SettingsPage() {
-  const { demoMode, setDemoMode, profile, setProfile, resetDemo, classes, classSize } = useStore();
-  const [draft, setDraft] = useState<Profile>(profile);
-  // Follow the saved profile after a save, a reset, or a change in another tab.
-  useEffect(() => setDraft(profile), [profile]);
-  const dirty = (Object.keys(draft) as (keyof Profile)[]).some((k) => draft[k] !== profile[k]);
-  const field = (k: keyof Profile) => ({
+  const { demoMode, setDemoMode, profile, saveProfile, resetDemo, classes, classSize } = useStore();
+  const [draft, setDraft] = useState<ProfileForm>(() => formFrom(profile));
+  const [saving, setSaving] = useState(false);
+  // Follow the saved profile, e.g. after a save or a change on another device.
+  useEffect(() => setDraft(formFrom(profile)), [profile]);
+  const dirty = FORM_FIELDS.some((k) => draft[k] !== profile[k]);
+  const field = (k: keyof ProfileForm) => ({
     value: draft[k],
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => setDraft((d) => ({ ...d, [k]: e.target.value })),
   });
@@ -69,10 +74,17 @@ function SettingsPage() {
         <Button
           className="mt-4"
           size="sm"
-          disabled={!dirty || !draft.name.trim()}
-          onClick={() => {
-            setProfile({ ...draft, name: draft.name.trim() });
-            toast.success("Profile saved");
+          disabled={saving || !dirty || !draft.name.trim()}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              await saveProfile({ ...draft, name: draft.name.trim() });
+              toast.success("Profile saved");
+            } catch {
+              toast.error("Couldn't save your profile", { description: "Check your internet connection and try again." });
+            } finally {
+              setSaving(false);
+            }
           }}
         >
           Save changes
@@ -114,9 +126,13 @@ function SettingsPage() {
           </div>
           <Switch
             checked={demoMode}
-            onCheckedChange={(on) => {
-              setDemoMode(on);
-              toast.success(on ? "Showing demo data" : "Showing your own workspace");
+            onCheckedChange={async (on) => {
+              try {
+                await setDemoMode(on);
+                toast.success(on ? "Showing demo data" : "Showing your own workspace");
+              } catch {
+                toast.error("Couldn't change the setting", { description: "Check your internet connection and try again." });
+              }
             }}
           />
         </div>
@@ -129,10 +145,10 @@ function SettingsPage() {
         </div>
         <div className="flex items-center justify-between gap-4 border-t border-border py-3">
           <div>
-            <p className="text-sm font-medium">Saved in this browser</p>
+            <p className="text-sm font-medium">Where your data is saved</p>
             <p className="text-xs text-muted-foreground">
-              Your classes, exams and profile are saved automatically on this device. Resetting only restores the demo
-              data to how it started — your own workspace is not touched.
+              Your classes, exams and profile are saved to your account automatically, so they're there on any device.
+              The demo is kept in this browser only. Resetting restores the demo — your own workspace is not touched.
             </p>
           </div>
           <AlertDialog>
