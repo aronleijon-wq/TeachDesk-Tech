@@ -79,6 +79,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      // Site-wide fallback title/description; pages that set their own override these.
+      { title: "TeachDesk — The workspace for modern teachers" },
+      {
+        name: "description",
+        content:
+          "TeachDesk brings exams, grading, retakes, assignments and teacher workflows into one intelligent workspace.",
+      },
       { name: "author", content: "TeachDesk" },
       // Proves site ownership to Google (Search Console / OAuth verification). Keep it.
       { name: "google-site-verification", content: "7Tiesj9cEqnTToWa_ntV7O4nKeObdvoqH6_faxVsH7U" },
