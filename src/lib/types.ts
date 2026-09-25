@@ -1,0 +1,124 @@
+// Shared data types for a TeachDesk workspace.
+
+export type ExamStatus = "draft" | "upcoming" | "completed" | "needs-grading";
+export type AttendanceStatus = "completed" | "absent" | "pending";
+export type RetakeStatus = "needs-scheduling" | "scheduled" | "completed";
+
+export interface Student {
+  id: string;
+  name: string;
+  classId: string;
+  email: string;
+  /** Demo students carry fixed figures; real students' figures are computed from exam results. */
+  average?: number | undefined;
+  attendanceRate?: number | undefined;
+  missingWork: number;
+}
+
+export interface ClassGroup {
+  id: string;
+  name: string;
+  subject: string;
+  room: string;
+}
+
+export interface Question {
+  id: string;
+  number: number;
+  type: "multiple-choice" | "short-answer" | "open-ended" | "calculation";
+  topic: string;
+  skill: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  points: number;
+  prompt: string;
+  expectedAnswer: string;
+  gradingCriteria: string;
+  objective: string;
+}
+
+export interface ExamVersion {
+  id: string;
+  label: string;
+  origin: "original" | "ai-generated";
+  createdAt: string;
+  approved: boolean;
+  questions: Question[];
+  equivalenceScore?: number | undefined;
+}
+
+export interface Attendance {
+  studentId: string;
+  status: AttendanceStatus;
+  score?: number | undefined;
+  versionId?: string | undefined;
+}
+
+export interface Retake {
+  id: string;
+  examId: string;
+  studentId: string;
+  status: RetakeStatus;
+  date?: string | undefined;
+  time?: string | undefined;
+  room?: string | undefined;
+  versionId?: string | undefined;
+}
+
+export interface Exam {
+  id: string;
+  title: string;
+  subject: string;
+  classId: string;
+  date: string;
+  time: string;
+  durationMin: number;
+  room: string;
+  totalPoints: number;
+  status: ExamStatus;
+  objectives: string[];
+  versions: ExamVersion[];
+  attendance: Attendance[];
+}
+
+export interface Assignment {
+  id: string;
+  title: string;
+  subject: string;
+  classId: string;
+  due: string;
+  submitted: number;
+  total: number;
+  toGrade: number;
+  rubric?: { criterion: string; points: number; descriptor: string }[] | undefined;
+}
+
+export interface CalendarEvent {
+  id: string;
+  date: string;
+  time: string;
+  title: string;
+  classId?: string;
+  room?: string;
+  kind: "lesson" | "exam" | "retake" | "planning" | "deadline";
+  students?: number;
+}
+
+/** Everything one teacher works with. There is one real workspace and one demo workspace per account. */
+export interface Workspace {
+  classes: ClassGroup[];
+  students: Student[];
+  exams: Exam[];
+  retakes: Retake[];
+  assignments: Assignment[];
+  /** Lessons and planning slots. Exams, retakes and deadlines are added to the calendar automatically. */
+  events: CalendarEvent[];
+}
+
+export const emptyWorkspace = (): Workspace => ({
+  classes: [],
+  students: [],
+  exams: [],
+  retakes: [],
+  assignments: [],
+  events: [],
+});

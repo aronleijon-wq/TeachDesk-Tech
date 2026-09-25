@@ -7,11 +7,11 @@ import {
   ClipboardList,
   FileWarning,
   RefreshCw,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState, PageHeader, Panel, ProgressBar, StatCard, StatusPill, formatDate } from "@/components/primitives";
-import { classById, todayEvents } from "@/lib/demo-data";
-import { useAttentionSummary, useStore } from "@/lib/store";
+import { useAttentionSummary, useCalendar, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/app/")({
   head: () => ({
@@ -33,16 +33,32 @@ function greeting() {
 }
 
 function Dashboard() {
-  const { exams, profile } = useStore();
+  const { exams, profile, classById, classSize, classes, demoMode } = useStore();
+  const { today: todayEvents } = useCalendar();
   const { missedExams, toGrade, needsScheduling, missingWork, upcoming, retakes } = useAttentionSummary();
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader title={`${greeting()}, ${profile.name.trim().split(/\s+/)[0] || "there"}`} subtitle="Here's what needs your attention." />
 
+      {!demoMode && classes.length === 0 && (
+        <div className="mb-6">
+          <EmptyState
+            icon={Users}
+            title="Start by adding your class"
+            description="Create a class and paste in your student list. Exams, retakes and the gradebook then use your own students."
+            action={
+              <Button asChild>
+                <Link to="/app/students">Add your class</Link>
+              </Button>
+            }
+          />
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Upcoming exams" value={upcoming.length} hint="Next 6 weeks" icon={BookOpen} />
-        <StatCard label="To grade" value={toGrade} hint="Across 3 assignments" icon={ClipboardList} />
+        <StatCard label="To grade" value={toGrade} hint="Across your assignments" icon={ClipboardList} />
         <StatCard label="Missing work" value={missingWork.length} hint="Students affected" icon={FileWarning} />
         <StatCard label="Retakes" value={retakes.length} hint={`${needsScheduling.length} need scheduling`} icon={RefreshCw} />
       </div>
@@ -101,7 +117,7 @@ function Dashboard() {
                 {upcoming.map((e) => {
                   const done = e.attendance.filter((a) => a.status === "completed").length;
                   const absent = e.attendance.filter((a) => a.status === "absent").length;
-                  const total = e.attendance.length || classById(e.classId)?.studentCount || 0;
+                  const total = e.attendance.length || classSize(e.classId);
                   return (
                     <li key={e.id} className="rounded-md border border-border p-4">
                       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -132,6 +148,7 @@ function Dashboard() {
 
         <div className="space-y-6">
           <Panel title="Today" description={new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}>
+            {todayEvents.length === 0 && <p className="px-2 py-2 text-sm text-muted-foreground">Nothing scheduled today.</p>}
             <ol className="space-y-1">
               {todayEvents.map((ev) => (
                 <li key={ev.id} className="flex gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent">

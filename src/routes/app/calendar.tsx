@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Panel, StatusPill, formatDate } from "@/components/primitives";
-import { todayEvents, upcomingWeek, classById } from "@/lib/demo-data";
+import { useCalendar, useStore } from "@/lib/store";
+import type { CalendarEvent } from "@/lib/types";
 
 export const Route = createFileRoute("/app/calendar")({
   head: () => ({
@@ -18,13 +19,12 @@ const toneFor = (kind: string) =>
   kind === "exam" ? "primary" : kind === "retake" ? "warning" : kind === "deadline" ? "danger" : "neutral";
 
 function CalendarPage() {
-  const grouped = upcomingWeek
-    .slice()
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .reduce<Record<string, typeof upcomingWeek>>((acc, ev) => {
-      (acc[ev.date] ||= []).push(ev);
-      return acc;
-    }, {});
+  const { classById } = useStore();
+  const { today: todayEvents, upcoming } = useCalendar();
+  const grouped = upcoming.reduce<Record<string, CalendarEvent[]>>((acc, ev) => {
+    (acc[ev.date] ||= []).push(ev);
+    return acc;
+  }, {});
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -32,6 +32,7 @@ function CalendarPage() {
 
       <div className="space-y-4">
         <Panel title="Today">
+          {todayEvents.length === 0 && <p className="px-2 py-2 text-sm text-muted-foreground">Nothing scheduled today.</p>}
           <ol className="space-y-1">
             {todayEvents.map((ev) => (
               <li key={ev.id} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-accent">
@@ -49,6 +50,14 @@ function CalendarPage() {
             ))}
           </ol>
         </Panel>
+
+        {upcoming.length === 0 && (
+          <Panel>
+            <p className="text-sm text-muted-foreground">
+              Nothing coming up yet. Exams, scheduled retakes and assignment deadlines appear here automatically.
+            </p>
+          </Panel>
+        )}
 
         {Object.entries(grouped).map(([date, items]) => (
           <Panel key={date} title={formatDate(date)}>

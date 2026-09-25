@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState, PageHeader, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
-import { classById } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 import { NewExamDialog } from "@/components/new-exam-dialog";
 import { cn } from "@/lib/utils";
@@ -24,7 +23,7 @@ export const Route = createFileRoute("/app/exams/")({
 const filters = ["All", "Upcoming", "Completed", "Needs grading", "Retakes", "Drafts"] as const;
 
 function ExamsPage() {
-  const { exams, retakes } = useStore();
+  const { exams, retakes, classById, classSize } = useStore();
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
   const [query, setQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -53,7 +52,7 @@ function ExamsPage() {
           return true;
       }
     });
-  }, [exams, filter, query, retakes]);
+  }, [exams, filter, query, retakes, classById]);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -108,7 +107,7 @@ function ExamsPage() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {visible.map((e) => {
-            const total = e.attendance.length || classById(e.classId)?.studentCount || 0;
+            const total = e.attendance.length || classSize(e.classId);
             const done = e.attendance.filter((a) => a.status === "completed").length;
             const absent = e.attendance.filter((a) => a.status === "absent").length;
             const examRetakes = retakes.filter((r) => r.examId === e.id).length;

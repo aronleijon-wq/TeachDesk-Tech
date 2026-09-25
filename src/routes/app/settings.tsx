@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader, Panel, StatusPill } from "@/components/primitives";
-import { classes } from "@/lib/demo-data";
 import { useStore, type Profile } from "@/lib/store";
 
 export const Route = createFileRoute("/app/settings")({
@@ -33,7 +32,7 @@ export const Route = createFileRoute("/app/settings")({
 });
 
 function SettingsPage() {
-  const { demoMode, setDemoMode, profile, setProfile, resetWorkspace } = useStore();
+  const { demoMode, setDemoMode, profile, setProfile, resetDemo, classes, classSize } = useStore();
   const [draft, setDraft] = useState<Profile>(profile);
   // Follow the saved profile after a save, a reset, or a change in another tab.
   useEffect(() => setDraft(profile), [profile]);
@@ -80,15 +79,25 @@ function SettingsPage() {
         </Button>
       </Panel>
 
-      <Panel title="Classes">
+      <Panel
+        title="Classes"
+        action={
+          <Button asChild variant="outline" size="sm">
+            <Link to="/app/students">Manage classes</Link>
+          </Button>
+        }
+      >
+        {classes.length === 0 && (
+          <p className="text-sm text-muted-foreground">No classes yet. Add your first class on the Students page.</p>
+        )}
         <ul className="divide-y divide-border text-sm">
           {classes.map((c) => (
             <li key={c.id} className="flex items-center justify-between py-2">
               <span>
                 <span className="font-medium">{c.name}</span>
-                <span className="block text-xs text-muted-foreground">{c.subject} · Room {c.room}</span>
+                <span className="block text-xs text-muted-foreground">{[c.subject, c.room && `Room ${c.room}`].filter(Boolean).join(" · ")}</span>
               </span>
-              <span className="text-xs text-muted-foreground">{c.studentCount} students</span>
+              <span className="text-xs text-muted-foreground">{classSize(c.id)} students</span>
             </li>
           ))}
         </ul>
@@ -97,12 +106,19 @@ function SettingsPage() {
       <Panel title="Data & AI">
         <div className="flex items-center justify-between gap-4 py-2">
           <div>
-            <p className="text-sm font-medium">Demo mode</p>
+            <p className="text-sm font-medium">Show demo data</p>
             <p className="text-xs text-muted-foreground">
-              Uses seeded demo classes and students. Turn off to work with live school data.
+              On: explore TeachDesk with example classes and students. Off: your own classes, students and exams.
+              Switching never deletes anything.
             </p>
           </div>
-          <Switch checked={demoMode} onCheckedChange={setDemoMode} />
+          <Switch
+            checked={demoMode}
+            onCheckedChange={(on) => {
+              setDemoMode(on);
+              toast.success(on ? "Showing demo data" : "Showing your own workspace");
+            }}
+          />
         </div>
         <div className="flex items-center justify-between gap-4 border-t border-border py-3">
           <div>
@@ -115,8 +131,8 @@ function SettingsPage() {
           <div>
             <p className="text-sm font-medium">Saved in this browser</p>
             <p className="text-xs text-muted-foreground">
-              Exams, versions, attendance, retakes and your profile are saved automatically on this device.
-              Resetting deletes them and restores the demo data.
+              Your classes, exams and profile are saved automatically on this device. Resetting only restores the demo
+              data to how it started — your own workspace is not touched.
             </p>
           </div>
           <AlertDialog>
@@ -125,21 +141,21 @@ function SettingsPage() {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Reset all data?</AlertDialogTitle>
+                <AlertDialogTitle>Reset the demo data?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This permanently deletes every exam, generated version, attendance record, retake and profile change
-                  saved in this browser, and restores the original demo data. It can't be undone.
+                  Changes you made while exploring the demo are undone and the example data is restored. Your own
+                  classes, students and exams are kept.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => {
-                    resetWorkspace();
+                    resetDemo();
                     toast.success("Demo data restored");
                   }}
                 >
-                  Reset everything
+                  Reset demo data
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

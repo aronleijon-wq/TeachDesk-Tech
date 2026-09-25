@@ -4,7 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
-import { classById } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/app/assignments")({
@@ -27,7 +26,7 @@ const demoRubric = [
 ];
 
 function AssignmentsPage() {
-  const { assignments, setRubric } = useStore();
+  const { assignments, setRubric, classById } = useStore();
   const [busy, setBusy] = useState<string | null>(null);
 
   return (

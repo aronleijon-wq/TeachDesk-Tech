@@ -1,123 +1,23 @@
-// Demo dataset for TeachDesk. Clearly separated from production data:
+// Demo dataset for TeachDesk. Clearly separated from real data:
 // this module is the single source of seeded demo content.
+import type {
+  Assignment,
+  Attendance,
+  CalendarEvent,
+  ClassGroup,
+  Exam,
+  Question,
+  Retake,
+  Student,
+  Workspace,
+} from "./types";
 
-export type ExamStatus = "draft" | "upcoming" | "completed" | "needs-grading";
-export type AttendanceStatus = "completed" | "absent" | "pending";
-export type RetakeStatus = "needs-scheduling" | "scheduled" | "completed";
-
-export interface Student {
-  id: string;
-  name: string;
-  classId: string;
-  email: string;
-  average: number;
-  missingWork: number;
-  attendanceRate: number;
-}
-
-export interface ClassGroup {
-  id: string;
-  name: string;
-  subject: string;
-  studentCount: number;
-  room: string;
-}
-
-export interface Question {
-  id: string;
-  number: number;
-  type: "multiple-choice" | "short-answer" | "open-ended" | "calculation";
-  topic: string;
-  skill: string;
-  difficulty: "Easy" | "Medium" | "Hard";
-  points: number;
-  prompt: string;
-  expectedAnswer: string;
-  gradingCriteria: string;
-  objective: string;
-}
-
-export interface ExamVersion {
-  id: string;
-  label: string;
-  origin: "original" | "ai-generated";
-  createdAt: string;
-  approved: boolean;
-  questions: Question[];
-  equivalenceScore?: number | undefined;
-}
-
-export interface Attendance {
-  studentId: string;
-  status: AttendanceStatus;
-  score?: number | undefined;
-  versionId?: string | undefined;
-}
-
-export interface Retake {
-  id: string;
-  examId: string;
-  studentId: string;
-  status: RetakeStatus;
-  date?: string | undefined;
-  time?: string | undefined;
-  room?: string | undefined;
-  versionId?: string | undefined;
-}
-
-export interface Exam {
-  id: string;
-  title: string;
-  subject: string;
-  classId: string;
-  date: string;
-  time: string;
-  durationMin: number;
-  room: string;
-  totalPoints: number;
-  status: ExamStatus;
-  objectives: string[];
-  versions: ExamVersion[];
-  attendance: Attendance[];
-}
-
-export interface Assignment {
-  id: string;
-  title: string;
-  subject: string;
-  classId: string;
-  due: string;
-  submitted: number;
-  total: number;
-  toGrade: number;
-  rubric?: { criterion: string; points: number; descriptor: string }[] | undefined;
-}
-
-export interface CalendarEvent {
-  id: string;
-  date: string;
-  time: string;
-  title: string;
-  classId?: string;
-  room?: string;
-  kind: "lesson" | "exam" | "retake" | "planning" | "deadline";
-  students?: number;
-}
-
-export const teacher = {
-  name: "Anna Svensson",
-  role: "Lärare — Matematik & Fysik",
-  school: "Stockholm Gymnasium",
-  email: "anna.svensson@stockholmsgymnasium.se",
-  plan: "Professional",
-  initials: "AS",
-};
-
-export const classes: ClassGroup[] = [
-  { id: "math3c", name: "Mathematics 3C", subject: "Mathematics", studentCount: 27, room: "B214" },
-  { id: "phys2", name: "Physics 2", subject: "Physics", studentCount: 26, room: "C104" },
-  { id: "soc3", name: "Social Studies 3", subject: "Social Studies", studentCount: 28, room: "A331" },
+const classes: ClassGroup[] = [
+  { id: "math3c", name: "Mathematics 3C", subject: "Mathematics", room: "B214" },
+  { id: "phys2", name: "Physics 2", subject: "Physics", room: "C104" },
+  { id: "soc3", name: "Social Studies 3", subject: "Social Studies", room: "A331" },
 ];
+const classSizes: Record<string, number> = { math3c: 27, phys2: 26, soc3: 28 };
 
 const firstNames = [
   "Sara", "Leo", "William", "Elsa", "Oskar", "Maja", "Hugo", "Alva", "Liam", "Ebba",
@@ -134,7 +34,7 @@ const lastNames = [
 function buildStudents(): Student[] {
   const out: Student[] = [];
   classes.forEach((c, ci) => {
-    for (let i = 0; i < c.studentCount; i++) {
+    for (let i = 0; i < (classSizes[c.id] ?? 0); i++) {
       const first = firstNames[(i + ci * 7) % firstNames.length]!;
       const last = lastNames[(i * 3 + ci * 5) % lastNames.length]!;
       const seed = (i * 13 + ci * 29) % 20;
@@ -156,7 +56,7 @@ function buildStudents(): Student[] {
   return out;
 }
 
-export const students: Student[] = buildStudents();
+const students: Student[] = buildStudents();
 
 const derivativeQuestions: Question[] = [
   ["Derivatives", "Basic differentiation", "Easy", 3, "Differentiate f(x) = 3x² + 5x − 2.", "f'(x) = 6x + 5", "1p per correct term, 1p for notation", "Apply power rule"],
@@ -199,7 +99,7 @@ function attendanceFor(classId: string, absentIds: string[], completedScore = tr
     });
 }
 
-export const exams: Exam[] = [
+const exams: Exam[] = [
   {
     id: "exam-derivatives-1",
     title: "Derivatives — Exam 1",
@@ -313,34 +213,28 @@ export const exams: Exam[] = [
   },
 ];
 
-export const retakes: Retake[] = [
+const retakes: Retake[] = [
   { id: "r1", examId: "exam-derivatives-1", studentId: "math3c-s1", status: "needs-scheduling" },
   { id: "r2", examId: "exam-derivatives-1", studentId: "math3c-s2", status: "needs-scheduling" },
   { id: "r3", examId: "exam-derivatives-1", studentId: "math3c-s3", status: "scheduled", date: "2026-11-24", time: "14:30", room: "B210", versionId: "v-b" },
   { id: "r4", examId: "exam-democracy", studentId: "soc3-s4", status: "scheduled", date: "2026-10-22", time: "15:00", room: "A331", versionId: "vd-a" },
 ];
 
-export const assignments: Assignment[] = [
+const assignments: Assignment[] = [
   { id: "a1", title: "Derivative problem set", subject: "Mathematics", classId: "math3c", due: "2026-11-18", submitted: 22, total: 27, toGrade: 9 },
   { id: "a2", title: "Lab report — Ohm's law", subject: "Physics", classId: "phys2", due: "2026-11-20", submitted: 19, total: 26, toGrade: 6 },
   { id: "a3", title: "Essay — Swedish democracy", subject: "Social Studies", classId: "soc3", due: "2026-11-14", submitted: 26, total: 28, toGrade: 3 },
   { id: "a4", title: "Integral practice", subject: "Mathematics", classId: "math3c", due: "2026-12-01", submitted: 5, total: 27, toGrade: 0 },
 ];
 
-export const todayEvents: CalendarEvent[] = [
+const todayEvents: CalendarEvent[] = [
   { id: "e1", date: "today", time: "08:30", title: "Mathematics 3C — Derivatives review", classId: "math3c", room: "B214", kind: "lesson", students: 27 },
   { id: "e2", date: "today", time: "10:15", title: "Physics 2 — Circuit lab", classId: "phys2", room: "C104", kind: "lesson", students: 26 },
   { id: "e3", date: "today", time: "13:00", title: "Planning", kind: "planning" },
   { id: "e4", date: "today", time: "14:30", title: "Retake — Mathematics 3C", classId: "math3c", room: "B210", kind: "retake", students: 3 },
 ];
 
-export const upcomingWeek: CalendarEvent[] = [
-  { id: "w1", date: "2026-11-24", time: "14:30", title: "Retake — Derivatives Exam 1", classId: "math3c", room: "B210", kind: "retake", students: 1 },
-  { id: "w2", date: "2026-11-27", time: "13:00", title: "Electricity & Circuits exam", classId: "phys2", room: "C104", kind: "exam", students: 26 },
-  { id: "w3", date: "2026-11-18", time: "23:59", title: "Deadline — Derivative problem set", classId: "math3c", kind: "deadline" },
-  { id: "w4", date: "2026-12-04", time: "10:15", title: "Integrals — Exam 2", classId: "math3c", room: "B214", kind: "exam", students: 27 },
-  { id: "w5", date: "2026-11-20", time: "23:59", title: "Deadline — Lab report", classId: "phys2", kind: "deadline" },
-];
-
-export const classById = (id: string) => classes.find((c) => c.id === id);
-export const studentById = (id: string) => students.find((s) => s.id === id);
+/** A fresh copy of the demo workspace, safe to edit. */
+export function createDemoWorkspace(): Workspace {
+  return structuredClone({ classes, students, exams, retakes, assignments, events: todayEvents });
+}

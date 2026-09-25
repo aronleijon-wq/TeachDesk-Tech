@@ -1,5 +1,5 @@
 import { Check, FileUp, Loader2, PenLine, Sparkles, Upload } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { classes, type Exam, type Question } from "@/lib/demo-data";
+import type { Exam, Question } from "@/lib/types";
 import { extractExamQuestions, type ExtractResult } from "@/lib/exam-ai.functions";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ export function NewExamDialog({
   aiFirst?: boolean;
   onCreated: (id: string) => void;
 }) {
-  const { addExam } = useStore();
+  const { addExam, classes, students } = useStore();
   const [step, setStep] = useState(0);
   const [source, setSource] = useState<Source>(aiFirst ? "ai" : "scratch");
   const [file, setFile] = useState<File | null>(null);
@@ -65,12 +65,12 @@ export function NewExamDialog({
   const [extracted, setExtracted] = useState<ExtractResult | null>(null);
   const [form, setForm] = useState({
     title: "",
-    subject: "Mathematics",
-    classId: "math3c",
+    subject: classes[0]?.subject ?? "",
+    classId: classes[0]?.id ?? "",
     date: "",
     time: "08:30",
     duration: "90",
-    room: "B214",
+    room: classes[0]?.room ?? "",
     points: "40",
     topics: "",
     difficulty: "Mixed",
@@ -78,6 +78,14 @@ export function NewExamDialog({
   });
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Pick a class once one exists (e.g. created after this dialog was first shown).
+  const firstClass = classes[0];
+  useEffect(() => {
+    if (!form.classId && firstClass) {
+      setForm((f) => ({ ...f, classId: firstClass.id, subject: f.subject || firstClass.subject, room: f.room || firstClass.room }));
+    }
+  }, [form.classId, firstClass]);
 
   const extractedPoints = extracted?.questions.reduce((sum, q) => sum + q.points, 0) ?? 0;
   const needsExtraction = source === "upload" && !extracted?.questions.length;
@@ -158,7 +166,10 @@ export function NewExamDialog({
             },
           ]
         : [],
-      attendance: [],
+      // Everyone in the class is expected; attendance is marked on the exam page.
+      attendance: students
+        .filter((s) => s.classId === form.classId)
+        .map((s) => ({ studentId: s.id, status: "pending" as const })),
     };
     addExam(exam);
     toast.success("Exam published", { description: `${exam.title} is now visible to your class.` });
@@ -205,14 +216,23 @@ export function NewExamDialog({
                 <Input value={form.subject} onChange={(e) => set("subject", e.target.value)} />
               </Field>
               <Field label="Class">
-                <Select value={form.classId} onValueChange={(v) => set("classId", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={form.classId}
+                  onValueChange={(id) => {
+                    const klass = classes.find((c) => c.id === id);
+                    setForm((f) => ({ ...f, classId: id, subject: klass?.subject || f.subject, room: klass?.room || f.room }));
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="No classes yet" /></SelectTrigger>
                   <SelectContent>
                     {classes.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {classes.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Add your class on the Students page first.</p>
+                )}
               </Field>
               <Field label="Date"><Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} /></Field>
               <Field label="Start time"><Input type="time" value={form.time} onChange={(e) => set("time", e.target.value)} /></Field>
@@ -351,7 +371,7 @@ export function NewExamDialog({
             {step === 0 ? "Cancel" : "Back"}
           </Button>
           {step < steps.length - 1 ? (
-            <Button onClick={() => setStep(step + 1)} disabled={step === 1 && needsExtraction}>
+            <Button onClick={() => setStep(step + 1)} disabled={!form.classId || (step === 1 && needsExtraction)}>
               Continue
             </Button>
           ) : (
