@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
 import { GenerateVersionDialog } from "@/components/generate-version-dialog";
-import { classById, studentById, type Question } from "@/lib/demo-data";
+import type { Question } from "@/lib/types";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/app/exams/$examId")({
@@ -25,7 +25,8 @@ export const Route = createFileRoute("/app/exams/$examId")({
 
 function ExamDetail() {
   const { examId } = Route.useParams();
-  const { exams, retakes, setAttendance, setScore, scheduleRetake, updateQuestion, approveVersion } = useStore();
+  const { exams, retakes, setAttendance, setScore, scheduleRetake, updateQuestion, approveVersion, classById, studentById } =
+    useStore();
   const exam = exams.find((e) => e.id === examId);
   const [genOpen, setGenOpen] = useState(false);
   const [activeVersion, setActiveVersion] = useState(0);
@@ -212,7 +213,7 @@ function ExamDetail() {
                     versionLabel={exam.versions.find((v) => v.id === r.versionId)?.label}
                     onSchedule={(date, time, room) => {
                       const nextVersion = exam.versions[exam.versions.length - 1]?.id;
-                      scheduleRetake(r.id, date, time, room, nextVersion);
+                      scheduleRetake(r.id, { date, time, room, versionId: nextVersion });
                       toast.success("Retake scheduled", {
                         description: `${studentById(r.studentId)?.name} · ${date} ${time} · ${room}`,
                       });

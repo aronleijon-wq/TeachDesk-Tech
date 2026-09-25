@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader, Panel, StatCard } from "@/components/primitives";
-import { classes, students } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/app/analytics")({
@@ -32,49 +31,59 @@ const trend = [
 ];
 
 function Analytics() {
-  const { exams, assignments } = useStore();
-  const classAverage = Math.round(students.reduce((s, x) => s + x.average, 0) / students.length);
+  const { exams, assignments, classes, students, studentStats, demoMode } = useStore();
+  const averages = students.map((s) => studentStats(s).average).filter((a): a is number => a != null);
+  const classAverage = averages.length ? `${Math.round(averages.reduce((sum, a) => sum + a, 0) / averages.length)}%` : "—";
 
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader title="Analytics" subtitle="Performance, mastery and workload across your classes." />
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <StatCard label="Class average" value={`${classAverage}%`} hint="All classes" />
+        <StatCard label="Class average" value={classAverage} hint="All classes" />
         <StatCard label="Exams this term" value={exams.length} />
         <StatCard label="Assignments" value={assignments.length} />
         <StatCard label="Classes" value={classes.length} />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Panel title="Topic mastery" description="Mathematics 3C">
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topicData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="topic" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
-                <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }} />
-                <Bar dataKey="mastery" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
+      {/* The trend charts are illustrative and only shown with demo data. */}
+      {demoMode ? (
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <Panel title="Topic mastery" description="Mathematics 3C">
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topicData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="topic" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }} />
+                  <Bar dataKey="mastery" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
 
-        <Panel title="Average over time" description="All classes">
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
-                <YAxis domain={[50, 90]} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }} />
-                <Line type="monotone" dataKey="average" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          <Panel title="Average over time" description="All classes">
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                  <YAxis domain={[50, 90]} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }} />
+                  <Line type="monotone" dataKey="average" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+        </div>
+      ) : (
+        <Panel className="mt-6">
+          <p className="text-sm text-muted-foreground">
+            Topic mastery and trends will appear here once your exams have results.
+          </p>
         </Panel>
-      </div>
+      )}
 
       <Panel className="mt-4" title="Students needing follow-up">
         <ul className="divide-y divide-border text-sm">
@@ -85,7 +94,7 @@ function Analytics() {
               <li key={s.id} className="flex items-center justify-between py-2">
                 <span className="font-medium">{s.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {s.missingWork} missing · {s.average}% average
+                  {s.missingWork} missing · {studentStats(s).average != null ? `${studentStats(s).average}% average` : "no results yet"}
                 </span>
               </li>
             ))}

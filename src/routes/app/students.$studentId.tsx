@@ -2,7 +2,6 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
-import { classById, studentById } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/app/students/$studentId")({
@@ -19,9 +18,11 @@ export const Route = createFileRoute("/app/students/$studentId")({
 
 function StudentProfile() {
   const { studentId } = Route.useParams();
+  const { exams, retakes, assignments, classById, studentById, studentStats } = useStore();
   const student = studentById(studentId);
-  const { exams, retakes, assignments } = useStore();
   if (!student) throw notFound();
+  const stats = studentStats(student);
+  const percent = (n: number | undefined) => (n == null ? "—" : `${n}%`);
 
   const klass = classById(student.classId);
   const studentExams = exams.filter((e) => e.attendance.some((a) => a.studentId === student.id));
@@ -33,12 +34,12 @@ function StudentProfile() {
         <Link to="/app/students"><ArrowLeft className="size-4" /> Students</Link>
       </Button>
 
-      <PageHeader title={student.name} subtitle={`${klass?.name} · ${student.email}`} />
+      <PageHeader title={student.name} subtitle={[klass?.name, student.email].filter(Boolean).join(" · ")} />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <Panel><p className="label-xs">Average</p><p className="stat-number mt-1">{student.average}%</p></Panel>
-        <Panel><p className="label-xs">Attendance</p><p className="stat-number mt-1">{student.attendanceRate}%</p></Panel>
-        <Panel><p className="label-xs">Missing work</p><p className="stat-number mt-1">{student.missingWork}</p></Panel>
+        <Panel><p className="label-xs">Average</p><p className="stat-number mt-1">{percent(stats.average)}</p></Panel>
+        <Panel><p className="label-xs">Attendance</p><p className="stat-number mt-1">{percent(stats.attendanceRate)}</p></Panel>
+        <Panel><p className="label-xs">Missing work</p><p className="stat-number mt-1">{stats.missingWork}</p></Panel>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

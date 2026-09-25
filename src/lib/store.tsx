@@ -1,26 +1,8 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import {
-  assignments as seedAssignments,
-  exams as seedExams,
-  retakes as seedRetakes,
-  students,
-  type Assignment,
-  type AttendanceStatus,
-  type Exam,
-  type ExamVersion,
-  type Question,
-  type Retake,
-} from "./demo-data";
+import { createDemoWorkspace } from "./demo-data";
+import { emptyWorkspace, type Student, type Workspace } from "./types";
+import * as rules from "./workspace";
 
 export interface Profile {
   name: string;
@@ -39,49 +21,62 @@ function profileFor(account: { name: string; email: string }): Profile {
   return { name: account.name, email: account.email, role: "Teacher", school: "", plan: "Trial" };
 }
 
-// Each account's workspace is saved in this browser under its own key. Bump the
-// version when the saved shape changes incompatibly; older saves are then ignored.
-const STORAGE_VERSION = 1;
+// Each account is saved in this browser under its own key. It holds two workspaces —
+// the teacher's own and the demo — and which one is showing. Bump the version when the
+// saved shape changes incompatibly; older saves then keep only the profile.
+const STORAGE_VERSION = 2;
 const storageKey = (userId: string) => `teachdesk:workspace:${userId}`;
 
-interface SavedWorkspace {
+type Mode = "own" | "demo";
+
+interface Saved {
   version: number;
-  exams: Exam[];
-  retakes: Retake[];
-  assignments: Assignment[];
-  demoMode: boolean;
+  mode: Mode;
+  own: Workspace;
+  demo: Workspace;
   profile: Profile;
 }
 
-function readSaved(key: string): SavedWorkspace | null {
+function readSaved(key: string): Partial<Saved> | null {
   try {
     const raw = window.localStorage.getItem(key);
     if (!raw) return null;
-    const saved = JSON.parse(raw) as SavedWorkspace;
-    if (saved?.version !== STORAGE_VERSION || !Array.isArray(saved.exams)) return null;
-    return saved;
+    const saved = JSON.parse(raw) as Partial<Saved>;
+    if (saved.version === STORAGE_VERSION && saved.own && saved.demo) return saved;
+    return saved.profile ? { profile: saved.profile } : null;
   } catch {
     return null;
   }
 }
 
-interface StoreValue {
-  exams: Exam[];
-  retakes: Retake[];
-  assignments: Assignment[];
+/** A workspace rule with the workspace argument filled in by the store. */
+type Bound<F> = F extends (ws: Workspace, ...args: infer A) => Workspace ? (...args: A) => void : never;
+
+interface StoreValue extends Workspace {
   demoMode: boolean;
-  setDemoMode: (v: boolean) => void;
-  setAttendance: (examId: string, studentId: string, status: AttendanceStatus) => void;
-  setScore: (examId: string, studentId: string, score: number) => void;
-  scheduleRetake: (retakeId: string, date: string, time: string, room: string, versionId?: string | undefined) => void;
-  addVersion: (examId: string, version: ExamVersion) => void;
-  updateQuestion: (examId: string, versionId: string, question: Question) => void;
-  addExam: (exam: Exam) => void;
-  setRubric: (assignmentId: string, rubric: NonNullable<Assignment["rubric"]>) => void;
-  approveVersion: (examId: string, versionId: string) => void;
+  setDemoMode: (on: boolean) => void;
+  resetDemo: () => void;
   profile: Profile;
   setProfile: (profile: Profile) => void;
-  resetWorkspace: () => void;
+
+  classById: (id: string) => Workspace["classes"][number] | undefined;
+  studentById: (id: string) => Student | undefined;
+  classSize: (classId: string) => number;
+  studentStats: (student: Student) => ReturnType<typeof rules.studentStats>;
+
+  setAttendance: Bound<typeof rules.setAttendance>;
+  setScore: Bound<typeof rules.setScore>;
+  scheduleRetake: Bound<typeof rules.scheduleRetake>;
+  addExam: Bound<typeof rules.addExam>;
+  addVersion: Bound<typeof rules.addVersion>;
+  approveVersion: Bound<typeof rules.approveVersion>;
+  updateQuestion: Bound<typeof rules.updateQuestion>;
+  setRubric: Bound<typeof rules.setRubric>;
+  addStudents: Bound<typeof rules.addStudents>;
+  removeStudent: Bound<typeof rules.removeStudent>;
+  removeClass: Bound<typeof rules.removeClass>;
+  /** Creates a class with its students and returns the new class id. */
+  addClass: (details: Parameters<typeof rules.addClass>[1], studentLines: string[]) => string;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -97,24 +92,26 @@ export function StoreProvider({
 }) {
   const key = storageKey(userId);
   const [defaultProfile] = useState(() => profileFor(account));
-  const [exams, setExams] = useState<Exam[]>(seedExams);
-  const [retakes, setRetakes] = useState<Retake[]>(seedRetakes);
-  const [assignments, setAssignments] = useState<Assignment[]>(seedAssignments);
-  const [demoMode, setDemoMode] = useState(true);
+  const [mode, setMode] = useState<Mode>("demo");
+  const [own, setOwn] = useState<Workspace>(emptyWorkspace);
+  const [demo, setDemo] = useState<Workspace>(createDemoWorkspace);
   const [profile, setProfile] = useState<Profile>(defaultProfile);
-  // False until the saved workspace has been read, so nothing renders (or is
-  // edited) against seed data that is about to be replaced.
+  // False until the saved data has been read, so nothing renders (or is edited)
+  // against defaults that are about to be replaced.
   const [loaded, setLoaded] = useState(false);
   const saveFailed = useRef(false);
 
-  const applySaved = useCallback((saved: SavedWorkspace | null) => {
-    setExams(saved?.exams ?? seedExams);
-    setRetakes(saved?.retakes ?? seedRetakes);
-    setAssignments(saved?.assignments ?? seedAssignments);
-    setDemoMode(saved?.demoMode ?? true);
-    // The sign-in email always wins over a saved one.
-    setProfile({ ...(saved?.profile ?? defaultProfile), email: defaultProfile.email });
-  }, [defaultProfile]);
+  const applySaved = useCallback(
+    (saved: Partial<Saved> | null) => {
+      // New accounts start in the demo so there is something to explore.
+      setMode(saved?.mode ?? "demo");
+      setOwn(saved?.own ?? emptyWorkspace());
+      setDemo(saved?.demo ?? createDemoWorkspace());
+      // The sign-in email always wins over a saved one.
+      setProfile({ ...(saved?.profile ?? defaultProfile), email: defaultProfile.email });
+    },
+    [defaultProfile],
+  );
 
   useEffect(() => {
     applySaved(readSaved(key));
@@ -129,7 +126,7 @@ export function StoreProvider({
 
   useEffect(() => {
     if (!loaded) return;
-    const saved: SavedWorkspace = { version: STORAGE_VERSION, exams, retakes, assignments, demoMode, profile };
+    const saved: Saved = { version: STORAGE_VERSION, mode, own, demo, profile };
     try {
       window.localStorage.setItem(key, JSON.stringify(saved));
       saveFailed.current = false;
@@ -141,120 +138,49 @@ export function StoreProvider({
         });
       }
     }
-  }, [key, loaded, exams, retakes, assignments, demoMode, profile]);
+  }, [key, loaded, mode, own, demo, profile]);
 
-  const resetWorkspace = useCallback(() => {
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // Storage blocked: resetting the in-memory state is still useful.
-    }
-    applySaved(null);
-  }, [applySaved, key]);
+  const active = mode === "demo" ? demo : own;
+  const setActive = mode === "demo" ? setDemo : setOwn;
 
-  const setAttendance = useCallback((examId: string, studentId: string, status: AttendanceStatus) => {
-    setExams((prev) =>
-      prev.map((e) =>
-        e.id !== examId
-          ? e
-          : {
-              ...e,
-              attendance: e.attendance.map((a) =>
-                a.studentId === studentId ? { ...a, status } : a,
-              ),
-            },
-      ),
-    );
-    setRetakes((prev) => {
-      const exists = prev.some((r) => r.examId === examId && r.studentId === studentId);
-      if (status === "absent" && !exists) {
-        return [
-          ...prev,
-          { id: `r-${examId}-${studentId}`, examId, studentId, status: "needs-scheduling" as const },
-        ];
-      }
-      if (status !== "absent" && exists) {
-        return prev.filter((r) => !(r.examId === examId && r.studentId === studentId));
-      }
-      return prev;
-    });
-  }, []);
+  const value = useMemo<StoreValue>(() => {
+    // Applies a workspace rule to whichever workspace is showing.
+    const bind =
+      <A extends unknown[]>(rule: (ws: Workspace, ...args: A) => Workspace) =>
+      (...args: A) =>
+        setActive((ws) => rule(ws, ...args));
 
-  const setScore = useCallback((examId: string, studentId: string, score: number) => {
-    setExams((prev) =>
-      prev.map((e) =>
-        e.id !== examId
-          ? e
-          : {
-              ...e,
-              attendance: e.attendance.map((a) =>
-                a.studentId === studentId ? { ...a, score, status: "completed" as const } : a,
-              ),
-            },
-      ),
-    );
-  }, []);
+    return {
+      ...active,
+      demoMode: mode === "demo",
+      setDemoMode: (on) => setMode(on ? "demo" : "own"),
+      resetDemo: () => setDemo(createDemoWorkspace()),
+      profile,
+      setProfile,
 
-  const scheduleRetake = useCallback(
-    (retakeId: string, date: string, time: string, room: string, versionId?: string | undefined) => {
-      setRetakes((prev) =>
-        prev.map((r) =>
-          r.id === retakeId
-            ? { ...r, status: "scheduled" as const, date, time, room, ...(versionId ? { versionId } : {}) }
-            : r,
-        ),
-      );
-    },
-    [],
-  );
+      classById: (id) => active.classes.find((c) => c.id === id),
+      studentById: (id) => active.students.find((s) => s.id === id),
+      classSize: (classId) => rules.classSize(active, classId),
+      studentStats: (student) => rules.studentStats(active, student),
 
-  const addVersion = useCallback((examId: string, version: ExamVersion) => {
-    setExams((prev) =>
-      prev.map((e) => (e.id === examId ? { ...e, versions: [...e.versions, version] } : e)),
-    );
-  }, []);
-
-  const updateQuestion = useCallback((examId: string, versionId: string, question: Question) => {
-    setExams((prev) =>
-      prev.map((e) =>
-        e.id !== examId
-          ? e
-          : {
-              ...e,
-              versions: e.versions.map((v) =>
-                v.id !== versionId
-                  ? v
-                  : { ...v, questions: v.questions.map((q) => (q.id === question.id ? question : q)) },
-              ),
-            },
-      ),
-    );
-  }, []);
-
-  const approveVersion = useCallback((examId: string, versionId: string) => {
-    setExams((prev) =>
-      prev.map((e) =>
-        e.id !== examId
-          ? e
-          : { ...e, versions: e.versions.map((v) => (v.id === versionId ? { ...v, approved: true } : v)) },
-      ),
-    );
-  }, []);
-
-  const addExam = useCallback((exam: Exam) => setExams((prev) => [exam, ...prev]), []);
-
-  const setRubric = useCallback((assignmentId: string, rubric: NonNullable<Assignment["rubric"]>) => {
-    setAssignments((prev) => prev.map((a) => (a.id === assignmentId ? { ...a, rubric } : a)));
-  }, []);
-
-  const value = useMemo(
-    () => ({
-      exams, retakes, assignments, demoMode, setDemoMode,
-      setAttendance, setScore, scheduleRetake, addVersion, updateQuestion, addExam, setRubric,
-      approveVersion, profile, setProfile, resetWorkspace,
-    }),
-    [exams, retakes, assignments, demoMode, setAttendance, setScore, scheduleRetake, addVersion, updateQuestion, addExam, setRubric, approveVersion, profile, resetWorkspace],
-  );
+      setAttendance: bind(rules.setAttendance),
+      setScore: bind(rules.setScore),
+      scheduleRetake: bind(rules.scheduleRetake),
+      addExam: bind(rules.addExam),
+      addVersion: bind(rules.addVersion),
+      approveVersion: bind(rules.approveVersion),
+      updateQuestion: bind(rules.updateQuestion),
+      setRubric: bind(rules.setRubric),
+      addStudents: bind(rules.addStudents),
+      removeStudent: bind(rules.removeStudent),
+      removeClass: bind(rules.removeClass),
+      addClass: (details, studentLines) => {
+        const { ws, classId } = rules.addClass(active, details, studentLines);
+        setActive(() => ws);
+        return classId;
+      },
+    };
+  }, [active, setActive, mode, profile]);
 
   if (!loaded) {
     return (
@@ -274,17 +200,30 @@ export function useStore() {
 }
 
 export function useAttentionSummary() {
-  const { exams, retakes, assignments } = useStore();
+  const { exams, retakes, assignments, students } = useStore();
   return useMemo(() => {
     const missedExams = exams.flatMap((e) =>
       e.attendance
         .filter((a) => a.status === "absent")
-        .map((a) => ({ exam: e, student: students.find((s) => s.id === a.studentId)! })),
+        .flatMap((a) => {
+          const student = students.find((s) => s.id === a.studentId);
+          return student ? [{ exam: e, student }] : [];
+        }),
     );
     const toGrade = assignments.reduce((sum, a) => sum + a.toGrade, 0);
     const needsScheduling = retakes.filter((r) => r.status === "needs-scheduling");
     const missingWork = students.filter((s) => s.missingWork > 0);
     const upcoming = exams.filter((e) => e.status === "upcoming");
     return { missedExams, toGrade, needsScheduling, missingWork, upcoming, retakes };
-  }, [exams, retakes, assignments]);
+  }, [exams, retakes, assignments, students]);
+}
+
+/** The calendar for the workspace that is showing: lessons plus exams, retakes and deadlines. */
+export function useCalendar() {
+  const { classes, students, exams, retakes, assignments, events } = useStore();
+  return useMemo(() => {
+    const today = rules.todayIso();
+    const all = rules.calendarEvents({ classes, students, exams, retakes, assignments, events }, today);
+    return { today: all.filter((e) => e.date === today), upcoming: all.filter((e) => e.date > today) };
+  }, [classes, students, exams, retakes, assignments, events]);
 }

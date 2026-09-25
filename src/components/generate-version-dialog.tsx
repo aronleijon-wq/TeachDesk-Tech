@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatusPill } from "@/components/primitives";
 import { generateEquivalentVersion } from "@/lib/exam-ai.functions";
-import type { Exam, ExamVersion, Question } from "@/lib/demo-data";
+import type { Exam, ExamVersion, Question } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 

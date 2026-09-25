@@ -1,10 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/primitives";
-import { classes, students } from "@/lib/demo-data";
+import { PageHeader, Panel } from "@/components/primitives";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -21,8 +20,8 @@ export const Route = createFileRoute("/app/gradebook")({
 });
 
 function Gradebook() {
-  const { exams } = useStore();
-  const [classId, setClassId] = useState(classes[0]!.id);
+  const { exams, classes, students } = useStore();
+  const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const classExams = exams.filter((e) => e.classId === classId && e.versions.length > 0);
   const classStudents = students.filter((s) => s.classId === classId);
 
@@ -37,6 +36,14 @@ function Gradebook() {
           </Button>
         }
       />
+
+      {classes.length === 0 && (
+        <Panel>
+          <p className="text-sm text-muted-foreground">
+            Results appear here per class. <Link to="/app/students" className="text-primary hover:underline">Add your class</Link> to get started.
+          </p>
+        </Panel>
+      )}
 
       <div className="mb-4 flex flex-wrap gap-1">
         {classes.map((c) => (

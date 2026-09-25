@@ -1,9 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { ClassDialog, type ClassDialogTarget } from "@/components/class-dialog";
+import { EmptyState, PageHeader, StatusPill } from "@/components/primitives";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PageHeader, StatusPill } from "@/components/primitives";
-import { classById, classes, students } from "@/lib/demo-data";
+import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/students/")({
@@ -19,82 +33,214 @@ export const Route = createFileRoute("/app/students/")({
 });
 
 function StudentsPage() {
+  const { classes, students, classById, studentStats, removeClass, removeStudent } = useStore();
   const [query, setQuery] = useState("");
   const [classFilter, setClassFilter] = useState("all");
+  const [dialog, setDialog] = useState<ClassDialogTarget | null>(null);
+
+  // A deleted class can leave the filter pointing at nothing; fall back to all classes.
+  const selectedClass = classFilter === "all" ? undefined : classById(classFilter);
+  const activeFilter = selectedClass ? selectedClass.id : "all";
 
   const visible = useMemo(
     () =>
       students.filter(
         (s) =>
-          (classFilter === "all" || s.classId === classFilter) &&
-          s.name.toLowerCase().includes(query.toLowerCase()),
+          (activeFilter === "all" || s.classId === activeFilter) && s.name.toLowerCase().includes(query.toLowerCase()),
       ),
-    [query, classFilter],
+    [students, query, activeFilter],
   );
+
+  const percent = (n: number | undefined) => (n == null ? "—" : `${n}%`);
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title="Students" subtitle="Progress, missing work and follow-ups across your classes." />
+      <PageHeader
+        title="Students"
+        subtitle="Your classes, and each student's progress, missing work and follow-ups."
+        actions={
+          <>
+            {selectedClass && (
+              <>
+                <Button variant="outline" onClick={() => setDialog({ addTo: selectedClass.id })}>
+                  <UserPlus className="size-4" /> Add students
+                </Button>
+                <ConfirmButton
+                  label={<><Trash2 className="size-4" /> Delete class</>}
+                  title={`Delete ${selectedClass.name}?`}
+                  description="The class, its students and their exams, results and retakes are removed. This can't be undone."
+                  confirm="Delete class"
+                  onConfirm={() => {
+                    removeClass(selectedClass.id);
+                    setClassFilter("all");
+                    toast.success(`${selectedClass.name} deleted`);
+                  }}
+                />
+              </>
+            )}
+            <Button onClick={() => setDialog("new")}>
+              <Plus className="size-4" /> New class
+            </Button>
+          </>
+        }
+      />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search students" className="pl-9" />
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {[{ id: "all", name: "All classes" }, ...classes].map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setClassFilter(c.id)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                classFilter === c.id ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-accent",
-              )}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-muted/50">
-            <tr className="text-left">
-              <Th>Student</Th>
-              <Th>Class</Th>
-              <Th className="text-right">Average</Th>
-              <Th className="text-right">Attendance</Th>
-              <Th className="text-right">Missing work</Th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {visible.map((s) => (
-              <tr key={s.id} className="transition-colors hover:bg-accent/50">
-                <td className="px-4 py-2.5">
-                  <Link to="/app/students/$studentId" params={{ studentId: s.id }} className="font-medium hover:text-primary">
-                    {s.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-2.5 text-muted-foreground">{classById(s.classId)?.name}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{s.average}%</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{s.attendanceRate}%</td>
-                <td className="px-4 py-2.5 text-right">
-                  {s.missingWork > 0 ? (
-                    <StatusPill tone="warning">{s.missingWork} missing</StatusPill>
-                  ) : (
-                    <StatusPill tone="success">Up to date</StatusPill>
+      {classes.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="Add your first class"
+          description="Create a class and paste in your student list. You can copy it straight from SchoolSoft or a spreadsheet."
+          action={
+            <Button onClick={() => setDialog("new")}>
+              <Plus className="size-4" /> New class
+            </Button>
+          }
+        />
+      ) : (
+        <>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search students" className="pl-9" />
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {[{ id: "all", name: "All classes" }, ...classes].map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setClassFilter(c.id)}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    activeFilter === c.id ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-accent",
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {visible.length === 0 ? (
+            <EmptyState
+              icon={UserPlus}
+              title={query ? "No students match your search" : "No students in this class yet"}
+              description={query ? "Try another name." : "Paste your student list to add everyone at once."}
+              action={
+                !query && selectedClass ? (
+                  <Button onClick={() => setDialog({ addTo: selectedClass.id })}>
+                    <UserPlus className="size-4" /> Add students
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border bg-muted/50">
+                  <tr className="text-left">
+                    <Th>Student</Th>
+                    <Th>Class</Th>
+                    <Th className="text-right">Average</Th>
+                    <Th className="text-right">Attendance</Th>
+                    <Th className="text-right">Missing work</Th>
+                    <Th className="w-10"><span className="sr-only">Remove</span></Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {visible.map((s) => {
+                    const stats = studentStats(s);
+                    return (
+                      <tr key={s.id} className="transition-colors hover:bg-accent/50">
+                        <td className="px-4 py-2.5">
+                          <Link
+                            to="/app/students/$studentId"
+                            params={{ studentId: s.id }}
+                            className="font-medium hover:text-primary"
+                          >
+                            {s.name}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{classById(s.classId)?.name}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">{percent(stats.average)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">{percent(stats.attendanceRate)}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          {stats.missingWork > 0 ? (
+                            <StatusPill tone="warning">{stats.missingWork} missing</StatusPill>
+                          ) : (
+                            <StatusPill tone="success">Up to date</StatusPill>
+                          )}
+                        </td>
+                        <td className="px-2 py-2.5 text-right">
+                          <ConfirmButton
+                            variant="ghost"
+                            label={<Trash2 className="size-4" />}
+                            ariaLabel={`Remove ${s.name}`}
+                            title={`Remove ${s.name}?`}
+                            description="Their exam results and retakes are removed too. This can't be undone."
+                            confirm="Remove student"
+                            onConfirm={() => {
+                              removeStudent(s.id);
+                              toast.success(`${s.name} removed`);
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      <ClassDialog target={dialog} onClose={() => setDialog(null)} onCreated={(id) => setClassFilter(id)} />
     </div>
   );
 }
 
+/** A button that asks for confirmation before doing something that can't be undone. */
+function ConfirmButton({
+  label,
+  ariaLabel,
+  title,
+  description,
+  confirm,
+  onConfirm,
+  variant = "outline",
+}: {
+  label: ReactNode;
+  ariaLabel?: string;
+  title: string;
+  description: string;
+  confirm: string;
+  onConfirm: () => void;
+  variant?: "outline" | "ghost";
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant={variant} size={variant === "ghost" ? "icon" : "default"} aria-label={ariaLabel}>
+          {label}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{confirm}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function Th({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <th className={cn("px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground", className)}>{children}</th>;
+  return (
+    <th className={cn("px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground", className)}>
+      {children}
+    </th>
+  );
 }

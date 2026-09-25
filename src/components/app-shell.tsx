@@ -43,7 +43,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { LogoMark, Wordmark } from "@/components/brand";
 import { useAuth } from "@/lib/auth";
-import { classById, students } from "@/lib/demo-data";
 import { initialsOf, useAttentionSummary, useStore } from "@/lib/store";
 
 const nav = [
@@ -74,7 +73,7 @@ function useDarkMode() {
 }
 
 function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  const { exams, assignments } = useStore();
+  const { exams, assignments, students, classById } = useStore();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden p-0 sm:max-w-lg">
