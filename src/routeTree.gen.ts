@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppAiToolsRouteImport } from './routes/app/ai-tools'
 import { Route as AppAnalyticsRouteImport } from './routes/app/analytics'
@@ -24,9 +26,19 @@ import { Route as AppExamsExamIdRouteImport } from './routes/app/exams.$examId'
 import { Route as AppStudentsIndexRouteImport } from './routes/app/students.index'
 import { Route as AppStudentsStudentIdRouteImport } from './routes/app/students.$studentId'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -96,7 +108,9 @@ const AppStudentsStudentIdRoute = AppStudentsStudentIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/demo': typeof DemoRoute
   '/app/ai-tools': typeof AppAiToolsRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/assignments': typeof AppAssignmentsRoute
@@ -112,6 +126,8 @@ export interface FileRoutesByFullPath {
   '/app/students/': typeof AppStudentsIndexRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/app/ai-tools': typeof AppAiToolsRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/assignments': typeof AppAssignmentsRoute
@@ -128,7 +144,9 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/demo': typeof DemoRoute
   '/app/ai-tools': typeof AppAiToolsRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/assignments': typeof AppAssignmentsRoute
@@ -146,7 +164,9 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/app'
+    | '/demo'
     | '/app/ai-tools'
     | '/app/analytics'
     | '/app/assignments'
@@ -162,6 +182,8 @@ export interface FileRouteTypes {
     | '/app/students/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
+    | '/demo'
     | '/app/ai-tools'
     | '/app/analytics'
     | '/app/assignments'
@@ -177,7 +199,9 @@ export interface FileRouteTypes {
     | '/app/students'
   id:
     | '__root__'
+    | '/'
     | '/app'
+    | '/demo'
     | '/app/ai-tools'
     | '/app/analytics'
     | '/app/assignments'
@@ -194,16 +218,32 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  DemoRoute: typeof DemoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app': {
       id: '/app'
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -335,7 +375,9 @@ const AppRouteChildren: AppRouteChildren = {
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  DemoRoute: DemoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
