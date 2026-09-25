@@ -3,6 +3,7 @@ import {
   BarChart3, BookOpen, CalendarDays, Check, ClipboardList, FileText, LayoutDashboard, Search, Send, Sparkles, Table2, Users,
 } from "lucide-react";
 import { StatusPill, ProgressBar } from "@/components/primitives";
+import { LogoMark } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import { useInView } from "./site-chrome";
 
@@ -27,7 +28,7 @@ const SIDEBAR = [
   [CalendarDays, "Calendar"], [Table2, "Gradebook"], [BarChart3, "Analytics"], [Sparkles, "AI Tools"],
 ] as const;
 
-/** Hero: a faithful, animated rendition of the Teachdesk dashboard. */
+/** Hero: a faithful, animated rendition of the TeachDesk dashboard. */
 export function HeroProduct() {
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -41,7 +42,7 @@ export function HeroProduct() {
       <div className="flex min-h-[420px] text-left">
         <aside className="hidden w-48 shrink-0 border-r border-border bg-sidebar p-3 md:block">
           <div className="mb-4 flex items-center gap-2 px-2 text-sm font-semibold">
-            <span className="grid size-5 place-items-center rounded bg-foreground text-[10px] text-background">T</span>
+            <LogoMark className="size-5" />
             TeachDesk
           </div>
           {SIDEBAR.map(([Icon, label], i) => (
@@ -131,7 +132,7 @@ export function HeroProduct() {
 
 const STEPS = [
   { title: "Original exam", body: "Derivatives test · Version A · 8 questions · 40 pts" },
-  { title: "Teachdesk analyzes it", body: "Topics, difficulty, points and question types mapped" },
+  { title: "TeachDesk analyzes it", body: "Topics, difficulty, points and question types mapped" },
   { title: "Equivalent Version B", body: "New numbers, contexts and wording. Same structure." },
   { title: "Teacher reviews", body: "Edit any question. Nothing is used until approved." },
   { title: "Student is informed", body: "Retake time, room and version sent to the student" },

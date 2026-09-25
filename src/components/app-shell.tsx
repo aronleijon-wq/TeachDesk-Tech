@@ -5,7 +5,6 @@ import {
   BookOpen,
   CalendarDays,
   ClipboardList,
-  GraduationCap,
   HelpCircle,
   Inbox,
   LayoutDashboard,
@@ -42,6 +41,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { LogoMark, Wordmark } from "@/components/brand";
 import { useAuth } from "@/lib/auth";
 import { classById, students } from "@/lib/demo-data";
 import { initialsOf, useAttentionSummary, useStore } from "@/lib/store";
@@ -166,10 +166,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         >
           <div className={cn("flex h-14 items-center gap-2 px-4", collapsed && "justify-center px-0")}>
-            <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <GraduationCap className="size-4" />
-            </div>
-            {!collapsed && <span className="text-[15px] font-semibold tracking-tight">TeachDesk</span>}
+            {collapsed ? <LogoMark /> : <Wordmark />}
           </div>
 
           <nav className="flex-1 space-y-0.5 px-2 py-2">
