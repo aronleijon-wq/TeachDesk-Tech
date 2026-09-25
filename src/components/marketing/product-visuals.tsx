@@ -6,8 +6,9 @@ import { StatusPill, ProgressBar } from "@/components/primitives";
 import { LogoMark } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import { useInView } from "./site-chrome";
+import { SITE_HOST } from "@/lib/site";
 
-function Chrome({ children, url = "teachdesk.com/app" }: { children: React.ReactNode; url?: string }) {
+function Chrome({ children, url = `${SITE_HOST}/app` }: { children: React.ReactNode; url?: string }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-[var(--shadow-panel)]">
       <div className="flex h-9 items-center gap-2 border-b border-border bg-muted/60 px-3">
@@ -173,7 +174,7 @@ export function RetakeFlow() {
         ))}
       </ol>
 
-      <Chrome url="teachdesk.com/app/exams/derivatives">
+      <Chrome url={`${SITE_HOST}/app/exams/derivatives`}>
         <div className="grid min-h-[380px] gap-px bg-border sm:grid-cols-2">
           <ExamPane label="Version A" tone="neutral" active={step >= 0} q={["Differentiate f(x) = 3x² + 5x − 2", "A car's position is s(t) = 4t³. Find v(2).", "Find the slope of y = x³ at x = 1."]} />
           <div className="relative bg-surface p-4">

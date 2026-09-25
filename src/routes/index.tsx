@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Reveal, SectionHeading, SiteFooter, SiteNav } from "@/components/marketing/site-chrome";
 import { HeroProduct, RetakeFlow } from "@/components/marketing/product-visuals";
 import { cn } from "@/lib/utils";
+import { SITE_URL } from "@/lib/site";
 
 const title = "TeachDesk — The workspace for modern teachers";
 const description = "TeachDesk brings exams, grading, retakes, assignments and teacher workflows into one intelligent workspace.";
@@ -18,10 +19,10 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: title },
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://teachdesk.lovable.app/" },
+      { property: "og:url", content: `${SITE_URL}/` },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://teachdesk.lovable.app/" }],
+    links: [{ rel: "canonical", href: `${SITE_URL}/` }],
   }),
   component: Home,
 });

@@ -7,7 +7,7 @@ CREATE TABLE public.admin_emails (
 ALTER TABLE public.admin_emails ENABLE ROW LEVEL SECURITY;
 -- No policies: the list is not readable through the public API.
 
-INSERT INTO public.admin_emails (email) VALUES ('byleijons@gmail.com');
+INSERT INTO public.admin_emails (email) VALUES ('aronleijon@icloud.com');
 
 CREATE FUNCTION public.is_admin()
 RETURNS BOOLEAN

@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://teachdesk.lovable.app/sitemap.xml
+Sitemap: https://teachdesk.se/sitemap.xml
