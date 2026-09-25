@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader, StatusPill } from "@/components/primitives";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/pricing")({
+export const Route = createFileRoute("/app/pricing")({
   head: () => ({
     meta: [
       { title: "Plans — Classflow" },

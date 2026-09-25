@@ -4,7 +4,7 @@ import { PageHeader, Panel, StatCard } from "@/components/primitives";
 import { classes, students } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/analytics")({
+export const Route = createFileRoute("/app/analytics")({
   head: () => ({
     meta: [
       { title: "Analytics — Classflow" },

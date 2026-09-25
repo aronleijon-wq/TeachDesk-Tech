@@ -45,19 +45,19 @@ import { classById, students, teacher } from "@/lib/demo-data";
 import { useAttentionSummary, useStore } from "@/lib/store";
 
 const nav = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/exams", label: "Exams", icon: BookOpen },
-  { to: "/assignments", label: "Assignments", icon: ClipboardList },
-  { to: "/students", label: "Students", icon: Users },
-  { to: "/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/gradebook", label: "Gradebook", icon: Table2 },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/ai-tools", label: "AI Tools", icon: Sparkles },
+  { to: "/app", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/app/exams", label: "Exams", icon: BookOpen },
+  { to: "/app/assignments", label: "Assignments", icon: ClipboardList },
+  { to: "/app/students", label: "Students", icon: Users },
+  { to: "/app/calendar", label: "Calendar", icon: CalendarDays },
+  { to: "/app/gradebook", label: "Gradebook", icon: Table2 },
+  { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/app/ai-tools", label: "AI Tools", icon: Sparkles },
 ] as const;
 
 const secondary = [
-  { to: "/settings", label: "Settings", icon: Settings },
-  { to: "/help", label: "Help", icon: LifeBuoy },
+  { to: "/app/settings", label: "Settings", icon: Settings },
+  { to: "/app/help", label: "Help", icon: LifeBuoy },
 ] as const;
 
 function useDarkMode() {
@@ -81,7 +81,7 @@ function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
             <CommandGroup heading="Students">
               {students.slice(0, 40).map((s) => (
                 <CommandItem key={s.id} value={`${s.name} ${classById(s.classId)?.name}`} asChild>
-                  <Link to="/students/$studentId" params={{ studentId: s.id }} onClick={() => onOpenChange(false)}>
+                  <Link to="/app/students/$studentId" params={{ studentId: s.id }} onClick={() => onOpenChange(false)}>
                     <span className="font-medium">{s.name}</span>
                     <span className="ml-2 text-xs text-muted-foreground">
                       {classById(s.classId)?.name} · {s.missingWork} missing
@@ -93,7 +93,7 @@ function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
             <CommandGroup heading="Exams">
               {exams.map((e) => (
                 <CommandItem key={e.id} value={e.title} asChild>
-                  <Link to="/exams/$examId" params={{ examId: e.id }} onClick={() => onOpenChange(false)}>
+                  <Link to="/app/exams/$examId" params={{ examId: e.id }} onClick={() => onOpenChange(false)}>
                     <span className="font-medium">{e.title}</span>
                     <span className="ml-2 text-xs text-muted-foreground">{classById(e.classId)?.name}</span>
                   </Link>
@@ -103,7 +103,7 @@ function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
             <CommandGroup heading="Assignments">
               {assignments.map((a) => (
                 <CommandItem key={a.id} value={a.title} asChild>
-                  <Link to="/assignments" onClick={() => onOpenChange(false)}>
+                  <Link to="/app/assignments" onClick={() => onOpenChange(false)}>
                     <span className="font-medium">{a.title}</span>
                     <span className="ml-2 text-xs text-muted-foreground">{classById(a.classId)?.name}</span>
                   </Link>
@@ -137,7 +137,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const title = useMemo(() => {
     const match = [...nav, ...secondary].find(
-      (n) => n.to === pathname || (n.to !== "/" && pathname.startsWith(n.to)),
+      (n) => n.to === pathname || (n.to !== "/app" && pathname.startsWith(n.to)),
     );
       return match?.label ?? "TeachDesk";
   }, [pathname]);
@@ -170,7 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div className="border-t border-sidebar-border p-2">
             <Link
-              to="/settings"
+              to="/app/settings"
               className={cn(
                 "flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-sidebar-accent",
                 collapsed && "justify-center",
@@ -247,7 +247,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
               </Button>
               <Button variant="ghost" size="icon" asChild aria-label="Help">
-                <Link to="/help">
+                <Link to="/app/help">
                   <HelpCircle className="size-4" />
                 </Link>
               </Button>
@@ -265,13 +265,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/settings">Profile & settings</Link>
+                    <Link to="/app/settings">Profile & settings</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/settings">School — {teacher.school}</Link>
+                    <Link to="/app/settings">School — {teacher.school}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/pricing">Plan — {teacher.plan}</Link>
+                    <Link to="/app/pricing">Plan — {teacher.plan}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>Sign out</DropdownMenuItem>
@@ -286,7 +286,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Mobile bottom navigation */}
         <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-surface md:hidden">
           {nav.slice(0, 5).map((item) => {
-            const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+            const active = item.to === "/app" ? pathname === "/app" || pathname === "/app/" : pathname.startsWith(item.to);
             return (
               <Link
                 key={item.to}
@@ -321,7 +321,7 @@ function NavLink({
   collapsed: boolean;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
+  const active = to === "/app" ? pathname === "/app" || pathname === "/app/" : pathname.startsWith(to);
 
   const link = (
     <Link

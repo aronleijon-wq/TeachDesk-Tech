@@ -8,7 +8,7 @@ import { classes, students } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/gradebook")({
+export const Route = createFileRoute("/app/gradebook")({
   head: () => ({
     meta: [
       { title: "Gradebook — Classflow" },

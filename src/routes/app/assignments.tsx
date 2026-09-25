@@ -7,7 +7,7 @@ import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/compon
 import { classById } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/assignments")({
+export const Route = createFileRoute("/app/assignments")({
   head: () => ({
     meta: [
       { title: "Assignments — Classflow" },

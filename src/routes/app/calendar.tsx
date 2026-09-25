@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Panel, StatusPill, formatDate } from "@/components/primitives";
 import { todayEvents, upcomingWeek, classById } from "@/lib/demo-data";
 
-export const Route = createFileRoute("/calendar")({
+export const Route = createFileRoute("/app/calendar")({
   head: () => ({
     meta: [
       { title: "Calendar — Classflow" },

@@ -11,7 +11,7 @@ import { GenerateVersionDialog } from "@/components/generate-version-dialog";
 import { classById, studentById, type Question } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/exams/$examId")({
+export const Route = createFileRoute("/app/exams/$examId")({
   head: () => ({
     meta: [
       { title: "Exam — Classflow" },
@@ -41,7 +41,7 @@ function ExamDetail() {
   return (
     <div className="mx-auto max-w-6xl">
       <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2 text-muted-foreground">
-        <Link to="/exams"><ArrowLeft className="size-4" /> Exams</Link>
+        <Link to="/app/exams"><ArrowLeft className="size-4" /> Exams</Link>
       </Button>
 
       <PageHeader

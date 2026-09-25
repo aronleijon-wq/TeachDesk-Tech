@@ -13,7 +13,7 @@ import { EmptyState, PageHeader, Panel, ProgressBar, StatCard, StatusPill, forma
 import { classById, todayEvents } from "@/lib/demo-data";
 import { useAttentionSummary, useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/app/")({
   head: () => ({
     meta: [
       { title: "Dashboard — Classflow" },
@@ -58,7 +58,7 @@ function Dashboard() {
                   title={`${missedExams.length} students missed an exam`}
                   meta={`${classById(missedExams[0]!.exam.classId)?.name} · ${missedExams[0]!.exam.title}`}
                   names={missedExams.map((m) => m.student.name)}
-                  to="/exams/$examId"
+                  to="/app/exams/$examId"
                   params={{ examId: missedExams[0]!.exam.id }}
                   cta="Schedule retake"
                 />
@@ -68,7 +68,7 @@ function Dashboard() {
                 icon={ClipboardList}
                 title={`${toGrade} submissions need grading`}
                 meta="Mathematics 3C, Physics 2, Social Studies 3"
-                to="/assignments"
+                to="/app/assignments"
                 cta="Start grading"
               />
               {needsScheduling.length > 0 && (
@@ -77,7 +77,7 @@ function Dashboard() {
                   icon={RefreshCw}
                   title={`${needsScheduling.length} retakes need scheduling`}
                   meta="Derivatives — Exam 1"
-                  to="/exams/$examId"
+                  to="/app/exams/$examId"
                   params={{ examId: "exam-derivatives-1" }}
                   cta="Open retakes"
                 />
@@ -87,13 +87,13 @@ function Dashboard() {
                 icon={FileWarning}
                 title={`${missingWork.length} students have missing work`}
                 meta="Follow-up recommended before the next deadline"
-                to="/students"
+                to="/app/students"
                 cta="Review students"
               />
             </div>
           </Panel>
 
-          <Panel title="Upcoming exams" action={<Link className="text-xs font-medium text-primary" to="/exams">View all</Link>}>
+          <Panel title="Upcoming exams" action={<Link className="text-xs font-medium text-primary" to="/app/exams">View all</Link>}>
             {upcoming.length === 0 ? (
               <EmptyState icon={BookOpen} title="No upcoming exams" description="Create an exam to get started." />
             ) : (
@@ -113,7 +113,7 @@ function Dashboard() {
                           </p>
                         </div>
                         <Button size="sm" variant="outline" asChild>
-                          <Link to="/exams/$examId" params={{ examId: e.id }}>Open exam</Link>
+                          <Link to="/app/exams/$examId" params={{ examId: e.id }}>Open exam</Link>
                         </Button>
                       </div>
                       <div className="mt-3 flex items-center gap-3">

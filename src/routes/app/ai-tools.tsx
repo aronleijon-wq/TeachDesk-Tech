@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { PageHeader, Panel, StatusPill } from "@/components/primitives";
 
-export const Route = createFileRoute("/ai-tools")({
+export const Route = createFileRoute("/app/ai-tools")({
   head: () => ({
     meta: [
       { title: "AI Tools — Classflow" },
@@ -26,42 +26,42 @@ const tools = [
     icon: Sparkles,
     title: "Generate equivalent exam",
     description: "Create Version B of an exam that tests the same skills with new numbers and contexts.",
-    to: "/exams",
+    to: "/app/exams",
     live: true,
   },
   {
     icon: FileSearch,
     title: "Analyse uploaded exam",
     description: "Extract questions, topics, points, difficulty and objectives from a PDF or document.",
-    to: "/exams",
+    to: "/app/exams",
     live: false,
   },
   {
     icon: ListChecks,
     title: "Create rubric",
     description: "Draft a criteria-based rubric for an assignment, ready for your edits.",
-    to: "/assignments",
+    to: "/app/assignments",
     live: false,
   },
   {
     icon: ClipboardCheck,
     title: "Suggest grading",
     description: "Propose points for open answers with a motivation. You confirm every grade.",
-    to: "/gradebook",
+    to: "/app/gradebook",
     live: false,
   },
   {
     icon: MessageSquareText,
     title: "Summarise class results",
     description: "A short written summary of how a class performed and what to reteach.",
-    to: "/analytics",
+    to: "/app/analytics",
     live: false,
   },
   {
     icon: Users,
     title: "Find students needing follow-up",
     description: "Surface students with missing work, absences or falling results.",
-    to: "/students",
+    to: "/app/students",
     live: false,
   },
 ];

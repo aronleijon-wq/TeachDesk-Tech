@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Panel } from "@/components/primitives";
 
-export const Route = createFileRoute("/help")({
+export const Route = createFileRoute("/app/help")({
   head: () => ({
     meta: [
       { title: "Help — Classflow" },

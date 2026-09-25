@@ -9,7 +9,7 @@ import { useStore } from "@/lib/store";
 import { NewExamDialog } from "@/components/new-exam-dialog";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/exams/")({
+export const Route = createFileRoute("/app/exams/")({
   head: () => ({
     meta: [
       { title: "Exams — Classflow" },
@@ -115,7 +115,7 @@ function ExamsPage() {
             return (
               <Link
                 key={e.id}
-                to="/exams/$examId"
+                to="/app/exams/$examId"
                 params={{ examId: e.id }}
                 className="rounded-lg border border-border bg-surface p-4 shadow-card transition-all hover:border-primary/40 hover:shadow-panel"
               >
@@ -160,7 +160,7 @@ function ExamsPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         aiFirst={aiMode}
-        onCreated={(id) => navigate({ to: "/exams/$examId", params: { examId: id } })}
+        onCreated={(id) => navigate({ to: "/app/exams/$examId", params: { examId: id } })}
       />
     </div>
   );
