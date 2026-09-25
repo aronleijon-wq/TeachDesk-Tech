@@ -25,7 +25,7 @@ export const Route = createFileRoute("/app/exams/$examId")({
 
 function ExamDetail() {
   const { examId } = Route.useParams();
-  const { exams, retakes, setAttendance, setScore, scheduleRetake, updateQuestion } = useStore();
+  const { exams, retakes, setAttendance, setScore, scheduleRetake, updateQuestion, approveVersion } = useStore();
   const exam = exams.find((e) => e.id === examId);
   const [genOpen, setGenOpen] = useState(false);
   const [activeVersion, setActiveVersion] = useState(0);
@@ -141,10 +141,23 @@ function ExamDetail() {
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {v.questions.length} questions · {v.questions.reduce((s, q) => s + q.points, 0)} points ·{" "}
-                      {v.approved ? "Approved" : "Awaiting teacher approval"}
-                    </p>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        {v.questions.length} questions · {v.questions.reduce((s, q) => s + q.points, 0)} points ·{" "}
+                        {v.approved ? "Approved" : "Awaiting teacher approval"}
+                      </p>
+                      {!v.approved && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            approveVersion(exam.id, v.id);
+                            toast.success(`${v.label} approved`, { description: "It can now be used for retakes." });
+                          }}
+                        >
+                          <Check className="size-4" /> Approve
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

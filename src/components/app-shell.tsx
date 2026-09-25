@@ -41,8 +41,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { classById, students, teacher } from "@/lib/demo-data";
-import { useAttentionSummary, useStore } from "@/lib/store";
+import { classById, students } from "@/lib/demo-data";
+import { initialsOf, useAttentionSummary, useStore } from "@/lib/store";
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
@@ -123,6 +123,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { dark, setDark } = useDarkMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { missedExams, toGrade, needsScheduling } = useAttentionSummary();
+  const { profile } = useStore();
+  const teacher = { ...profile, initials: initialsOf(profile.name) };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

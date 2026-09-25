@@ -2,15 +2,19 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { toast } from "sonner";
 import {
   assignments as seedAssignments,
   exams as seedExams,
   retakes as seedRetakes,
   students,
+  teacher as seedTeacher,
   type Assignment,
   type AttendanceStatus,
   type Exam,
@@ -18,6 +22,53 @@ import {
   type Question,
   type Retake,
 } from "./demo-data";
+
+export interface Profile {
+  name: string;
+  email: string;
+  role: string;
+  school: string;
+  plan: string;
+}
+
+export function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")).toUpperCase() || "?";
+}
+
+const seedProfile: Profile = {
+  name: seedTeacher.name,
+  email: seedTeacher.email,
+  role: seedTeacher.role,
+  school: seedTeacher.school,
+  plan: seedTeacher.plan,
+};
+
+// The whole workspace is saved in this browser under one key. Bump the version
+// when the saved shape changes incompatibly; older saves are then ignored.
+const STORAGE_KEY = "teachdesk:workspace";
+const STORAGE_VERSION = 1;
+
+interface SavedWorkspace {
+  version: number;
+  exams: Exam[];
+  retakes: Retake[];
+  assignments: Assignment[];
+  demoMode: boolean;
+  profile: Profile;
+}
+
+function readSaved(): SavedWorkspace | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as SavedWorkspace;
+    if (saved?.version !== STORAGE_VERSION || !Array.isArray(saved.exams)) return null;
+    return saved;
+  } catch {
+    return null;
+  }
+}
 
 interface StoreValue {
   exams: Exam[];
@@ -32,6 +83,10 @@ interface StoreValue {
   updateQuestion: (examId: string, versionId: string, question: Question) => void;
   addExam: (exam: Exam) => void;
   setRubric: (assignmentId: string, rubric: NonNullable<Assignment["rubric"]>) => void;
+  approveVersion: (examId: string, versionId: string) => void;
+  profile: Profile;
+  setProfile: (profile: Profile) => void;
+  resetWorkspace: () => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -41,6 +96,55 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [retakes, setRetakes] = useState<Retake[]>(seedRetakes);
   const [assignments, setAssignments] = useState<Assignment[]>(seedAssignments);
   const [demoMode, setDemoMode] = useState(true);
+  const [profile, setProfile] = useState<Profile>(seedProfile);
+  // False until the saved workspace has been read, so nothing renders (or is
+  // edited) against seed data that is about to be replaced.
+  const [loaded, setLoaded] = useState(false);
+  const saveFailed = useRef(false);
+
+  const applySaved = useCallback((saved: SavedWorkspace | null) => {
+    setExams(saved?.exams ?? seedExams);
+    setRetakes(saved?.retakes ?? seedRetakes);
+    setAssignments(saved?.assignments ?? seedAssignments);
+    setDemoMode(saved?.demoMode ?? true);
+    setProfile(saved?.profile ?? seedProfile);
+  }, []);
+
+  useEffect(() => {
+    applySaved(readSaved());
+    setLoaded(true);
+    // Keep other open tabs in sync.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) applySaved(readSaved());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [applySaved]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    const saved: SavedWorkspace = { version: STORAGE_VERSION, exams, retakes, assignments, demoMode, profile };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      saveFailed.current = false;
+    } catch {
+      if (!saveFailed.current) {
+        saveFailed.current = true;
+        toast.error("Couldn't save your latest changes", {
+          description: "This browser's storage is full or blocked. Changes will be lost on refresh.",
+        });
+      }
+    }
+  }, [loaded, exams, retakes, assignments, demoMode, profile]);
+
+  const resetWorkspace = useCallback(() => {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Storage blocked: resetting the in-memory state is still useful.
+    }
+    applySaved(null);
+  }, [applySaved]);
 
   const setAttendance = useCallback((examId: string, studentId: string, status: AttendanceStatus) => {
     setExams((prev) =>
@@ -121,6 +225,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const approveVersion = useCallback((examId: string, versionId: string) => {
+    setExams((prev) =>
+      prev.map((e) =>
+        e.id !== examId
+          ? e
+          : { ...e, versions: e.versions.map((v) => (v.id === versionId ? { ...v, approved: true } : v)) },
+      ),
+    );
+  }, []);
+
   const addExam = useCallback((exam: Exam) => setExams((prev) => [exam, ...prev]), []);
 
   const setRubric = useCallback((assignmentId: string, rubric: NonNullable<Assignment["rubric"]>) => {
@@ -131,9 +245,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       exams, retakes, assignments, demoMode, setDemoMode,
       setAttendance, setScore, scheduleRetake, addVersion, updateQuestion, addExam, setRubric,
+      approveVersion, profile, setProfile, resetWorkspace,
     }),
-    [exams, retakes, assignments, demoMode, setAttendance, setScore, scheduleRetake, addVersion, updateQuestion, addExam, setRubric],
+    [exams, retakes, assignments, demoMode, setAttendance, setScore, scheduleRetake, addVersion, updateQuestion, addExam, setRubric, approveVersion, profile, resetWorkspace],
   );
+
+  if (!loaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+        Loading your workspace…
+      </div>
+    );
+  }
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
