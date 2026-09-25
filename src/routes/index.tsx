@@ -10,21 +10,53 @@ import { SITE_URL } from "@/lib/site";
 import { PlanFeatures } from "@/components/plan-features";
 import { PLANS, PRICE_NOTE, formatPrice, yearlyOffer, type Plan } from "@/lib/pricing";
 
-const title = "TeachDesk — The workspace for modern teachers";
-const description = "TeachDesk brings exams, grading, retakes, assignments and teacher workflows into one intelligent workspace.";
+const title = "TeachDesk — Lärarverktyget för prov, omprov och rättning";
+const description =
+  "Minska läraradministrationen. TeachDesk samlar prov, likvärdiga omprov, rättning, bedömning och elevuppföljning i ett arbetsflöde — vid sidan av SchoolSoft, Vklass och Unikum.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title },
       { name: "description", content: description },
+      {
+        name: "keywords",
+        content:
+          "lärarverktyg, prov, omprov, rättning, bedömning, betygsunderlag, SchoolSoft, Vklass, Unikum, Skolon, digitala prov, läraradministration, skolplattform",
+      },
       { property: "og:title", content: title },
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
+      { property: "og:locale", content: "sv_SE" },
       { property: "og:url", content: `${SITE_URL}/` },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/` }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "TeachDesk",
+          url: `${SITE_URL}/`,
+          applicationCategory: "EducationalApplication",
+          operatingSystem: "Web",
+          inLanguage: "sv-SE",
+          description,
+          audience: { "@type": "Audience", audienceType: "Lärare och skolor i Sverige" },
+          areaServed: { "@type": "Country", name: "Sverige" },
+          featureList: [
+            "Skapa prov och prövningar",
+            "Likvärdiga omprov med AI-stöd som läraren godkänner",
+            "Rättning, bedömning och betygsunderlag",
+            "Elevuppföljning och frånvaro vid prov",
+            "Fungerar vid sidan av SchoolSoft, Vklass, Unikum och Google Classroom",
+          ],
+          publisher: { "@type": "Organization", name: "TeachDesk", url: `${SITE_URL}/` },
+        }),
+      },
+    ],
   }),
   component: Home,
 });
