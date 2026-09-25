@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppAiToolsRouteImport } from './routes/app/ai-tools'
 import { Route as AppAnalyticsRouteImport } from './routes/app/analytics'
@@ -23,73 +24,79 @@ import { Route as AppExamsExamIdRouteImport } from './routes/app/exams.$examId'
 import { Route as AppStudentsIndexRouteImport } from './routes/app/students.index'
 import { Route as AppStudentsStudentIdRouteImport } from './routes/app/students.$studentId'
 
-const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/app/',
-  path: '/app/',
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppAiToolsRoute = AppAiToolsRouteImport.update({
-  id: '/app/ai-tools',
-  path: '/app/ai-tools',
-  getParentRoute: () => rootRouteImport,
+  id: '/ai-tools',
+  path: '/ai-tools',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
-  id: '/app/analytics',
-  path: '/app/analytics',
-  getParentRoute: () => rootRouteImport,
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppAssignmentsRoute = AppAssignmentsRouteImport.update({
-  id: '/app/assignments',
-  path: '/app/assignments',
-  getParentRoute: () => rootRouteImport,
+  id: '/assignments',
+  path: '/assignments',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppCalendarRoute = AppCalendarRouteImport.update({
-  id: '/app/calendar',
-  path: '/app/calendar',
-  getParentRoute: () => rootRouteImport,
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppGradebookRoute = AppGradebookRouteImport.update({
-  id: '/app/gradebook',
-  path: '/app/gradebook',
-  getParentRoute: () => rootRouteImport,
+  id: '/gradebook',
+  path: '/gradebook',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppHelpRoute = AppHelpRouteImport.update({
-  id: '/app/help',
-  path: '/app/help',
-  getParentRoute: () => rootRouteImport,
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppPricingRoute = AppPricingRouteImport.update({
-  id: '/app/pricing',
-  path: '/app/pricing',
-  getParentRoute: () => rootRouteImport,
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/app/settings',
-  path: '/app/settings',
-  getParentRoute: () => rootRouteImport,
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppExamsIndexRoute = AppExamsIndexRouteImport.update({
-  id: '/app/exams/',
-  path: '/app/exams/',
-  getParentRoute: () => rootRouteImport,
+  id: '/exams/',
+  path: '/exams/',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppExamsExamIdRoute = AppExamsExamIdRouteImport.update({
-  id: '/app/exams/$examId',
-  path: '/app/exams/$examId',
-  getParentRoute: () => rootRouteImport,
+  id: '/exams/$examId',
+  path: '/exams/$examId',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppStudentsIndexRoute = AppStudentsIndexRouteImport.update({
-  id: '/app/students/',
-  path: '/app/students/',
-  getParentRoute: () => rootRouteImport,
+  id: '/students/',
+  path: '/students/',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppStudentsStudentIdRoute = AppStudentsStudentIdRouteImport.update({
-  id: '/app/students/$studentId',
-  path: '/app/students/$studentId',
-  getParentRoute: () => rootRouteImport,
+  id: '/students/$studentId',
+  path: '/students/$studentId',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/app': typeof AppRouteWithChildren
   '/app/ai-tools': typeof AppAiToolsRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/assignments': typeof AppAssignmentsRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/app': typeof AppRouteWithChildren
   '/app/ai-tools': typeof AppAiToolsRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/assignments': typeof AppAssignmentsRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/app'
     | '/app/ai-tools'
     | '/app/analytics'
     | '/app/assignments'
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/app/students'
   id:
     | '__root__'
+    | '/app'
     | '/app/ai-tools'
     | '/app/analytics'
     | '/app/assignments'
@@ -184,6 +194,113 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  AppRoute: typeof AppRouteWithChildren
+}
+
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ai-tools': {
+      id: '/app/ai-tools'
+      path: '/ai-tools'
+      fullPath: '/app/ai-tools'
+      preLoaderRoute: typeof AppAiToolsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/analytics': {
+      id: '/app/analytics'
+      path: '/analytics'
+      fullPath: '/app/analytics'
+      preLoaderRoute: typeof AppAnalyticsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/assignments': {
+      id: '/app/assignments'
+      path: '/assignments'
+      fullPath: '/app/assignments'
+      preLoaderRoute: typeof AppAssignmentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/calendar': {
+      id: '/app/calendar'
+      path: '/calendar'
+      fullPath: '/app/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/gradebook': {
+      id: '/app/gradebook'
+      path: '/gradebook'
+      fullPath: '/app/gradebook'
+      preLoaderRoute: typeof AppGradebookRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/help': {
+      id: '/app/help'
+      path: '/help'
+      fullPath: '/app/help'
+      preLoaderRoute: typeof AppHelpRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/pricing': {
+      id: '/app/pricing'
+      path: '/pricing'
+      fullPath: '/app/pricing'
+      preLoaderRoute: typeof AppPricingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/exams/': {
+      id: '/app/exams/'
+      path: '/exams'
+      fullPath: '/app/exams/'
+      preLoaderRoute: typeof AppExamsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/exams/$examId': {
+      id: '/app/exams/$examId'
+      path: '/exams/$examId'
+      fullPath: '/app/exams/$examId'
+      preLoaderRoute: typeof AppExamsExamIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/students/': {
+      id: '/app/students/'
+      path: '/students'
+      fullPath: '/app/students/'
+      preLoaderRoute: typeof AppStudentsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/students/$studentId': {
+      id: '/app/students/$studentId'
+      path: '/students/$studentId'
+      fullPath: '/app/students/$studentId'
+      preLoaderRoute: typeof AppStudentsStudentIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+  }
+}
+
+interface AppRouteChildren {
   AppAiToolsRoute: typeof AppAiToolsRoute
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAssignmentsRoute: typeof AppAssignmentsRoute
@@ -199,103 +316,7 @@ export interface RootRouteChildren {
   AppStudentsIndexRoute: typeof AppStudentsIndexRoute
 }
 
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/app/': {
-      id: '/app/'
-      path: '/app'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/ai-tools': {
-      id: '/app/ai-tools'
-      path: '/app/ai-tools'
-      fullPath: '/app/ai-tools'
-      preLoaderRoute: typeof AppAiToolsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/analytics': {
-      id: '/app/analytics'
-      path: '/app/analytics'
-      fullPath: '/app/analytics'
-      preLoaderRoute: typeof AppAnalyticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/assignments': {
-      id: '/app/assignments'
-      path: '/app/assignments'
-      fullPath: '/app/assignments'
-      preLoaderRoute: typeof AppAssignmentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/calendar': {
-      id: '/app/calendar'
-      path: '/app/calendar'
-      fullPath: '/app/calendar'
-      preLoaderRoute: typeof AppCalendarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/gradebook': {
-      id: '/app/gradebook'
-      path: '/app/gradebook'
-      fullPath: '/app/gradebook'
-      preLoaderRoute: typeof AppGradebookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/help': {
-      id: '/app/help'
-      path: '/app/help'
-      fullPath: '/app/help'
-      preLoaderRoute: typeof AppHelpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/pricing': {
-      id: '/app/pricing'
-      path: '/app/pricing'
-      fullPath: '/app/pricing'
-      preLoaderRoute: typeof AppPricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/settings': {
-      id: '/app/settings'
-      path: '/app/settings'
-      fullPath: '/app/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/exams/': {
-      id: '/app/exams/'
-      path: '/app/exams'
-      fullPath: '/app/exams/'
-      preLoaderRoute: typeof AppExamsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/exams/$examId': {
-      id: '/app/exams/$examId'
-      path: '/app/exams/$examId'
-      fullPath: '/app/exams/$examId'
-      preLoaderRoute: typeof AppExamsExamIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/students/': {
-      id: '/app/students/'
-      path: '/app/students'
-      fullPath: '/app/students/'
-      preLoaderRoute: typeof AppStudentsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/students/$studentId': {
-      id: '/app/students/$studentId'
-      path: '/app/students/$studentId'
-      fullPath: '/app/students/$studentId'
-      preLoaderRoute: typeof AppStudentsStudentIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-  }
-}
-
-const rootRouteChildren: RootRouteChildren = {
+const AppRouteChildren: AppRouteChildren = {
   AppAiToolsRoute: AppAiToolsRoute,
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppAssignmentsRoute: AppAssignmentsRoute,
@@ -309,6 +330,12 @@ const rootRouteChildren: RootRouteChildren = {
   AppStudentsStudentIdRoute: AppStudentsStudentIdRoute,
   AppExamsIndexRoute: AppExamsIndexRoute,
   AppStudentsIndexRoute: AppStudentsIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
