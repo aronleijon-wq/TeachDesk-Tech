@@ -6,7 +6,6 @@ import {
   BookOpen,
   CalendarDays,
   ClipboardList,
-  GraduationCap,
   HelpCircle,
   LayoutDashboard,
   LifeBuoy,
