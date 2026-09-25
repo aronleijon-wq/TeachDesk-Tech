@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://teachdesk.lovable.app/</loc>
+    <loc>https://teachdesk.se/</loc>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://teachdesk.lovable.app/demo</loc>
+    <loc>https://teachdesk.se/demo</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://teachdesk.lovable.app/login</loc>
+    <loc>https://teachdesk.se/login</loc>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://teachdesk.lovable.app/privacy</loc>
+    <loc>https://teachdesk.se/privacy</loc>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://teachdesk.lovable.app/terms</loc>
+    <loc>https://teachdesk.se/terms</loc>
     <priority>0.3</priority>
   </url>
 </urlset>

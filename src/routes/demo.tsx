@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteFooter, SiteNav } from "@/components/marketing/site-chrome";
 import { DemoForm } from "@/components/marketing/demo-form";
+import { SITE_URL } from "@/lib/site";
 
 const title = "Book a demo — TeachDesk";
 const description = "Get a walkthrough of TeachDesk and see how it can fit into your school's existing workflow.";
@@ -13,10 +14,10 @@ export const Route = createFileRoute("/demo")({
       { property: "og:title", content: title },
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://teachdesk.lovable.app/demo" },
+      { property: "og:url", content: `${SITE_URL}/demo` },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://teachdesk.lovable.app/demo" }],
+    links: [{ rel: "canonical", href: `${SITE_URL}/demo` }],
   }),
   component: DemoPage,
 });
