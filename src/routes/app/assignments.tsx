@@ -1,32 +1,52 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ClipboardList } from "lucide-react";
-import { EmptyState, PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
+import { EmptyState, PageHeader, Panel, ProgressBar, StatusPill } from "@/components/primitives";
+import { defineMessages, useLanguage, useMessages } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 
+const messages = defineMessages({
+  en: {
+    pageTitle: "Assignments — TeachDesk",
+    title: "Assignments",
+    subtitle: "Submissions and what's left to grade.",
+    comingLater: "Assignments are coming later",
+    comingLaterText:
+      "For now TeachDesk handles exams, retakes, results and follow-up. You can see how assignments will look in the demo (Settings → Show demo data).",
+    details: (due: string, submitted: number, total: number) =>
+      `Due ${due} · ${submitted}/${total} submitted`,
+    toGrade: (n: number) => `${n} to grade`,
+  },
+  sv: {
+    pageTitle: "Uppgifter — TeachDesk",
+    title: "Uppgifter",
+    subtitle: "Inlämningar och vad som är kvar att bedöma.",
+    comingLater: "Uppgifter kommer senare",
+    comingLaterText:
+      "Just nu hanterar TeachDesk prov, omprov, resultat och uppföljning. Du kan se hur uppgifter kommer att se ut i exempeldatan (Inställningar → Visa exempeldata).",
+    details: (due, submitted, total) => `Senast ${due} · ${submitted}/${total} inlämnade`,
+    toGrade: (n) => `${n} att bedöma`,
+  },
+});
+
 export const Route = createFileRoute("/app/assignments")({
-  head: () => ({
-    meta: [
-      { title: "Assignments — TeachDesk" },
-      { name: "description", content: "Submissions and what's left to grade for each assignment." },
-      { property: "og:title", content: "Assignments — TeachDesk" },
-      { property: "og:description", content: "Submissions and what's left to grade." },
-    ],
-  }),
+  head: ({ match }) => ({ meta: [{ title: messages[match.context.language].pageTitle }] }),
   component: AssignmentsPage,
 });
 
 function AssignmentsPage() {
   const { assignments, classById } = useStore();
+  const { formatDate } = useLanguage();
+  const t = useMessages(messages);
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="Assignments" subtitle="Submissions and what's left to grade." />
+      <PageHeader title={t.title} subtitle={t.subtitle} />
 
       {assignments.length === 0 && (
         <EmptyState
           icon={ClipboardList}
-          title="Assignments are coming later"
-          description="For now TeachDesk handles exams, retakes, results and follow-up. You can see how assignments will look in the demo (Settings → Show demo data)."
+          title={t.comingLater}
+          description={t.comingLaterText}
         />
       )}
 
@@ -38,11 +58,11 @@ function AssignmentsPage() {
                 <p className="label-xs">{classById(a.classId)?.name}</p>
                 <p className="mt-1 text-[15px] font-semibold">{a.title}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Due {formatDate(a.due)} · {a.submitted}/{a.total} submitted
+                  {t.details(formatDate(a.due), a.submitted, a.total)}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {a.toGrade > 0 && <StatusPill tone="warning">{a.toGrade} to grade</StatusPill>}
+                {a.toGrade > 0 && <StatusPill tone="warning">{t.toGrade(a.toGrade)}</StatusPill>}
 
               </div>
             </div>

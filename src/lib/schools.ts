@@ -1,7 +1,32 @@
 // Schools, the teachers in them, and invitations to join. Who may see and change what is
 // decided by the database (drizzle/manual/0005_school_invitations.sql); this file asks.
 import { supabase } from "@/integrations/supabase/client";
+import { defineMessages, type Language } from "./messages";
 import { SITE_URL } from "./site";
+
+const messages = defineMessages({
+  en: {
+    roles: { admin: "Admin", teacher: "Teacher" },
+    acceptErrors: {
+      TD403:
+        "This invitation is for another email address. Sign in with the address it was sent to.",
+      TD404: "This invitation link isn't valid. Ask for a new one.",
+      TD410: "This invitation has already been used or has expired. Ask for a new one.",
+    } as Record<string, string>,
+    joinFailed: "Couldn't join the school. Check your internet connection and try again.",
+  },
+  sv: {
+    roles: { admin: "Administratör", teacher: "Lärare" },
+    acceptErrors: {
+      TD403:
+        "Inbjudan gäller en annan e-postadress. Logga in med adressen som inbjudan skickades till.",
+      TD404: "Inbjudningslänken är inte giltig. Be om en ny.",
+      TD410: "Inbjudan har redan använts eller har gått ut. Be om en ny.",
+    },
+    joinFailed:
+      "Det gick inte att gå med i skolan. Kontrollera internetanslutningen och försök igen.",
+  },
+});
 
 export type SchoolRole = "admin" | "teacher";
 export type SchoolStatus = "pilot" | "active" | "ended";
@@ -32,7 +57,7 @@ export const isExpired = (invitation: Invitation, now = new Date()) =>
   new Date(invitation.expiresAt) <= now;
 
 /** "Admin" or "Teacher". */
-export const roleLabel = (role: SchoolRole) => (role === "admin" ? "Admin" : "Teacher");
+export const roleLabel = (role: SchoolRole, language: Language) => messages[language].roles[role];
 
 // --- The teacher's schools -------------------------------------------------------------
 
@@ -86,20 +111,12 @@ export async function previewInvitation(token: string): Promise<InvitationPrevie
   );
 }
 
-const ACCEPT_ERRORS: Record<string, string> = {
-  TD403: "This invitation is for another email address. Sign in with the address it was sent to.",
-  TD404: "This invitation link isn't valid. Ask for a new one.",
-  TD410: "This invitation has already been used or has expired. Ask for a new one.",
-};
-
 /** Joins the school for the signed-in teacher and returns its id. */
-export async function acceptInvitation(token: string): Promise<string> {
+export async function acceptInvitation(token: string, language: Language): Promise<string> {
   const { data, error } = await supabase.rpc("accept_invitation", { invite_token: token });
   if (error) {
-    throw new Error(
-      ACCEPT_ERRORS[error.code] ??
-        "Couldn't join the school. Check your internet connection and try again.",
-    );
+    const t = messages[language];
+    throw new Error(t.acceptErrors[error.code] ?? t.joinFailed);
   }
   return data;
 }

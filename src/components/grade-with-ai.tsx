@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { gradePaper, type GradedPaper } from "@/lib/exam-ai.functions";
 import { matchStudent } from "@/lib/grading";
+import { defineMessages, useLanguage, useMessages } from "@/lib/i18n";
 import { readPickedFile } from "@/lib/picked-file";
 import { useStore } from "@/lib/store";
 import type { AiGrading, Exam, ExamVersion } from "@/lib/types";
@@ -35,6 +36,78 @@ interface Paper {
 
 const sum = (numbers: number[]) => numbers.reduce((total, n) => total + n, 0);
 
+const messages = defineMessages({
+  en: {
+    approvedMany: (n: number) => `${n} students approved`,
+    pdfOrPhoto: "Upload the test as a PDF or a photo.",
+    couldntGrade: "Couldn't grade this paper.",
+    title: "Grade with AI",
+    description:
+      "Upload the students' finished tests. AI suggests points for every question; nothing counts until you approve it.",
+    addQuestionsFirst:
+      "Add the exam's questions on the Questions tab first. AI grades against them and their expected answers.",
+    testsAreFor: "The tests are for",
+    dropPrompt: "Drop the students' tests here, or click to choose them",
+    dropHint:
+      "One file per student: a PDF, or a photo for one-page tests · max 10 MB each. TeachDesk doesn't keep the files.",
+    stayOnTab: "Stay on this tab while grading: about half a minute per test, three at a time.",
+    toReview: (n: number) => `To review (${n})`,
+    toReviewText: "Check each suggestion, change points where you disagree, and approve.",
+    approveNothingToCheck: (n: number) => `Approve ${n} with nothing to check`,
+    student: "Student",
+    waiting: "Waiting",
+    grading: "Grading…",
+    whose: "Whose test is this?",
+    tryAgain: (file: string) => `Try ${file} again`,
+    saved: (name: string, total: number, max: number) => `${name}: ${total} of ${max} points saved`,
+    toCheck: (n: number) => `${n} to check`,
+    hide: "Hide",
+    review: "Review",
+    approve: "Approve",
+    question: (n: number) => `Question ${n}`,
+    check: "Check",
+    noAnswer: "No answer found",
+    pointsFor: (n: number) => `Points for question ${n}`,
+    approveTotal: (total: number, max: number) => `Approve ${total} / ${max} p`,
+    discard: "Discard",
+  },
+  sv: {
+    approvedMany: (n) => `${n} elever godkända`,
+    pdfOrPhoto: "Ladda upp provet som PDF eller foto.",
+    couldntGrade: "Det gick inte att rätta provet.",
+    title: "Rätta med AI",
+    description:
+      "Ladda upp elevernas färdiga prov. AI föreslår poäng för varje fråga; inget räknas förrän du godkänner det.",
+    addQuestionsFirst:
+      "Lägg först till provets frågor under fliken Frågor. AI rättar mot dem och deras förväntade svar.",
+    testsAreFor: "Proven gäller",
+    dropPrompt: "Släpp elevernas prov här, eller klicka för att välja dem",
+    dropHint:
+      "En fil per elev: en PDF, eller ett foto för prov på en sida · max 10 MB per fil. TeachDesk sparar inte filerna.",
+    stayOnTab:
+      "Stanna på den här fliken under rättningen: ungefär en halv minut per prov, tre åt gången.",
+    toReview: (n) => `Att granska (${n})`,
+    toReviewText: "Granska varje förslag, ändra poängen där du inte håller med och godkänn.",
+    approveNothingToCheck: (n) => `Godkänn ${n} utan anmärkningar`,
+    student: "Elev",
+    waiting: "Väntar",
+    grading: "Rättar…",
+    whose: "Vems prov är det här?",
+    tryAgain: (file) => `Försök igen med ${file}`,
+    saved: (name, total, max) => `${name}: ${total} av ${max} poäng sparade`,
+    toCheck: (n) => `${n} att kontrollera`,
+    hide: "Dölj",
+    review: "Granska",
+    approve: "Godkänn",
+    question: (n) => `Fråga ${n}`,
+    check: "Kontrollera",
+    noAnswer: "Inget svar hittades",
+    pointsFor: (n) => `Poäng för fråga ${n}`,
+    approveTotal: (total, max) => `Godkänn ${total} / ${max} p`,
+    discard: "Släng förslaget",
+  },
+});
+
 /**
  * Grading with AI, on an exam's Grading tab: upload the students' finished tests, one file
  * per student. AI suggests points for every question, and the teacher reviews and approves
@@ -42,6 +115,8 @@ const sum = (numbers: number[]) => numbers.reduce((total, n) => total + n, 0);
  */
 export function GradeWithAi({ exam }: { exam: Exam }) {
   const { profile, studentById, suggestGrading, approveGrading } = useStore();
+  const { language } = useLanguage();
+  const t = useMessages(messages);
   const hasPro = profile.access.level === "pro";
   const versions = exam.versions.filter((v) => v.questions.length > 0);
   const [versionId, setVersionId] = useState(versions[0]?.id ?? "");
@@ -73,7 +148,7 @@ export function GradeWithAi({ exam }: { exam: Exam }) {
 
   const approveNothingToCheck = () => {
     for (const item of nothingToCheck) approveGrading(exam.id, item.studentId, pointsFor(item));
-    toast.success(`${nothingToCheck.length} students approved`);
+    toast.success(t.approvedMany(nothingToCheck.length));
   };
 
   const update = (id: number, changes: Partial<Paper>) =>
@@ -95,8 +170,8 @@ export function GradeWithAi({ exam }: { exam: Exam }) {
   const grade = async (paper: Paper, against: ExamVersion) => {
     update(paper.id, { status: "grading", versionId: against.id });
     try {
-      const picked = await readPickedFile(paper.file);
-      if (picked.kind !== "binary") throw new Error("Upload the test as a PDF or a photo.");
+      const picked = await readPickedFile(paper.file, language);
+      if (picked.kind !== "binary") throw new Error(t.pdfOrPhoto);
       const result = await gradePaper({
         data: {
           examTitle: exam.title,
@@ -118,7 +193,7 @@ export function GradeWithAi({ exam }: { exam: Exam }) {
     } catch (e) {
       update(paper.id, {
         status: "failed",
-        error: e instanceof Error ? e.message : "Couldn't grade this paper.",
+        error: e instanceof Error ? e.message : t.couldntGrade,
       });
     }
   };
@@ -151,22 +226,19 @@ export function GradeWithAi({ exam }: { exam: Exam }) {
   return (
     <div className="space-y-4">
       <Panel
-        title="Grade with AI"
-        description="Upload the students' finished tests. AI suggests points for every question; nothing counts until you approve it."
+        title={t.title}
+        description={t.description}
         action={<StatusPill tone="primary">Pro</StatusPill>}
       >
         {!version ? (
-          <p className="text-sm text-muted-foreground">
-            Add the exam's questions on the Questions tab first. AI grades against them and their
-            expected answers.
-          </p>
+          <p className="text-sm text-muted-foreground">{t.addQuestionsFirst}</p>
         ) : !hasPro ? (
           <ProNote />
         ) : (
           <div className="space-y-3">
             {versions.length > 1 && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">The tests are for</span>
+                <span className="text-muted-foreground">{t.testsAreFor}</span>
                 <Select value={version.id} onValueChange={setVersionId}>
                   <SelectTrigger className="h-8 w-40">
                     <SelectValue />
@@ -184,8 +256,8 @@ export function GradeWithAi({ exam }: { exam: Exam }) {
             <DropZone
               fileName={undefined}
               multiple
-              prompt="Drop the students' tests here, or click to choose them"
-              hint="One file per student: a PDF, or a photo for one-page tests · max 10 MB each. TeachDesk doesn't keep the files."
+              prompt={t.dropPrompt}
+              hint={t.dropHint}
               onFiles={addFiles}
             />
             {papers.length > 0 && (
@@ -206,23 +278,19 @@ export function GradeWithAi({ exam }: { exam: Exam }) {
                 ))}
               </ul>
             )}
-            {busy && (
-              <p className="text-xs text-muted-foreground">
-                Stay on this tab while grading: about half a minute per test, three at a time.
-              </p>
-            )}
+            {busy && <p className="text-xs text-muted-foreground">{t.stayOnTab}</p>}
           </div>
         )}
       </Panel>
 
       {toReview.length > 0 && (
         <Panel
-          title={`To review (${toReview.length})`}
-          description="Check each suggestion, change points where you disagree, and approve."
+          title={t.toReview(toReview.length)}
+          description={t.toReviewText}
           action={
             nothingToCheck.length > 1 && (
               <Button size="sm" variant="outline" onClick={approveNothingToCheck}>
-                Approve {nothingToCheck.length} with nothing to check
+                {t.approveNothingToCheck(nothingToCheck.length)}
               </Button>
             )
           }
@@ -233,7 +301,7 @@ export function GradeWithAi({ exam }: { exam: Exam }) {
                 key={item.key}
                 examId={exam.id}
                 studentId={item.studentId}
-                name={studentById(item.studentId)?.name ?? "Student"}
+                name={studentById(item.studentId)?.name ?? t.student}
                 grading={item.grading}
                 points={pointsFor(item)}
                 onPointsChange={(points) =>
@@ -261,14 +329,15 @@ function PaperRow({
   onChooseStudent: (studentId: string) => void;
   onRetry: () => void;
 }) {
+  const t = useMessages(messages);
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
       <span className="min-w-0 truncate">{paper.file.name}</span>
       <span className="flex items-center gap-2 text-muted-foreground">
-        {paper.status === "waiting" && "Waiting"}
+        {paper.status === "waiting" && t.waiting}
         {paper.status === "grading" && (
           <>
-            <Loader2 className="size-4 animate-spin" /> Grading…
+            <Loader2 className="size-4 animate-spin" /> {t.grading}
           </>
         )}
         {paper.status === "done" && (
@@ -279,7 +348,7 @@ function PaperRow({
         {paper.status === "unmatched" && (
           <Select onValueChange={onChooseStudent}>
             <SelectTrigger className="h-8 w-48">
-              <SelectValue placeholder="Whose test is this?" />
+              <SelectValue placeholder={t.whose} />
             </SelectTrigger>
             <SelectContent>
               {students.map((s) => (
@@ -297,7 +366,7 @@ function PaperRow({
               size="sm"
               variant="ghost"
               onClick={onRetry}
-              aria-label={`Try ${paper.file.name} again`}
+              aria-label={t.tryAgain(paper.file.name)}
             >
               <RotateCcw className="size-4" />
             </Button>
@@ -326,6 +395,7 @@ function ReviewCard({
   onPointsChange: (points: number[]) => void;
 }) {
   const { approveGrading, discardGrading } = useStore();
+  const t = useMessages(messages);
   const [open, setOpen] = useState(false);
   const total = sum(points);
   const max = sum(grading.questions.map((q) => q.maxPoints));
@@ -333,7 +403,7 @@ function ReviewCard({
 
   const approve = () => {
     approveGrading(examId, studentId, points);
-    toast.success(`${name}: ${total} of ${max} points saved`);
+    toast.success(t.saved(name, total, max));
   };
 
   return (
@@ -344,15 +414,15 @@ function ReviewCard({
           <p className="truncate text-xs text-muted-foreground">{grading.fileName}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {toCheck > 0 && <StatusPill tone="warning">{toCheck} to check</StatusPill>}
+          {toCheck > 0 && <StatusPill tone="warning">{t.toCheck(toCheck)}</StatusPill>}
           <span className="text-sm tabular-nums">
             {total} / {max} p
           </span>
           <Button size="sm" variant="ghost" onClick={() => setOpen((o) => !o)}>
-            {open ? "Hide" : "Review"}
+            {open ? t.hide : t.review}
           </Button>
           <Button size="sm" onClick={approve}>
-            Approve
+            {t.approve}
           </Button>
         </div>
       </div>
@@ -371,11 +441,11 @@ function ReviewCard({
               <li key={q.number} className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 text-sm">
                   <p className="flex items-center gap-2 font-medium">
-                    Question {q.number}
-                    {q.unsure && <StatusPill tone="warning">Check</StatusPill>}
+                    {t.question(q.number)}
+                    {q.unsure && <StatusPill tone="warning">{t.check}</StatusPill>}
                   </p>
                   <p className="mt-0.5 whitespace-pre-line text-muted-foreground">
-                    {q.answer ? `“${q.answer}”` : "No answer found"}
+                    {q.answer ? `“${q.answer}”` : t.noAnswer}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     <Sparkles className="mr-1 inline size-3 text-primary" />
@@ -389,7 +459,7 @@ function ReviewCard({
                     max={q.maxPoints}
                     step={0.5}
                     value={points[i]}
-                    aria-label={`Points for question ${q.number}`}
+                    aria-label={t.pointsFor(q.number)}
                     className="h-8 w-20"
                     onChange={(e) => {
                       const value = e.target.valueAsNumber;
@@ -406,10 +476,10 @@ function ReviewCard({
           </ol>
           <div className="flex gap-2">
             <Button size="sm" onClick={approve}>
-              Approve {total} / {max} p
+              {t.approveTotal(total, max)}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => discardGrading(examId, studentId)}>
-              Discard
+              {t.discard}
             </Button>
           </div>
         </div>

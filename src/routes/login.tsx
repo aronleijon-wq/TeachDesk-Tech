@@ -6,9 +6,78 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
+import { defineMessages, useMessages } from "@/lib/i18n";
 import { safeReturnPath } from "@/lib/return-path";
 
 type Mode = "sign-in" | "sign-up" | "forgot";
+
+const messages = defineMessages({
+  en: {
+    pageTitle: "Sign in — TeachDesk",
+    modes: {
+      "sign-in": { title: "Sign in", subtitle: "Welcome back to TeachDesk.", submit: "Sign in" },
+      "sign-up": {
+        title: "Create your account",
+        subtitle: "Start using TeachDesk in a minute.",
+        submit: "Create account",
+      },
+      forgot: {
+        title: "Reset your password",
+        subtitle: "We'll email you a link to choose a new one.",
+        submit: "Send reset link",
+      },
+    } satisfies Record<Mode, { title: string; subtitle: string; submit: string }>,
+    // Shown instead when someone signs in to accept an invitation.
+    joining: {
+      "sign-in": "Sign in to join your school on TeachDesk.",
+      "sign-up": "Use the email address your invitation was sent to.",
+    },
+    somethingWrong: "Something went wrong. Please try again.",
+    resetSent: "If an account exists for that email, a reset link is on its way.",
+    confirmEmail: "Check your inbox and click the link to confirm your email.",
+    google: "Continue with Google",
+    orEmail: "or with email",
+    name: "Your name",
+    email: "Email",
+    password: "Password",
+    forgot: "Forgot password?",
+    newHere: "New to TeachDesk?",
+    createAccount: "Create an account",
+    backToSignIn: "Back to sign in",
+  },
+  sv: {
+    pageTitle: "Logga in — TeachDesk",
+    modes: {
+      "sign-in": { title: "Logga in", subtitle: "Välkommen tillbaka till TeachDesk.", submit: "Logga in" },
+      "sign-up": {
+        title: "Skapa ditt konto",
+        subtitle: "Kom igång med TeachDesk på en minut.",
+        submit: "Skapa konto",
+      },
+      forgot: {
+        title: "Återställ ditt lösenord",
+        subtitle: "Vi mejlar dig en länk där du väljer ett nytt.",
+        submit: "Skicka länk",
+      },
+    },
+    joining: {
+      "sign-in": "Logga in för att gå med i din skola på TeachDesk.",
+      "sign-up": "Använd e-postadressen som inbjudan skickades till.",
+    },
+    somethingWrong: "Något gick fel. Försök igen.",
+    resetSent: "Om det finns ett konto för den e-postadressen är en länk på väg.",
+    confirmEmail: "Titta i din inkorg och klicka på länken för att bekräfta din e-postadress.",
+    google: "Fortsätt med Google",
+    orEmail: "eller med e-post",
+    name: "Ditt namn",
+    email: "E-post",
+    password: "Lösenord",
+    forgot: "Glömt lösenordet?",
+    newHere: "Ny på TeachDesk?",
+    createAccount: "Skapa ett konto",
+    backToSignIn: "Tillbaka till inloggningen",
+  },
+});
 
 export const Route = createFileRoute("/login")({
   // Only allow redirects to the app or an invitation, never to another site.
@@ -16,35 +85,20 @@ export const Route = createFileRoute("/login")({
     const redirect = safeReturnPath(search["redirect"]);
     return redirect ? { redirect } : {};
   },
-  head: () => ({
-    meta: [
-      { title: "Sign in — TeachDesk" },
-      { name: "description", content: "Sign in to your TeachDesk account to plan exams, grade work and follow up with students." },
-      { property: "og:title", content: "Sign in — TeachDesk" },
-      { property: "og:description", content: "Sign in to your TeachDesk account to plan exams, grade work and follow up with students." },
-      { name: "robots", content: "noindex" },
-    ],
+  head: ({ match }) => ({
+    meta: [{ title: messages[match.context.language].pageTitle }, { name: "robots", content: "noindex" }],
   }),
   component: LoginPage,
 });
-
-const copy: Record<Mode, { title: string; subtitle: string; submit: string }> = {
-  "sign-in": { title: "Sign in", subtitle: "Welcome back to TeachDesk.", submit: "Sign in" },
-  "sign-up": { title: "Create your account", subtitle: "Start using TeachDesk in a minute.", submit: "Create account" },
-  forgot: { title: "Reset your password", subtitle: "We'll email you a link to choose a new one.", submit: "Send reset link" },
-};
-
-// Shown instead when someone signs in to accept an invitation.
-const joiningCopy: Partial<Record<Mode, string>> = {
-  "sign-in": "Sign in to join your school on TeachDesk.",
-  "sign-up": "Use the email address your invitation was sent to.",
-};
 
 function LoginPage() {
   const { redirect = "/app" } = Route.useSearch();
   const joining = redirect.startsWith("/invite/");
   const navigate = useNavigate();
   const auth = useAuth();
+  const t = useMessages(messages);
+  const copy = t.modes;
+  const joiningCopy: Partial<Record<Mode, string>> = t.joining;
   const [mode, setMode] = useState<Mode>("sign-in");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [busy, setBusy] = useState(false);
@@ -69,7 +123,7 @@ function LoginPage() {
     try {
       await action();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setError(e instanceof Error ? e.message : t.somethingWrong);
     } finally {
       setBusy(false);
     }
@@ -81,7 +135,7 @@ function LoginPage() {
       if (mode === "sign-in") return auth.signInWithPassword(form.email, form.password);
       if (mode === "forgot") {
         await auth.sendPasswordReset(form.email);
-        return setNotice("If an account exists for that email, a reset link is on its way.");
+        return setNotice(t.resetSent);
       }
       const { needsConfirmation } = await auth.signUpWithPassword(
         form.name.trim(),
@@ -89,7 +143,7 @@ function LoginPage() {
         form.password,
         redirect,
       );
-      if (needsConfirmation) setNotice("Check your inbox and click the link to confirm your email.");
+      if (needsConfirmation) setNotice(t.confirmEmail);
     });
   };
 
@@ -110,10 +164,10 @@ function LoginPage() {
             disabled={busy}
             onClick={() => void run(() => auth.signInWithGoogle(redirect))}
           >
-            <GoogleIcon /> Continue with Google
+            <GoogleIcon /> {t.google}
           </Button>
           <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> or with email <span className="h-px flex-1 bg-border" />
+            <span className="h-px flex-1 bg-border" /> {t.orEmail} <span className="h-px flex-1 bg-border" />
           </div>
         </>
       )}
@@ -121,21 +175,21 @@ function LoginPage() {
       <form onSubmit={submit} className="space-y-4">
         {mode === "sign-up" && (
           <div className="space-y-1.5">
-            <Label htmlFor="name">Your name</Label>
+            <Label htmlFor="name">{t.name}</Label>
             <Input {...field("name")} autoComplete="name" required />
           </div>
         )}
         <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t.email}</Label>
           <Input {...field("email")} type="email" autoComplete="email" required />
         </div>
         {mode !== "forgot" && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t.password}</Label>
               {mode === "sign-in" && (
                 <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => switchMode("forgot")}>
-                  Forgot password?
+                  {t.forgot}
                 </button>
               )}
             </div>
@@ -161,14 +215,14 @@ function LoginPage() {
       <p className="mt-6 text-center text-sm text-muted-foreground">
         {mode === "sign-in" ? (
           <>
-            New to TeachDesk?{" "}
+            {t.newHere}{" "}
             <button type="button" className="font-medium text-foreground hover:underline" onClick={() => switchMode("sign-up")}>
-              Create an account
+              {t.createAccount}
             </button>
           </>
         ) : (
           <button type="button" className="font-medium text-foreground hover:underline" onClick={() => switchMode("sign-in")}>
-            Back to sign in
+            {t.backToSignIn}
           </button>
         )}
       </p>

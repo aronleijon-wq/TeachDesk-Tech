@@ -33,7 +33,7 @@ test("a version 2 save gives the own workspace, demo, profile and demo switch", 
     version: 2,
     mode: "own",
     own,
-    demo: createDemoWorkspace(),
+    demo: createDemoWorkspace("en"),
     profile: { name: " Aron ", email: "x@y", role: "Lärare", school: "", plan: "Trial" },
   });
   const account = readLegacyAccount("u1")!;
@@ -74,7 +74,7 @@ test("old data can be cleared, and the demo is kept under its own key", () => {
   clearLegacyAccount("u1");
   assert.equal(readLegacyAccount("u1"), null);
   assert.equal(readDemoWorkspace("u1"), null);
-  assert.equal(writeDemoWorkspace("u1", createDemoWorkspace()), true);
+  assert.equal(writeDemoWorkspace("u1", createDemoWorkspace("en")), true);
   assert.equal(readDemoWorkspace("u1")?.students.length, 81);
 });
 

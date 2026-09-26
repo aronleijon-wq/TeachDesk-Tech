@@ -485,7 +485,11 @@ export const todayIso = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-/** Lessons and planning from the workspace, plus exams, scheduled retakes and assignment deadlines. */
+/**
+ * Lessons and planning from the workspace, plus exams, scheduled retakes and assignment
+ * deadlines. Retakes and deadlines carry the exam's or assignment's own title; pages say
+ * which kind of event it is.
+ */
 export function calendarEvents(ws: Workspace, today = todayIso()): CalendarEvent[] {
   const lessons = ws.events.map((ev) => ({ ...ev, date: ev.date === "today" ? today : ev.date }));
   const exams: CalendarEvent[] = ws.exams
@@ -512,7 +516,7 @@ export function calendarEvents(ws: Workspace, today = todayIso()): CalendarEvent
         id: `retake-${key}`,
         date: r.date,
         time: r.time ?? "",
-        title: `Retake — ${exam?.title ?? "exam"}`,
+        title: exam?.title ?? "",
         ...(exam ? { classId: exam.classId } : {}),
         ...(r.room ? { room: r.room } : {}),
         kind: "retake",
@@ -523,7 +527,7 @@ export function calendarEvents(ws: Workspace, today = todayIso()): CalendarEvent
     id: `deadline-${a.id}`,
     date: a.due,
     time: "23:59",
-    title: `Deadline — ${a.title}`,
+    title: a.title,
     classId: a.classId,
     kind: "deadline",
   }));

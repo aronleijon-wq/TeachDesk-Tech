@@ -1,7 +1,7 @@
 // Run with: npm test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { accessFor, accessLabel, formatPrice, PLANS, yearlyOffer } from "@/lib/pricing";
+import { accessFor, accessLabel, formatPrice, plans, yearlyOffer } from "@/lib/pricing";
 
 const now = new Date("2026-09-26T12:00:00Z");
 const inDays = (days: number) => new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -13,7 +13,7 @@ test("paying for Pro gives Pro, with or without a trial", () => {
     via: "plan",
     daysLeft: null,
   });
-  assert.equal(accessLabel(accessFor("pro", inDays(5), [], now)), "Pro");
+  assert.equal(accessLabel(accessFor("pro", inDays(5), [], now), "en"), "Pro");
 });
 
 test("a running trial gives Pro and counts the days left", () => {
@@ -27,8 +27,11 @@ test("a running trial gives Pro and counts the days left", () => {
     via: "trial",
     daysLeft: 1,
   });
-  assert.equal(accessLabel(accessFor("free", inDays(12), [], now)), "Pro trial · 12 days left");
-  assert.equal(accessLabel(accessFor("free", inDays(1), [], now)), "Pro trial · 1 day left");
+  assert.equal(
+    accessLabel(accessFor("free", inDays(12), [], now), "en"),
+    "Pro trial · 12 days left",
+  );
+  assert.equal(accessLabel(accessFor("free", inDays(1), [], now), "en"), "Pro trial · 1 day left");
 });
 
 test("after the trial the teacher is on the free plan", () => {
@@ -37,7 +40,7 @@ test("after the trial the teacher is on the free plan", () => {
     via: null,
     daysLeft: null,
   });
-  assert.equal(accessLabel(accessFor("free", inDays(-1), [], now)), "Free");
+  assert.equal(accessLabel(accessFor("free", inDays(-1), [], now), "en"), "Free");
 });
 
 test("a school's running pilot gives Pro and wins over the teacher's own trial", () => {
@@ -47,7 +50,7 @@ test("a school's running pilot gives Pro and wins over the teacher's own trial",
     daysLeft: 21,
   });
   assert.equal(
-    accessLabel(accessFor("free", inDays(-1), [pilot(3)], now)),
+    accessLabel(accessFor("free", inDays(-1), [pilot(3)], now), "en"),
     "School pilot · 3 days left",
   );
   // The longest-running pilot counts when a teacher is in more than one school.
@@ -67,13 +70,34 @@ test("an ended pilot gives nothing; a paying school gives Enterprise", () => {
     now,
   );
   assert.deepEqual(paying, { level: "pro", via: "school", daysLeft: null });
-  assert.equal(accessLabel(paying), "Enterprise");
+  assert.equal(accessLabel(paying, "en"), "Enterprise");
 });
 
 test("prices show in Swedish style, with the yearly offer where there is one", () => {
-  const pro = PLANS.find((p) => p.name === "Pro")!;
-  assert.equal(formatPrice(pro.price).replace(/\s/g, " "), "229 kr");
-  assert.equal(yearlyOffer(pro)?.replace(/\s/g, " "), "or 2 290 kr per year — 2 months free");
-  assert.equal(formatPrice(null), "Let's talk");
-  assert.equal(yearlyOffer(PLANS.find((p) => p.name === "Free")!), null);
+  const pro = plans("en").find((p) => p.name === "Pro")!;
+  assert.equal(formatPrice(pro.price, "en").replace(/\s/g, " "), "229 kr");
+  assert.equal(yearlyOffer(pro, "en")?.replace(/\s/g, " "), "or 2 290 kr per year — 2 months free");
+  assert.equal(formatPrice(null, "en"), "Let's talk");
+  assert.equal(
+    yearlyOffer(
+      plans("en").find((p) => p.name === "Free")!,
+      "en",
+    ),
+    null,
+  );
+});
+
+test("plans and labels read in Swedish too", () => {
+  const [free, pro, school] = plans("sv");
+  assert.deepEqual([free?.title, pro?.title, school?.title], ["Gratis", "Pro", "Skola"]);
+  assert.equal(
+    yearlyOffer(pro!, "sv")?.replace(/\s/g, " "),
+    "eller 2 290 kr per år — 2 månader gratis",
+  );
+  assert.equal(accessLabel(accessFor("free", inDays(1), [], now), "sv"), "Gratis Pro · 1 dag kvar");
+  assert.equal(
+    accessLabel(accessFor("free", inDays(-1), [pilot(3)], now), "sv"),
+    "Skolpilot · 3 dagar kvar",
+  );
+  assert.equal(accessLabel(accessFor("free", inDays(-1), [], now), "sv"), "Gratis");
 });

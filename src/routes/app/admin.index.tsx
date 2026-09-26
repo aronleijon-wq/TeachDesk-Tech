@@ -10,17 +10,61 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
+import { defineMessages, useLanguage, useMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type DemoRequest = Database["public"]["Tables"]["demo_requests"]["Row"];
 
 const statuses = ["new", "contacted", "closed"] as const;
 type Status = (typeof statuses)[number];
-const statusLabel: Record<Status, string> = { new: "New", contacted: "Contacted", closed: "Closed" };
 const statusTone = { new: "warning", contacted: "primary", closed: "neutral" } as const;
 
+const messages = defineMessages({
+  en: {
+    pageTitle: "Demo requests — TeachDesk",
+    title: "Demo requests",
+    subtitle:
+      "People who asked for a demo on the website. After the demo, start a pilot for their school.",
+    statuses: { new: "New", contacted: "Contacted", closed: "Closed" } satisfies Record<Status, string>,
+    markAs: { new: "Mark new", contacted: "Mark contacted", closed: "Mark closed" } satisfies Record<
+      Status,
+      string
+    >,
+    updateFailed: "Couldn't update the status. Please try again.",
+    staffOnly: "Only TeachDesk staff can see demo requests.",
+    all: (n: number) => `All (${n})`,
+    loading: "Loading requests…",
+    loadFailed: "Couldn't load demo requests. Refresh the page to try again.",
+    none: "No demo requests yet.",
+    tryFilter: "Nothing here — try another filter.",
+    emailSubject: "Your TeachDesk demo",
+    startPilot: "Start pilot",
+    changeStatus: "Change status",
+    received: (date: string) => `Received ${date}`,
+  },
+  sv: {
+    pageTitle: "Demoförfrågningar — TeachDesk",
+    title: "Demoförfrågningar",
+    subtitle:
+      "Personer som har bett om en demo på webbplatsen. Starta en pilot för deras skola efter demon.",
+    statuses: { new: "Ny", contacted: "Kontaktad", closed: "Avslutad" },
+    markAs: { new: "Markera som ny", contacted: "Markera som kontaktad", closed: "Markera som avslutad" },
+    updateFailed: "Det gick inte att ändra statusen. Försök igen.",
+    staffOnly: "Bara TeachDesks personal kan se demoförfrågningar.",
+    all: (n) => `Alla (${n})`,
+    loading: "Laddar förfrågningar…",
+    loadFailed: "Det gick inte att ladda demoförfrågningarna. Ladda om sidan och försök igen.",
+    none: "Inga demoförfrågningar än.",
+    tryFilter: "Inget här — prova ett annat filter.",
+    emailSubject: "Din demo av TeachDesk",
+    startPilot: "Starta pilot",
+    changeStatus: "Ändra status",
+    received: (date) => `Mottagen ${date}`,
+  },
+});
+
 export const Route = createFileRoute("/app/admin/")({
-  head: () => ({ meta: [{ title: "Demo requests — TeachDesk" }] }),
+  head: ({ match }) => ({ meta: [{ title: messages[match.context.language].pageTitle }] }),
   component: AdminPage,
 });
 
@@ -29,6 +73,7 @@ function AdminPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Status | "all">("new");
   const [pilotFor, setPilotFor] = useState<PilotTarget | null>(null);
+  const t = useMessages(messages);
 
   const requests = useQuery({
     queryKey: ["demo-requests"],
@@ -49,10 +94,10 @@ function AdminPage() {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["demo-requests"] }),
-    onError: () => toast.error("Couldn't update the status. Please try again."),
+    onError: () => toast.error(t.updateFailed),
   });
 
-  if (!isAdmin) return <NoAccess title="Demo requests" message="Only TeachDesk staff can see demo requests." />;
+  if (!isAdmin) return <NoAccess title={t.title} message={t.staffOnly} />;
 
   const all = requests.data ?? [];
   const counts = Object.fromEntries(statuses.map((s) => [s, all.filter((r) => r.status === s).length])) as Record<Status, number>;
@@ -61,8 +106,8 @@ function AdminPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="Demo requests"
-        subtitle="People who asked for a demo on the website. After the demo, start a pilot for their school."
+        title={t.title}
+        subtitle={t.subtitle}
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -75,21 +120,21 @@ function AdminPage() {
               filter === s ? "border-primary bg-primary-soft font-medium" : "border-border hover:bg-accent",
             )}
           >
-            {s === "all" ? `All (${all.length})` : `${statusLabel[s]} (${counts[s]})`}
+            {s === "all" ? t.all(all.length) : `${t.statuses[s]} (${counts[s]})`}
           </button>
         ))}
       </div>
 
-      {requests.isLoading && <p className="text-sm text-muted-foreground">Loading requests…</p>}
+      {requests.isLoading && <p className="text-sm text-muted-foreground">{t.loading}</p>}
       {requests.isError && (
         <Panel>
-          <p className="text-sm text-destructive">Couldn't load demo requests. Refresh the page to try again.</p>
+          <p className="text-sm text-destructive">{t.loadFailed}</p>
         </Panel>
       )}
       {requests.isSuccess && shown.length === 0 && (
         <Panel>
           <p className="text-sm text-muted-foreground">
-            {all.length === 0 ? "No demo requests yet." : "Nothing here — try another filter."}
+            {all.length === 0 ? t.none : t.tryFilter}
           </p>
         </Panel>
       )}
@@ -124,7 +169,12 @@ function RequestCard({
   onStartPilot: () => void;
 }) {
   const status = (statuses as readonly string[]).includes(r.status) ? (r.status as Status) : "new";
-  const received = new Date(r.created_at).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" });
+  const { language } = useLanguage();
+  const t = useMessages(messages);
+  const received = new Date(r.created_at).toLocaleString(language === "sv" ? "sv-SE" : "en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
@@ -135,7 +185,7 @@ function RequestCard({
           </p>
           <p className="text-sm text-muted-foreground">{r.organization}</p>
           <a
-            href={`mailto:${r.email}?subject=${encodeURIComponent("Your TeachDesk demo")}`}
+            href={`mailto:${r.email}?subject=${encodeURIComponent(t.emailSubject)}`}
             className="mt-1 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
           >
             <Mail className="size-3.5" /> {r.email}
@@ -143,17 +193,17 @@ function RequestCard({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={onStartPilot}>
-            Start pilot
+            {t.startPilot}
           </Button>
-          <StatusPill tone={statusTone[status]}>{statusLabel[status]}</StatusPill>
+          <StatusPill tone={statusTone[status]}>{t.statuses[status]}</StatusPill>
           <Select value={status} onValueChange={(v) => onStatus(v as Status)}>
-            <SelectTrigger className="h-8 w-[130px]" aria-label="Change status">
+            <SelectTrigger className="h-8 w-[180px]" aria-label={t.changeStatus}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {statuses.map((s) => (
                 <SelectItem key={s} value={s}>
-                  Mark {statusLabel[s].toLowerCase()}
+                  {t.markAs[s]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -161,7 +211,7 @@ function RequestCard({
         </div>
       </div>
       {r.message && <p className="mt-3 whitespace-pre-line border-t border-border pt-3 text-sm">{r.message}</p>}
-      <p className="mt-3 text-xs text-muted-foreground">Received {received}</p>
+      <p className="mt-3 text-xs text-muted-foreground">{t.received(received)}</p>
     </div>
   );
 }

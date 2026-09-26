@@ -5,23 +5,160 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
+import { PageHeader, Panel, ProgressBar, StatusPill } from "@/components/primitives";
 import { ConfirmButton } from "@/components/confirm-button";
 import { GenerateVersionDialog } from "@/components/generate-version-dialog";
 import { GradeWithAi } from "@/components/grade-with-ai";
 import { AddQuestion, QuestionCard } from "@/components/question-editor";
+import { defineMessages, useLanguage, useMessages } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { newId } from "@/lib/workspace";
 
+const messages = defineMessages({
+  en: {
+    pageTitle: "Exam — TeachDesk",
+    back: "Exams",
+    points: (n: number) => `${n} points`,
+    deleteExam: "Delete exam",
+    deleteTitle: (title: string) => `Delete ${title}?`,
+    deleteText: "Its questions, versions, results and retakes are deleted too. This can't be undone.",
+    deleted: (title: string) => `${title} deleted`,
+    print: "Print",
+    generateVersion: "Generate equivalent version",
+    metrics: { students: "Students", completed: "Completed", absent: "Absent", versions: "Versions" },
+    tabs: {
+      overview: "Overview",
+      questions: "Questions",
+      versions: "Versions",
+      attendance: "Attendance",
+      retakes: "Retakes",
+      grading: "Grading",
+    },
+    objectives: "Learning objectives",
+    completion: "Completion",
+    completionText: (done: number, total: number, absent: number, toSchedule: number) =>
+      `${done} of ${total} students completed. ${absent} absent, ${toSchedule} ${toSchedule === 1 ? "retake still needs" : "retakes still need"} scheduling.`,
+    noQuestions:
+      "No questions yet. Add the exam's questions here; then you can also generate an equivalent version for retakes.",
+    questionUpdated: "Question updated",
+    questionAdded: "Question added",
+    otherVersion: (label: string) =>
+      `You're looking at ${label}. To add or remove questions, choose Version A on the Versions tab.`,
+    aiGenerated: "AI generated",
+    original: "Original",
+    comparison: "Version comparison",
+    comparisonText: "Same skills, different surface",
+    equivalent: (n: number) => `${n}% equivalent`,
+    versionSummary: (questions: number, points: number) => `${questions} questions · ${points} points`,
+    approved: "Approved",
+    awaitingApproval: "Awaiting teacher approval",
+    versionApproved: (label: string) => `${label} approved`,
+    versionApprovedText: "It can now be used for retakes.",
+    approve: "Approve",
+    attendanceTitle: "Mark attendance",
+    attendanceText:
+      "Tap the students who were absent, then mark the rest present. Absent students go straight into the retake queue.",
+    everyonePresent: "Mark everyone present",
+    restPresent: (n: number) => `Mark the other ${n} present`,
+    statuses: { completed: "Present", absent: "Absent", pending: "Pending" },
+    retakesTitle: "Retakes",
+    retakesText: "Students who missed this exam",
+    noRetakes: "No retakes required.",
+    bookAllTitle: (n: number) => `Book one slot for all ${n} students who need a retake`,
+    bookAll: (n: number) => `Book for ${n} students`,
+    retakesBooked: (n: number) => `${n} retakes booked`,
+    retakeScheduled: "Retake scheduled",
+    scores: "Scores",
+    scoresText:
+      "Enter each student's score, or approve AI's suggestions above. Students appear here once they're marked present.",
+    aiAssisted: "AI-assisted",
+    scoreFor: (name: string) => `Score for ${name}`,
+    student: "student",
+    neverFinal: "No grade is ever finalised without your confirmation.",
+    absentNeedsScheduling: "Absent — needs scheduling",
+    scheduled: "Scheduled",
+    needsScheduling: "Needs scheduling",
+    reschedule: "Reschedule",
+    scheduleRetake: "Schedule retake",
+    confirm: "Confirm",
+    date: "Date",
+    time: "Time",
+    room: "Room",
+  },
+  sv: {
+    pageTitle: "Prov — TeachDesk",
+    back: "Prov",
+    points: (n) => `${n} poäng`,
+    deleteExam: "Ta bort provet",
+    deleteTitle: (title) => `Ta bort ${title}?`,
+    deleteText: "Frågor, versioner, resultat och omprov tas också bort. Det går inte att ångra.",
+    deleted: (title) => `${title} har tagits bort`,
+    print: "Skriv ut",
+    generateVersion: "Skapa likvärdig version",
+    metrics: { students: "Elever", completed: "Klara", absent: "Frånvarande", versions: "Versioner" },
+    tabs: {
+      overview: "Översikt",
+      questions: "Frågor",
+      versions: "Versioner",
+      attendance: "Närvaro",
+      retakes: "Omprov",
+      grading: "Rättning",
+    },
+    objectives: "Lärandemål",
+    completion: "Genomförande",
+    completionText: (done, total, absent, toSchedule) =>
+      `${done} av ${total} elever har skrivit provet. ${absent} frånvarande, ${toSchedule} omprov behöver fortfarande bokas.`,
+    noQuestions:
+      "Inga frågor än. Lägg till provets frågor här, så kan du också skapa en likvärdig version för omprov.",
+    questionUpdated: "Frågan har uppdaterats",
+    questionAdded: "Frågan har lagts till",
+    otherVersion: (label) =>
+      `Du tittar på ${label}. Välj Version A under fliken Versioner för att lägga till eller ta bort frågor.`,
+    aiGenerated: "Skapad med AI",
+    original: "Original",
+    comparison: "Jämför versioner",
+    comparisonText: "Samma förmågor, nya uppgifter",
+    equivalent: (n) => `${n} % likvärdig`,
+    versionSummary: (questions, points) => `${questions} frågor · ${points} poäng`,
+    approved: "Godkänd",
+    awaitingApproval: "Väntar på lärarens godkännande",
+    versionApproved: (label) => `${label} är godkänd`,
+    versionApprovedText: "Den kan nu användas till omprov.",
+    approve: "Godkänn",
+    attendanceTitle: "Markera närvaro",
+    attendanceText:
+      "Markera eleverna som var frånvarande och markera sedan resten som närvarande. Frånvarande elever hamnar direkt i omprovskön.",
+    everyonePresent: "Markera alla som närvarande",
+    restPresent: (n) => `Markera de övriga ${n} som närvarande`,
+    statuses: { completed: "Närvarande", absent: "Frånvarande", pending: "Ej markerad" },
+    retakesTitle: "Omprov",
+    retakesText: "Elever som missade provet",
+    noRetakes: "Inga omprov behövs.",
+    bookAllTitle: (n) => `Boka samma tid för alla ${n} elever som behöver omprov`,
+    bookAll: (n) => `Boka för ${n} elever`,
+    retakesBooked: (n) => `${n} omprov bokade`,
+    retakeScheduled: "Omprovet är bokat",
+    scores: "Resultat",
+    scoresText:
+      "Fyll i varje elevs resultat eller godkänn AI:s förslag ovan. Eleverna visas här när de är markerade som närvarande.",
+    aiAssisted: "Med AI-stöd",
+    scoreFor: (name) => `Resultat för ${name}`,
+    student: "eleven",
+    neverFinal: "Inget resultat blir slutgiltigt utan att du bekräftar det.",
+    absentNeedsScheduling: "Frånvarande — behöver bokas",
+    scheduled: "Bokat",
+    needsScheduling: "Behöver bokas",
+    reschedule: "Boka om",
+    scheduleRetake: "Boka omprov",
+    confirm: "Bekräfta",
+    date: "Datum",
+    time: "Tid",
+    room: "Sal",
+  },
+});
+
 export const Route = createFileRoute("/app/exams/$examId")({
-  head: () => ({
-    meta: [
-      { title: "Exam — TeachDesk" },
-      { name: "description", content: "Exam overview, questions, versions, attendance, retakes and grading." },
-      { property: "og:title", content: "Exam — TeachDesk" },
-      { property: "og:description", content: "Manage one exam end to end." },
-    ],
-  }),
+  head: ({ match }) => ({ meta: [{ title: messages[match.context.language].pageTitle }] }),
   component: ExamDetail,
 });
 
@@ -44,6 +181,8 @@ function ExamDetail() {
     studentById,
   } = useStore();
   const exam = exams.find((e) => e.id === examId);
+  const { formatDate } = useLanguage();
+  const t = useMessages(messages);
   const navigate = useNavigate();
   const [genOpen, setGenOpen] = useState(false);
   const [activeVersion, setActiveVersion] = useState(0);
@@ -65,68 +204,68 @@ function ExamDetail() {
   return (
     <div className="mx-auto max-w-6xl">
       <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2 text-muted-foreground">
-        <Link to="/app/exams"><ArrowLeft className="size-4" /> Exams</Link>
+        <Link to="/app/exams"><ArrowLeft className="size-4" /> {t.back}</Link>
       </Button>
 
       <PageHeader
         title={exam.title}
-        subtitle={`${klass?.name} · ${formatDate(exam.date)} · ${exam.time} · ${exam.room} · ${exam.totalPoints} points`}
+        subtitle={`${klass?.name} · ${formatDate(exam.date)} · ${exam.time} · ${exam.room} · ${t.points(exam.totalPoints)}`}
         actions={
           <>
             <ConfirmButton
               label={
                 <>
-                  <Trash2 className="size-4" /> Delete exam
+                  <Trash2 className="size-4" /> {t.deleteExam}
                 </>
               }
-              title={`Delete ${exam.title}?`}
-              description="Its questions, versions, results and retakes are deleted too. This can't be undone."
-              confirm="Delete exam"
+              title={t.deleteTitle(exam.title)}
+              description={t.deleteText}
+              confirm={t.deleteExam}
               onConfirm={() => {
                 // Leave the page first, so it never shows an exam that's gone.
                 void navigate({ to: "/app/exams" }).then(() => {
                   removeExam(exam.id);
-                  toast.success(`${exam.title} deleted`);
+                  toast.success(t.deleted(exam.title));
                 });
               }}
             />
             {version?.questions.length ? (
               <Button variant="outline" asChild>
                 <Link to="/app/print/$examId" params={{ examId: exam.id }} search={{ version: version.id }}>
-                  <Printer className="size-4" /> Print
+                  <Printer className="size-4" /> {t.print}
                 </Link>
               </Button>
             ) : (
               <Button variant="outline" disabled>
-                <Printer className="size-4" /> Print
+                <Printer className="size-4" /> {t.print}
               </Button>
             )}
             <Button onClick={() => setGenOpen(true)} disabled={!exam.versions[0]?.questions.length}>
-              <Sparkles className="size-4" /> Generate equivalent version
+              <Sparkles className="size-4" /> {t.generateVersion}
             </Button>
           </>
         }
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-4">
-        <Metric label="Students" value={exam.attendance.length} />
-        <Metric label="Completed" value={completed.length} />
-        <Metric label="Absent" value={absent.length} />
-        <Metric label="Versions" value={exam.versions.length} />
+        <Metric label={t.metrics.students} value={exam.attendance.length} />
+        <Metric label={t.metrics.completed} value={completed.length} />
+        <Metric label={t.metrics.absent} value={absent.length} />
+        <Metric label={t.metrics.versions} value={exam.versions.length} />
       </div>
 
       <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="questions">Questions</TabsTrigger>
-          <TabsTrigger value="versions">Versions</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="retakes">Retakes</TabsTrigger>
-          <TabsTrigger value="grading">Grading</TabsTrigger>
+          <TabsTrigger value="overview">{t.tabs.overview}</TabsTrigger>
+          <TabsTrigger value="questions">{t.tabs.questions}</TabsTrigger>
+          <TabsTrigger value="versions">{t.tabs.versions}</TabsTrigger>
+          <TabsTrigger value="attendance">{t.tabs.attendance}</TabsTrigger>
+          <TabsTrigger value="retakes">{t.tabs.retakes}</TabsTrigger>
+          <TabsTrigger value="grading">{t.tabs.grading}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4 grid gap-4 lg:grid-cols-2">
-          <Panel title="Learning objectives">
+          <Panel title={t.objectives}>
             <ul className="space-y-2 text-sm">
               {exam.objectives.map((o) => (
                 <li key={o} className="flex items-start gap-2">
@@ -135,11 +274,10 @@ function ExamDetail() {
               ))}
             </ul>
           </Panel>
-          <Panel title="Completion">
+          <Panel title={t.completion}>
             <ProgressBar value={exam.attendance.length ? (completed.length / exam.attendance.length) * 100 : 0} />
             <p className="mt-2 text-sm text-muted-foreground">
-              {completed.length} of {exam.attendance.length} students completed. {absent.length} absent,{" "}
-              {examRetakes.filter((r) => r.status === "needs-scheduling").length} retakes still need scheduling.
+              {t.completionText(completed.length, exam.attendance.length, absent.length, toSchedule.length)}
             </p>
           </Panel>
         </TabsContent>
@@ -147,10 +285,7 @@ function ExamDetail() {
         <TabsContent value="questions" className="mt-4 space-y-3">
           {!version?.questions.length && (
             <Panel>
-              <p className="text-sm text-muted-foreground">
-                No questions yet. Add the exam's questions here; then you can also generate an equivalent version for
-                retakes.
-              </p>
+              <p className="text-sm text-muted-foreground">{t.noQuestions}</p>
             </Panel>
           )}
           {version?.questions.map((q) => (
@@ -159,7 +294,7 @@ function ExamDetail() {
               question={q}
               onSave={(updated) => {
                 updateQuestion(exam.id, version.id, updated);
-                toast.success("Question updated");
+                toast.success(t.questionUpdated);
               }}
               {...(onOriginal ? { onRemove: () => removeQuestion(exam.id, q.id) } : {})}
             />
@@ -168,12 +303,12 @@ function ExamDetail() {
             <AddQuestion
               onAdd={(draft) => {
                 addQuestion(exam.id, { ...draft, id: newId("question"), number: 0 });
-                toast.success("Question added");
+                toast.success(t.questionAdded);
               }}
             />
           ) : (
             <p className="text-xs text-muted-foreground">
-              You're looking at {version?.label}. To add or remove questions, choose Version A on the Versions tab.
+              {t.otherVersion(version?.label ?? "")}
             </p>
           )}
         </TabsContent>
@@ -188,20 +323,20 @@ function ExamDetail() {
               >
                 <span className="font-medium">{v.label}</span>
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {v.origin === "ai-generated" ? "AI generated" : "Original"}
+                  {v.origin === "ai-generated" ? t.aiGenerated : t.original}
                 </span>
               </button>
             ))}
           </div>
 
           {exam.versions.length >= 2 && (
-            <Panel title="Version comparison" description="Same skills, different surface">
+            <Panel title={t.comparison} description={t.comparisonText}>
               <div className="grid gap-3 md:grid-cols-2">
                 {[exam.versions[0]!, exam.versions[activeVersion === 0 ? 1 : activeVersion]!].map((v, idx) => (
                   <div key={`${v.id}-${idx}`} className="rounded-md border border-border p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">{v.label}</p>
-                      {v.equivalenceScore && <StatusPill tone="success">{v.equivalenceScore}% equivalent</StatusPill>}
+                      {v.equivalenceScore && <StatusPill tone="success">{t.equivalent(v.equivalenceScore)}</StatusPill>}
                     </div>
                     <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
                       {v.questions.slice(0, 4).map((q) => (
@@ -212,18 +347,18 @@ function ExamDetail() {
                     </ul>
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                       <p className="text-xs text-muted-foreground">
-                        {v.questions.length} questions · {v.questions.reduce((s, q) => s + q.points, 0)} points ·{" "}
-                        {v.approved ? "Approved" : "Awaiting teacher approval"}
+                        {t.versionSummary(v.questions.length, v.questions.reduce((s, q) => s + q.points, 0))} ·{" "}
+                        {v.approved ? t.approved : t.awaitingApproval}
                       </p>
                       {!v.approved && (
                         <Button
                           size="sm"
                           onClick={() => {
                             approveVersion(exam.id, v.id);
-                            toast.success(`${v.label} approved`, { description: "It can now be used for retakes." });
+                            toast.success(t.versionApproved(v.label), { description: t.versionApprovedText });
                           }}
                         >
-                          <Check className="size-4" /> Approve
+                          <Check className="size-4" /> {t.approve}
                         </Button>
                       )}
                     </div>
@@ -236,13 +371,13 @@ function ExamDetail() {
 
         <TabsContent value="attendance" className="mt-4">
           <Panel
-            title="Mark attendance"
-            description="Tap the students who were absent, then mark the rest present. Absent students go straight into the retake queue."
+            title={t.attendanceTitle}
+            description={t.attendanceText}
             action={
               notMarked > 0 && (
                 <Button size="sm" variant="outline" onClick={() => markRestPresent(exam.id)}>
                   <Check className="size-4" />
-                  {notMarked === exam.attendance.length ? "Mark everyone present" : `Mark the other ${notMarked} present`}
+                  {notMarked === exam.attendance.length ? t.everyonePresent : t.restPresent(notMarked)}
                 </Button>
               )
             }
@@ -261,7 +396,7 @@ function ExamDetail() {
                           variant={a.status === status ? "default" : "outline"}
                           onClick={() => setAttendance(exam.id, a.studentId, status)}
                         >
-                          {status === "completed" ? "Present" : status === "absent" ? "Absent" : "Pending"}
+                          {t.statuses[status]}
                         </Button>
                       ))}
                     </span>
@@ -273,22 +408,22 @@ function ExamDetail() {
         </TabsContent>
 
         <TabsContent value="retakes" className="mt-4">
-          <Panel title="Retakes" description="Students who missed this exam">
+          <Panel title={t.retakesTitle} description={t.retakesText}>
             {examRetakes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No retakes required.</p>
+              <p className="text-sm text-muted-foreground">{t.noRetakes}</p>
             ) : (
               <>
                 {toSchedule.length > 1 && (
                   <SlotForm
-                    title={`Book one slot for all ${toSchedule.length} students who need a retake`}
+                    title={t.bookAllTitle(toSchedule.length)}
                     defaultRoom={exam.room}
-                    submitLabel={`Book for ${toSchedule.length} students`}
+                    submitLabel={t.bookAll(toSchedule.length)}
                     onBook={(slot) => {
                       scheduleRetakes(
                         toSchedule.map((r) => r.id),
                         { ...slot, versionId: retakeVersionId },
                       );
-                      toast.success(`${toSchedule.length} retakes booked`, {
+                      toast.success(t.retakesBooked(toSchedule.length), {
                         description: `${formatDate(slot.date)} · ${slot.time} · ${slot.room}`,
                       });
                     }}
@@ -307,7 +442,7 @@ function ExamDetail() {
                       versionLabel={exam.versions.find((v) => v.id === r.versionId)?.label}
                       onSchedule={(slot) => {
                         scheduleRetake(r.id, { ...slot, versionId: retakeVersionId });
-                        toast.success("Retake scheduled", {
+                        toast.success(t.retakeScheduled, {
                           description: `${studentById(r.studentId)?.name} · ${formatDate(slot.date)} ${slot.time} · ${slot.room}`,
                         });
                       }}
@@ -321,13 +456,13 @@ function ExamDetail() {
 
         <TabsContent value="grading" className="mt-4 space-y-4">
           <GradeWithAi exam={exam} />
-          <Panel title="Scores" description="Enter each student's score, or approve AI's suggestions above. Students appear here once they're marked present.">
+          <Panel title={t.scores} description={t.scoresText}>
             <ul className="divide-y divide-border">
               {exam.attendance.filter((a) => a.status === "completed").map((a) => (
                 <li key={a.studentId} className="flex items-center justify-between gap-3 py-2">
                   <span className="flex items-center gap-2 text-sm font-medium">
                     {studentById(a.studentId)?.name}
-                    {a.aiGrading?.approved && <StatusPill tone="primary">AI-assisted</StatusPill>}
+                    {a.aiGrading?.approved && <StatusPill tone="primary">{t.aiAssisted}</StatusPill>}
                   </span>
                   <span className="flex items-center gap-2">
                     <Input
@@ -338,7 +473,7 @@ function ExamDetail() {
                       max={exam.totalPoints}
                       defaultValue={a.score ?? ""}
                       placeholder="—"
-                      aria-label={`Score for ${studentById(a.studentId)?.name ?? "student"}`}
+                      aria-label={t.scoreFor(studentById(a.studentId)?.name ?? t.student)}
                       className="h-8 w-20"
                       onBlur={(e) => {
                         // An empty box means not graded yet; only real scores are saved.
@@ -351,9 +486,7 @@ function ExamDetail() {
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-muted-foreground">
-              No grade is ever finalised without your confirmation.
-            </p>
+            <p className="mt-3 text-xs text-muted-foreground">{t.neverFinal}</p>
           </Panel>
         </TabsContent>
       </Tabs>
@@ -399,6 +532,8 @@ function RetakeRow({
   onSchedule: (slot: Slot) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const { formatDate } = useLanguage();
+  const t = useMessages(messages);
   const scheduled = status === "scheduled" && date;
 
   return (
@@ -409,15 +544,15 @@ function RetakeRow({
           <p className="text-xs text-muted-foreground">
             {scheduled
               ? `${formatDate(date)} · ${time} · ${room}${versionLabel ? ` · ${versionLabel}` : ""}`
-              : "Absent — needs scheduling"}
+              : t.absentNeedsScheduling}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <StatusPill tone={scheduled ? "success" : "warning"}>
-            {scheduled ? "Scheduled" : "Needs scheduling"}
+            {scheduled ? t.scheduled : t.needsScheduling}
           </StatusPill>
           <Button size="sm" variant="outline" onClick={() => setEditing((v) => !v)}>
-            {scheduled ? "Reschedule" : "Schedule retake"}
+            {scheduled ? t.reschedule : t.scheduleRetake}
           </Button>
         </div>
       </div>
@@ -426,7 +561,7 @@ function RetakeRow({
         <SlotForm
           initial={{ date: date ?? "", time: time ?? "14:30", room: room ?? defaultRoom }}
           defaultRoom={defaultRoom}
-          submitLabel="Confirm"
+          submitLabel={t.confirm}
           onBook={(slot) => {
             onSchedule(slot);
             setEditing(false);
@@ -452,30 +587,31 @@ function SlotForm({
   onBook: (slot: Slot) => void;
 }) {
   const [slot, setSlot] = useState<Slot>(initial ?? { date: "", time: "14:30", room: defaultRoom });
+  const t = useMessages(messages);
   return (
     <div className={title ? "mb-3 rounded-md bg-muted/50 p-3" : "mt-3 border-t border-border pt-3"}>
       {title && <p className="mb-2 text-sm font-medium">{title}</p>}
       <div className="flex flex-wrap items-end gap-2">
         <Input
           type="date"
-          aria-label="Date"
+          aria-label={t.date}
           value={slot.date}
           onChange={(e) => setSlot({ ...slot, date: e.target.value })}
           className="w-40"
         />
         <Input
           type="time"
-          aria-label="Time"
+          aria-label={t.time}
           value={slot.time}
           onChange={(e) => setSlot({ ...slot, time: e.target.value })}
           className="w-32"
         />
         <Input
-          aria-label="Room"
+          aria-label={t.room}
           value={slot.room}
           onChange={(e) => setSlot({ ...slot, room: e.target.value })}
           className="w-28"
-          placeholder="Room"
+          placeholder={t.room}
         />
         <Button size="sm" disabled={!slot.date} onClick={() => onBook(slot)}>
           {submitLabel}

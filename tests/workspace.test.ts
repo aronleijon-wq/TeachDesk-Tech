@@ -33,10 +33,10 @@ function classWithExam() {
 }
 
 test("the demo workspace is complete and each copy is independent", () => {
-  const demo = createDemoWorkspace();
+  const demo = createDemoWorkspace("en");
   assert.equal(demo.classes.length, 3);
   assert.equal(demo.students.length, 81);
-  assert.notEqual(createDemoWorkspace().exams[0], demo.exams[0]);
+  assert.notEqual(createDemoWorkspace("en").exams[0], demo.exams[0]);
 });
 
 test("a new workspace starts empty", () => {
@@ -114,10 +114,21 @@ test("the calendar shows exams and scheduled retakes", () => {
   );
 });
 
+test("the demo comes in Swedish, and each exam's total matches its questions", () => {
+  const demo = createDemoWorkspace("sv");
+  assert.equal(demo.classes[0]?.name, "Matematik 3c");
+  assert.equal(demo.exams[0]?.title, "Derivator — prov 1");
+  for (const exam of demo.exams.filter((e) => e.versions.length > 0)) {
+    const points = exam.versions[0]?.questions.reduce((sum, q) => sum + q.points, 0) ?? 0;
+    assert.equal(exam.totalPoints, points, exam.title);
+    for (const a of exam.attendance) assert.ok((a.score ?? 0) <= exam.totalPoints, exam.title);
+  }
+});
+
 test("the demo's lessons land on today", () => {
   const today = "2026-09-25";
   assert.equal(
-    rules.calendarEvents(createDemoWorkspace(), today).filter((e) => e.date === today).length,
+    rules.calendarEvents(createDemoWorkspace("en"), today).filter((e) => e.date === today).length,
     4,
   );
 });

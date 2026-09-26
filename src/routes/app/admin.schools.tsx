@@ -4,10 +4,11 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { InvitationRow, InviteForm } from "@/components/invitations";
-import { formatDate, NoAccess, PageHeader, Panel, StatusPill } from "@/components/primitives";
+import { NoAccess, PageHeader, Panel, StatusPill } from "@/components/primitives";
 import { StartPilotDialog, type PilotTarget } from "@/components/start-pilot-dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { defineMessages, formatDate, useLanguage, useMessages, type Language } from "@/lib/i18n";
 import {
   fetchAllSchools,
   inviteToSchool,
@@ -16,58 +17,124 @@ import {
   type SchoolOverview,
 } from "@/lib/schools";
 
-// For TeachDesk staff: every school, its pilot, and the invitations waiting to be accepted.
-export const Route = createFileRoute("/app/admin/schools")({
-  head: () => ({ meta: [{ title: "Schools — TeachDesk" }] }),
-  component: SchoolsPage,
-});
-
 const EXTRA_PILOT_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function statusOf({ status, pilotEndsAt }: SchoolOverview) {
-  if (status === "active") return { label: "Customer", tone: "success" } as const;
-  if (status === "ended") return { label: "Ended", tone: "neutral" } as const;
+const messages = defineMessages({
+  en: {
+    pageTitle: "Schools — TeachDesk",
+    customer: "Customer",
+    ended: "Ended",
+    pilotUntil: (date: string) => `Pilot until ${date}`,
+    ranOut: "Pilot ran out",
+    title: "Schools",
+    staffOnly: "Only TeachDesk staff can see all schools.",
+    subtitle:
+      "Pilots and customers. Send each invite link to the school's contact person — they invite their colleagues.",
+    startPilot: "Start a pilot",
+    loading: "Loading schools…",
+    loadFailed: "Couldn't load the schools. Refresh the page to try again.",
+    none: "No schools yet. Start a pilot from a demo request, or with the button above.",
+    failed: "That didn't work",
+    checkConnection: "Check your internet connection and try again.",
+    confirmEnd: (school: string) =>
+      `End TeachDesk for ${school}? Its teachers keep their data but lose Pro.`,
+    hasEnded: (school: string) => `${school} has ended`,
+    people: (n: number) => `${n} ${n === 1 ? "person" : "people"}`,
+    started: (date: string) => `started ${date}`,
+    renewed: "The link works for 14 more days",
+    withdrawn: "Invitation withdrawn",
+    close: "Close",
+    invite: "Invite someone",
+    extended: `Pilot extended by ${EXTRA_PILOT_DAYS} days`,
+    restart: "Restart pilot",
+    extend: `Extend by ${EXTRA_PILOT_DAYS} days`,
+    nowCustomer: (school: string) => `${school} is now a customer`,
+    markCustomer: "Mark as customer",
+    endPilot: "End pilot",
+    endSubscription: "End subscription",
+  },
+  sv: {
+    pageTitle: "Skolor — TeachDesk",
+    customer: "Kund",
+    ended: "Avslutad",
+    pilotUntil: (date) => `Pilot till ${date}`,
+    ranOut: "Piloten har gått ut",
+    title: "Skolor",
+    staffOnly: "Bara TeachDesks personal kan se alla skolor.",
+    subtitle:
+      "Piloter och kunder. Skicka varje inbjudningslänk till skolans kontaktperson — hen bjuder in sina kollegor.",
+    startPilot: "Starta en pilot",
+    loading: "Laddar skolor…",
+    loadFailed: "Det gick inte att ladda skolorna. Ladda om sidan och försök igen.",
+    none: "Inga skolor än. Starta en pilot från en demoförfrågan eller med knappen ovan.",
+    failed: "Det gick inte",
+    checkConnection: "Kontrollera internetanslutningen och försök igen.",
+    confirmEnd: (school) =>
+      `Avsluta TeachDesk för ${school}? Lärarna behåller sin data men förlorar Pro.`,
+    hasEnded: (school) => `${school} är avslutad`,
+    people: (n) => `${n} ${n === 1 ? "person" : "personer"}`,
+    started: (date) => `startade ${date}`,
+    renewed: "Länken gäller i 14 dagar till",
+    withdrawn: "Inbjudan har dragits tillbaka",
+    close: "Stäng",
+    invite: "Bjud in någon",
+    extended: `Piloten har förlängts med ${EXTRA_PILOT_DAYS} dagar`,
+    restart: "Starta om piloten",
+    extend: `Förläng med ${EXTRA_PILOT_DAYS} dagar`,
+    nowCustomer: (school) => `${school} är nu kund`,
+    markCustomer: "Markera som kund",
+    endPilot: "Avsluta piloten",
+    endSubscription: "Avsluta abonnemanget",
+  },
+});
+
+// For TeachDesk staff: every school, its pilot, and the invitations waiting to be accepted.
+export const Route = createFileRoute("/app/admin/schools")({
+  head: ({ match }) => ({ meta: [{ title: messages[match.context.language].pageTitle }] }),
+  component: SchoolsPage,
+});
+
+function statusOf({ status, pilotEndsAt }: SchoolOverview, language: Language) {
+  const t = messages[language];
+  if (status === "active") return { label: t.customer, tone: "success" } as const;
+  if (status === "ended") return { label: t.ended, tone: "neutral" } as const;
   if (pilotEndsAt && new Date(pilotEndsAt) > new Date())
-    return { label: `Pilot until ${formatDate(pilotEndsAt)}`, tone: "primary" } as const;
-  return { label: "Pilot ran out", tone: "warning" } as const;
+    return { label: t.pilotUntil(formatDate(pilotEndsAt, language)), tone: "primary" } as const;
+  return { label: t.ranOut, tone: "warning" } as const;
 }
 
 function SchoolsPage() {
   const { isAdmin } = useAuth();
+  const t = useMessages(messages);
   const queryClient = useQueryClient();
   const [pilotFor, setPilotFor] = useState<PilotTarget | null>(null);
   const schools = useQuery({ queryKey: ["schools"], enabled: isAdmin, queryFn: fetchAllSchools });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["schools"] });
 
-  if (!isAdmin)
-    return <NoAccess title="Schools" message="Only TeachDesk staff can see all schools." />;
+  if (!isAdmin) return <NoAccess title={t.title} message={t.staffOnly} />;
 
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="Schools"
-        subtitle="Pilots and customers. Send each invite link to the school's contact person — they invite their colleagues."
+        title={t.title}
+        subtitle={t.subtitle}
         actions={
           <Button onClick={() => setPilotFor({ school: "", email: "" })}>
-            <Plus className="size-4" /> Start a pilot
+            <Plus className="size-4" /> {t.startPilot}
           </Button>
         }
       />
 
-      {schools.isLoading && <p className="text-sm text-muted-foreground">Loading schools…</p>}
+      {schools.isLoading && <p className="text-sm text-muted-foreground">{t.loading}</p>}
       {schools.isError && (
         <Panel>
-          <p className="text-sm text-destructive">
-            Couldn't load the schools. Refresh the page to try again.
-          </p>
+          <p className="text-sm text-destructive">{t.loadFailed}</p>
         </Panel>
       )}
       {schools.data?.length === 0 && (
         <Panel>
-          <p className="text-sm text-muted-foreground">
-            No schools yet. Start a pilot from a demo request, or with the button above.
-          </p>
+          <p className="text-sm text-muted-foreground">{t.none}</p>
         </Panel>
       )}
 
@@ -94,7 +161,9 @@ function SchoolCard({
   onChanged: () => Promise<void>;
 }) {
   const [inviting, setInviting] = useState(false);
-  const status = statusOf(school);
+  const { language } = useLanguage();
+  const t = useMessages(messages);
+  const status = statusOf(school, language);
 
   /** Runs a change, then shows the result or explains the failure. */
   const change = async (action: () => Promise<unknown>, done: string) => {
@@ -102,9 +171,7 @@ function SchoolCard({
       await action();
       toast.success(done);
     } catch {
-      toast.error("That didn't work", {
-        description: "Check your internet connection and try again.",
-      });
+      toast.error(t.failed, { description: t.checkConnection });
     }
     await onChanged();
   };
@@ -120,13 +187,8 @@ function SchoolCard({
   };
 
   const end = () => {
-    if (
-      !window.confirm(
-        `End TeachDesk for ${school.name}? Its teachers keep their data but lose Pro.`,
-      )
-    )
-      return;
-    void change(() => updateSchool(school.id, "ended"), `${school.name} has ended`);
+    if (!window.confirm(t.confirmEnd(school.name))) return;
+    void change(() => updateSchool(school.id, "ended"), t.hasEnded(school.name));
   };
 
   return (
@@ -135,8 +197,7 @@ function SchoolCard({
         <div className="min-w-0">
           <p className="font-medium">{school.name}</p>
           <p className="text-sm text-muted-foreground">
-            {school.memberCount} {school.memberCount === 1 ? "person" : "people"} · started{" "}
-            {formatDate(school.createdAt)}
+            {t.people(school.memberCount)} · {t.started(formatDate(school.createdAt, language))}
           </p>
         </div>
         <StatusPill tone={status.tone}>{status.label}</StatusPill>
@@ -151,12 +212,10 @@ function SchoolCard({
               onRenew={() =>
                 void change(
                   () => inviteToSchool(school.id, invitation.email, invitation.role),
-                  "The link works for 14 more days",
+                  t.renewed,
                 )
               }
-              onWithdraw={() =>
-                void change(() => withdrawInvitation(invitation.id), "Invitation withdrawn")
-              }
+              onWithdraw={() => void change(() => withdrawInvitation(invitation.id), t.withdrawn)}
             />
           ))}
         </ul>
@@ -170,15 +229,11 @@ function SchoolCard({
 
       <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
         <Button size="sm" variant="outline" onClick={() => setInviting((open) => !open)}>
-          {inviting ? "Close" : "Invite someone"}
+          {inviting ? t.close : t.invite}
         </Button>
         {school.status !== "active" && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => void change(extendPilot, `Pilot extended by ${EXTRA_PILOT_DAYS} days`)}
-          >
-            {school.status === "ended" ? "Restart pilot" : `Extend by ${EXTRA_PILOT_DAYS} days`}
+          <Button size="sm" variant="outline" onClick={() => void change(extendPilot, t.extended)}>
+            {school.status === "ended" ? t.restart : t.extend}
           </Button>
         )}
         {school.status !== "active" && (
@@ -186,18 +241,15 @@ function SchoolCard({
             size="sm"
             variant="outline"
             onClick={() =>
-              void change(
-                () => updateSchool(school.id, "active"),
-                `${school.name} is now a customer`,
-              )
+              void change(() => updateSchool(school.id, "active"), t.nowCustomer(school.name))
             }
           >
-            Mark as customer
+            {t.markCustomer}
           </Button>
         )}
         {school.status !== "ended" && (
           <Button size="sm" variant="ghost" onClick={end}>
-            {school.status === "pilot" ? "End pilot" : "End subscription"}
+            {school.status === "pilot" ? t.endPilot : t.endSubscription}
           </Button>
         )}
       </div>

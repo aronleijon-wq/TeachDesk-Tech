@@ -1,9 +1,20 @@
 import { Check } from "lucide-react";
+import type { Language } from "@/lib/i18n";
 import type { Plan } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
+const comingSoon: Record<Language, string> = { en: "Coming soon", sv: "Kommer snart" };
+
 /** A plan's feature list; features that aren't built yet are marked "Coming soon". */
-export function PlanFeatures({ plan, className }: { plan: Plan; className?: string }) {
+export function PlanFeatures({
+  plan,
+  language,
+  className,
+}: {
+  plan: Plan;
+  language: Language;
+  className?: string;
+}) {
   return (
     <ul className={cn("space-y-2.5 text-sm", className)}>
       {plan.features.map((f) => (
@@ -13,7 +24,7 @@ export function PlanFeatures({ plan, className }: { plan: Plan; className?: stri
             {f.label}
             {f.comingSoon && (
               <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-                Coming soon
+                {comingSoon[language]}
               </span>
             )}
           </span>

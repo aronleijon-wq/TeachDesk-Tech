@@ -2,7 +2,6 @@ import { Check, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -11,22 +10,60 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { StatusPill } from "@/components/primitives";
 import { generateEquivalentVersion } from "@/lib/exam-ai.functions";
+import { defineMessages, useMessages } from "@/lib/i18n";
 import type { Exam, ExamVersion, Question } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-const stages = [
-  "Analysing original exam",
-  "Mapping learning objectives",
-  "Generating equivalent questions",
-  "Verifying difficulty and points",
-  "Running equivalence check",
-];
-
-const keepList = ["Topics", "Difficulty", "Number of questions", "Points", "Learning objectives", "Question types"];
-const changeList = ["Numbers", "Context", "Wording", "Examples"];
+const messages = defineMessages({
+  en: {
+    stages: [
+      "Analysing original exam",
+      "Mapping learning objectives",
+      "Generating equivalent questions",
+      "Verifying difficulty and points",
+      "Running equivalence check",
+    ],
+    keep: ["Topics", "Difficulty", "Number of questions", "Points", "Learning objectives", "Question types"],
+    change: ["Numbers", "Context", "Wording", "Examples"],
+    generated: (label: string) => `${label} generated`,
+    reviewFirst: "Review and approve it before use.",
+    failed: "Generation failed. Please try again.",
+    title: "Generate equivalent version",
+    description: (label: string) =>
+      `${label} will test the same knowledge and skills while changing numbers, contexts and wording.`,
+    maintain: "Maintain",
+    changes: "Change",
+    source: (label: string, questions: number, points: number) =>
+      `Source: ${label} · ${questions} questions · ${points} points. Generated versions are never used until you approve them.`,
+    noVersion: "no version available",
+    generate: (label: string) => `Generate ${label}`,
+  },
+  sv: {
+    stages: [
+      "Analyserar originalprovet",
+      "Kartlägger lärandemålen",
+      "Skapar likvärdiga frågor",
+      "Kontrollerar svårighetsgrad och poäng",
+      "Kontrollerar att versionerna är likvärdiga",
+    ],
+    keep: ["Områden", "Svårighetsgrad", "Antal frågor", "Poäng", "Lärandemål", "Frågetyper"],
+    change: ["Siffror", "Sammanhang", "Formuleringar", "Exempel"],
+    generated: (label) => `${label} har skapats`,
+    reviewFirst: "Granska och godkänn den innan den används.",
+    failed: "Det gick inte att skapa versionen. Försök igen.",
+    title: "Skapa likvärdig version",
+    description: (label) =>
+      `${label} prövar samma kunskaper och förmågor, med nya siffror, sammanhang och formuleringar.`,
+    maintain: "Behålls",
+    changes: "Ändras",
+    source: (label, questions, points) =>
+      `Utgår från: ${label} · ${questions} frågor · ${points} poäng. Skapade versioner används aldrig förrän du har godkänt dem.`,
+    noVersion: "ingen version finns",
+    generate: (label) => `Skapa ${label}`,
+  },
+});
 
 export function GenerateVersionDialog({
   exam,
@@ -38,6 +75,8 @@ export function GenerateVersionDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const { addVersion } = useStore();
+  const t = useMessages(messages);
+  const stages = t.stages;
   const [stage, setStage] = useState(-1);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,13 +136,13 @@ export function GenerateVersionDialog({
         questions,
       };
       addVersion(exam.id, version);
-      toast.success(`${nextLabel} generated`, { description: "Review and approve it before use." });
+      toast.success(t.generated(nextLabel), { description: t.reviewFirst });
       onOpenChange(false);
       setStage(-1);
     } catch (e) {
       clearInterval(timer);
       setStage(-1);
-      setError(e instanceof Error ? e.message : "Generation failed. Please try again.");
+      setError(e instanceof Error ? e.message : t.failed);
     }
   };
 
@@ -111,39 +150,36 @@ export function GenerateVersionDialog({
     <Dialog open={open} onOpenChange={(v) => { if (stage < 0 || stage >= stages.length) onOpenChange(v); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Generate equivalent version</DialogTitle>
-          <DialogDescription>
-            {nextLabel} will test the same knowledge and skills while changing numbers, contexts and wording.
-          </DialogDescription>
+          <DialogTitle>{t.title}</DialogTitle>
+          <DialogDescription>{t.description(nextLabel)}</DialogDescription>
         </DialogHeader>
 
         {stage < 0 ? (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="label-xs">Maintain</p>
+                <p className="label-xs">{t.maintain}</p>
                 <ul className="mt-2 space-y-1.5">
-                  {keepList.map((k) => (
+                  {t.keep.map((k) => (
                     <li key={k} className="flex items-center gap-2 text-sm">
-                      <Checkbox defaultChecked /> {k}
+                      <Check className="size-4 text-primary" /> {k}
                     </li>
                   ))}
                 </ul>
               </div>
               <div>
-                <p className="label-xs">Change</p>
+                <p className="label-xs">{t.changes}</p>
                 <ul className="mt-2 space-y-1.5">
-                  {changeList.map((k) => (
+                  {t.change.map((k) => (
                     <li key={k} className="flex items-center gap-2 text-sm">
-                      <Checkbox defaultChecked /> {k}
+                      <Check className="size-4 text-primary" /> {k}
                     </li>
                   ))}
                 </ul>
               </div>
             </div>
             <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-              Source: {source?.label ?? "no version available"} · {source?.questions.length ?? 0} questions · {exam.totalPoints} points.
-              Generated versions are never used until you approve them.
+              {t.source(source?.label ?? t.noVersion, source?.questions.length ?? 0, exam.totalPoints)}
             </p>
             {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
@@ -167,9 +203,8 @@ export function GenerateVersionDialog({
         <DialogFooter>
           {stage < 0 && (
             <>
-              <StatusPill tone="primary">Production AI</StatusPill>
               <Button onClick={run} disabled={!source}>
-                <Sparkles className="size-4" /> Generate {nextLabel}
+                <Sparkles className="size-4" /> {t.generate(nextLabel)}
               </Button>
             </>
           )}

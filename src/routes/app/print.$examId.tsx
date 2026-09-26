@@ -10,8 +10,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { defineMessages, useMessages } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+
+const messages = defineMessages({
+  en: {
+    pageTitle: "Print exam — TeachDesk",
+    back: "Back to the exam",
+    version: "Version",
+    studentCopy: "Student copy",
+    answerKey: "Answer key",
+    print: "Print or save as PDF",
+    noQuestions:
+      "This exam has no questions yet. Add them on the exam's Questions tab, then print it.",
+  },
+  sv: {
+    pageTitle: "Skriv ut prov — TeachDesk",
+    back: "Tillbaka till provet",
+    version: "Version",
+    studentCopy: "Elevens exemplar",
+    answerKey: "Facit",
+    print: "Skriv ut eller spara som PDF",
+    noQuestions:
+      "Provet har inga frågor än. Lägg till dem under fliken Frågor och skriv sedan ut provet.",
+  },
+});
 
 // Printing an exam: pick the version and the student copy or the answer key, then print.
 // The browser's print dialog can also save it as a PDF; the app's menus aren't printed.
@@ -20,7 +44,7 @@ export const Route = createFileRoute("/app/print/$examId")({
     ...(typeof search["version"] === "string" && { version: search["version"] }),
     ...((search["answers"] === true || search["answers"] === "true") && { answers: true }),
   }),
-  head: () => ({ meta: [{ title: "Print exam — TeachDesk" }] }),
+  head: ({ match }) => ({ meta: [{ title: messages[match.context.language].pageTitle }] }),
   component: PrintExam,
 });
 
@@ -28,6 +52,7 @@ function PrintExam() {
   const { examId } = Route.useParams();
   const { version: versionId, answers = false } = Route.useSearch();
   const { exams, classById, profile } = useStore();
+  const t = useMessages(messages);
   const navigate = useNavigate();
   const exam = exams.find((e) => e.id === examId);
   if (!exam) throw notFound();
@@ -41,7 +66,7 @@ function PrintExam() {
       <div className="mb-6 flex flex-wrap items-center gap-2 print:hidden">
         <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
           <Link to="/app/exams/$examId" params={{ examId }}>
-            <ArrowLeft className="size-4" /> Back to the exam
+            <ArrowLeft className="size-4" /> {t.back}
           </Link>
         </Button>
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -50,7 +75,7 @@ function PrintExam() {
               value={version.id}
               onValueChange={(id) => show({ version: id, ...(answers && { answers }) })}
             >
-              <SelectTrigger className="h-9 w-36" aria-label="Version">
+              <SelectTrigger className="h-9 w-36" aria-label={t.version}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -77,21 +102,19 @@ function PrintExam() {
                     : "text-muted-foreground",
                 )}
               >
-                {key ? "Answer key" : "Student copy"}
+                {key ? t.answerKey : t.studentCopy}
               </button>
             ))}
           </div>
           <Button onClick={() => window.print()} disabled={!version}>
-            <Printer className="size-4" /> Print or save as PDF
+            <Printer className="size-4" /> {t.print}
           </Button>
         </div>
       </div>
 
       {!version ? (
         <Panel>
-          <p className="text-sm text-muted-foreground">
-            This exam has no questions yet. Add them on the exam's Questions tab, then print it.
-          </p>
+          <p className="text-sm text-muted-foreground">{t.noQuestions}</p>
         </Panel>
       ) : (
         <PrintableExam
