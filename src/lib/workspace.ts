@@ -145,6 +145,13 @@ export const addExam = (ws: Workspace, exam: Exam): Workspace => ({
   exams: [exam, ...ws.exams],
 });
 
+/** Removes an exam together with its questions, results and retakes. */
+export const removeExam = (ws: Workspace, examId: string): Workspace => ({
+  ...ws,
+  exams: ws.exams.filter((e) => e.id !== examId),
+  retakes: ws.retakes.filter((r) => r.examId !== examId),
+});
+
 /** What the teacher fills in when creating an exam. */
 export interface ExamDetails {
   title: string;

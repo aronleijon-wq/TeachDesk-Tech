@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Plus, Search, Sparkles } from "lucide-react";
+import { BookOpen, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { ConfirmButton } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState, PageHeader, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
@@ -32,7 +34,7 @@ const stageLabel: Record<ExamStage, { text: string; tone: "neutral" | "primary" 
 };
 
 function ExamsPage() {
-  const { exams, retakes, classById, classSize } = useStore();
+  const { exams, retakes, classById, classSize, removeExam } = useStore();
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
   const [query, setQuery] = useState("");
   // Which way of creating an exam is open, if any.
@@ -123,32 +125,46 @@ function ExamsPage() {
             const examRetakes = retakes.filter((r) => r.examId === e.id).length;
             const stage = stageLabel[examStage(e)];
             return (
-              <Link
+              <div
                 key={e.id}
-                to="/app/exams/$examId"
-                params={{ examId: e.id }}
-                className="rounded-lg border border-border bg-surface p-4 shadow-card transition-all hover:border-primary/40 hover:shadow-panel"
+                className="relative rounded-lg border border-border bg-surface shadow-card transition-all hover:border-primary/40 hover:shadow-panel"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="label-xs">{classById(e.classId)?.name}</p>
-                    <p className="mt-1 text-[15px] font-semibold">{e.title}</p>
+                <Link to="/app/exams/$examId" params={{ examId: e.id }} className="block p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="label-xs">{classById(e.classId)?.name}</p>
+                      <p className="mt-1 text-[15px] font-semibold">{e.title}</p>
+                    </div>
+                    <StatusPill tone={stage.tone}>{stage.text}</StatusPill>
                   </div>
-                  <StatusPill tone={stage.tone}>{stage.text}</StatusPill>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {formatDate(e.date)} · {e.time} · {e.totalPoints} points · {total} students
+                  </p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <ProgressBar value={total ? (done / total) * 100 : 0} tone={stage.tone === "success" ? "success" : "primary"} />
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{done}/{total}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5 pr-10">
+                    {absent > 0 && <StatusPill tone="danger">{absent} absent</StatusPill>}
+                    {examRetakes > 0 && <StatusPill tone="primary">{examRetakes} retakes</StatusPill>}
+                    <StatusPill>{e.versions.length} versions</StatusPill>
+                  </div>
+                </Link>
+                <div className="absolute bottom-2 right-2">
+                  <ConfirmButton
+                    variant="ghost"
+                    label={<Trash2 className="size-4" />}
+                    ariaLabel={`Delete ${e.title}`}
+                    title={`Delete ${e.title}?`}
+                    description="Its questions, versions, results and retakes are deleted too. This can't be undone."
+                    confirm="Delete exam"
+                    onConfirm={() => {
+                      removeExam(e.id);
+                      toast.success(`${e.title} deleted`);
+                    }}
+                  />
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {formatDate(e.date)} · {e.time} · {e.totalPoints} points · {total} students
-                </p>
-                <div className="mt-3 flex items-center gap-3">
-                  <ProgressBar value={total ? (done / total) * 100 : 0} tone={stage.tone === "success" ? "success" : "primary"} />
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{done}/{total}</span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {absent > 0 && <StatusPill tone="danger">{absent} absent</StatusPill>}
-                  {examRetakes > 0 && <StatusPill tone="primary">{examRetakes} retakes</StatusPill>}
-                  <StatusPill>{e.versions.length} versions</StatusPill>
-                </div>
-              </Link>
+              </div>
             );
           })}
         </div>
