@@ -1,6 +1,7 @@
--- Run by hand in the Lovable Cloud SQL editor, like 0004. Deliberately NOT listed in
--- ../migrations/meta/_journal.json, so it is never run a second time.
--- Tested beforehand on Postgres 18 (PGlite) together with all earlier migrations.
+-- Applied by hand in the Lovable Cloud SQL editor on 2026-09-26, like 0004. Deliberately
+-- NOT listed in ../migrations/meta/_journal.json, so it is never run a second time.
+-- Tested beforehand on Postgres 18 (PGlite) with the production migration history:
+-- pilots, invitations, who may see and change what, and rollback on failure.
 
 -- School pilots and invitations. TeachDesk staff start a pilot for a school, which invites
 -- the school's first admin; school admins then invite their teachers. Invitations are
