@@ -41,7 +41,7 @@ const sum = (numbers: number[]) => numbers.reduce((total, n) => total + n, 0);
  * each student before the score counts. The files are only sent to be read, never stored.
  */
 export function GradeWithAi({ exam }: { exam: Exam }) {
-  const { profile, studentById, suggestGrading } = useStore();
+  const { profile, studentById, suggestGrading, approveGrading } = useStore();
   const hasPro = profile.access.level === "pro";
   const versions = exam.versions.filter((v) => v.questions.length > 0);
   const [versionId, setVersionId] = useState(versions[0]?.id ?? "");
@@ -51,8 +51,30 @@ export function GradeWithAi({ exam }: { exam: Exam }) {
 
   const students = exam.attendance.flatMap((a) => studentById(a.studentId) ?? []);
   const toReview = exam.attendance.flatMap((a) =>
-    a.aiGrading && !a.aiGrading.approved ? [{ studentId: a.studentId, grading: a.aiGrading }] : [],
+    a.aiGrading && !a.aiGrading.approved
+      ? [
+          {
+            studentId: a.studentId,
+            grading: a.aiGrading,
+            // A new grading of the same student starts a fresh review.
+            key: `${a.studentId}-${a.aiGrading.gradedAt}`,
+          },
+        ]
+      : [],
   );
+  // Points the teacher has changed on a suggestion, until it's approved.
+  const [changedPoints, setChangedPoints] = useState<Record<string, number[]>>({});
+  const pointsFor = ({ key, grading }: (typeof toReview)[number]) =>
+    changedPoints[key] ?? grading.questions.map((q) => q.points);
+  // Suggestions with nothing flagged can be approved all at once.
+  const nothingToCheck = toReview.filter(
+    ({ grading }) => grading.warnings.length === 0 && grading.questions.every((q) => !q.unsure),
+  );
+
+  const approveNothingToCheck = () => {
+    for (const item of nothingToCheck) approveGrading(exam.id, item.studentId, pointsFor(item));
+    toast.success(`${nothingToCheck.length} students approved`);
+  };
 
   const update = (id: number, changes: Partial<Paper>) =>
     setPapers((list) => list.map((p) => (p.id === id ? { ...p, ...changes } : p)));
@@ -197,16 +219,26 @@ export function GradeWithAi({ exam }: { exam: Exam }) {
         <Panel
           title={`To review (${toReview.length})`}
           description="Check each suggestion, change points where you disagree, and approve."
+          action={
+            nothingToCheck.length > 1 && (
+              <Button size="sm" variant="outline" onClick={approveNothingToCheck}>
+                Approve {nothingToCheck.length} with nothing to check
+              </Button>
+            )
+          }
         >
           <div className="space-y-3">
-            {toReview.map(({ studentId, grading }) => (
+            {toReview.map((item) => (
               <ReviewCard
-                // A new grading of the same student starts a fresh review.
-                key={`${studentId}-${grading.gradedAt}`}
+                key={item.key}
                 examId={exam.id}
-                studentId={studentId}
-                name={studentById(studentId)?.name ?? "Student"}
-                grading={grading}
+                studentId={item.studentId}
+                name={studentById(item.studentId)?.name ?? "Student"}
+                grading={item.grading}
+                points={pointsFor(item)}
+                onPointsChange={(points) =>
+                  setChangedPoints((all) => ({ ...all, [item.key]: points }))
+                }
               />
             ))}
           </div>
@@ -282,15 +314,19 @@ function ReviewCard({
   studentId,
   name,
   grading,
+  points,
+  onPointsChange,
 }: {
   examId: string;
   studentId: string;
   name: string;
   grading: AiGrading;
+  /** The points per question: AI's suggestion, or the teacher's changes to it. */
+  points: number[];
+  onPointsChange: (points: number[]) => void;
 }) {
   const { approveGrading, discardGrading } = useStore();
   const [open, setOpen] = useState(false);
-  const [points, setPoints] = useState(grading.questions.map((q) => q.points));
   const total = sum(points);
   const max = sum(grading.questions.map((q) => q.maxPoints));
   const toCheck = grading.questions.filter((q) => q.unsure).length + grading.warnings.length;
@@ -360,7 +396,7 @@ function ReviewCard({
                       const next = Number.isFinite(value)
                         ? Math.min(q.maxPoints, Math.max(0, value))
                         : 0;
-                      setPoints((all) => all.map((p, j) => (j === i ? next : p)));
+                      onPointsChange(points.map((p, j) => (j === i ? next : p)));
                     }}
                   />
                   / {q.maxPoints}

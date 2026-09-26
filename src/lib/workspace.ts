@@ -55,6 +55,12 @@ export function setAttendance(
   return next;
 }
 
+/** Marks everyone not marked yet as present, e.g. after tapping the ones who were absent. */
+export const markRestPresent = (ws: Workspace, examId: string): Workspace =>
+  (ws.exams.find((e) => e.id === examId)?.attendance ?? [])
+    .filter((a) => a.status === "pending")
+    .reduce((next, a) => setAttendance(next, examId, a.studentId, "completed"), ws);
+
 const mapAttendance = (
   ws: Workspace,
   examId: string,
@@ -139,6 +145,13 @@ export const scheduleRetake = (
       : r,
   ),
 });
+
+/** Books the same retake slot for several students at once. */
+export const scheduleRetakes = (
+  ws: Workspace,
+  retakeIds: string[],
+  slot: Parameters<typeof scheduleRetake>[2],
+): Workspace => retakeIds.reduce((next, id) => scheduleRetake(next, id, slot), ws);
 
 export const addExam = (ws: Workspace, exam: Exam): Workspace => ({
   ...ws,

@@ -77,11 +77,13 @@ interface StoreValue extends Workspace {
   studentStats: (student: Student) => ReturnType<typeof rules.studentStats>;
 
   setAttendance: Bound<typeof rules.setAttendance>;
+  markRestPresent: Bound<typeof rules.markRestPresent>;
   setScore: Bound<typeof rules.setScore>;
   suggestGrading: Bound<typeof rules.suggestGrading>;
   approveGrading: Bound<typeof rules.approveGrading>;
   discardGrading: Bound<typeof rules.discardGrading>;
   scheduleRetake: Bound<typeof rules.scheduleRetake>;
+  scheduleRetakes: Bound<typeof rules.scheduleRetakes>;
   addExam: Bound<typeof rules.addExam>;
   removeExam: Bound<typeof rules.removeExam>;
   addVersion: Bound<typeof rules.addVersion>;
@@ -275,11 +277,13 @@ function WorkspaceStore({
       studentStats: (student) => rules.studentStats(ws, student),
 
       setAttendance: bind(rules.setAttendance),
+      markRestPresent: bind(rules.markRestPresent),
       setScore: bind(rules.setScore),
       suggestGrading: bind(rules.suggestGrading),
       approveGrading: bind(rules.approveGrading),
       discardGrading: bind(rules.discardGrading),
       scheduleRetake: bind(rules.scheduleRetake),
+      scheduleRetakes: bind(rules.scheduleRetakes),
       addExam: bind(rules.addExam),
       removeExam: bind(rules.removeExam),
       addVersion: bind(rules.addVersion),

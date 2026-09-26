@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Printer, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -31,8 +31,10 @@ function ExamDetail() {
     exams,
     retakes,
     setAttendance,
+    markRestPresent,
     setScore,
     scheduleRetake,
+    scheduleRetakes,
     addQuestion,
     removeQuestion,
     removeExam,
@@ -52,6 +54,10 @@ function ExamDetail() {
   const completed = exam.attendance.filter((a) => a.status === "completed");
   const absent = exam.attendance.filter((a) => a.status === "absent");
   const examRetakes = retakes.filter((r) => r.examId === exam.id);
+  const toSchedule = examRetakes.filter((r) => r.status === "needs-scheduling");
+  const notMarked = exam.attendance.filter((a) => a.status === "pending").length;
+  // Retakes use the newest version: an equivalent one, once it exists.
+  const retakeVersionId = exam.versions[exam.versions.length - 1]?.id;
   const version = exam.versions[activeVersion];
   // Questions are written and removed on the original version; generated ones are only edited.
   const onOriginal = activeVersion === 0;
@@ -84,6 +90,17 @@ function ExamDetail() {
                 });
               }}
             />
+            {version?.questions.length ? (
+              <Button variant="outline" asChild>
+                <Link to="/app/print/$examId" params={{ examId: exam.id }} search={{ version: version.id }}>
+                  <Printer className="size-4" /> Print
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="outline" disabled>
+                <Printer className="size-4" /> Print
+              </Button>
+            )}
             <Button onClick={() => setGenOpen(true)} disabled={!exam.versions[0]?.questions.length}>
               <Sparkles className="size-4" /> Generate equivalent version
             </Button>
@@ -218,7 +235,18 @@ function ExamDetail() {
         </TabsContent>
 
         <TabsContent value="attendance" className="mt-4">
-          <Panel title="Mark attendance" description="Absent students automatically enter the retake queue.">
+          <Panel
+            title="Mark attendance"
+            description="Tap the students who were absent, then mark the rest present. Absent students go straight into the retake queue."
+            action={
+              notMarked > 0 && (
+                <Button size="sm" variant="outline" onClick={() => markRestPresent(exam.id)}>
+                  <Check className="size-4" />
+                  {notMarked === exam.attendance.length ? "Mark everyone present" : `Mark the other ${notMarked} present`}
+                </Button>
+              )
+            }
+          >
             <ul className="divide-y divide-border">
               {exam.attendance.map((a) => {
                 const student = studentById(a.studentId);
@@ -231,10 +259,7 @@ function ExamDetail() {
                           key={status}
                           size="sm"
                           variant={a.status === status ? "default" : "outline"}
-                          onClick={() => {
-                            setAttendance(exam.id, a.studentId, status);
-                            toast.success(`${student?.name} marked ${status}`);
-                          }}
+                          onClick={() => setAttendance(exam.id, a.studentId, status)}
                         >
                           {status === "completed" ? "Present" : status === "absent" ? "Absent" : "Pending"}
                         </Button>
@@ -252,26 +277,44 @@ function ExamDetail() {
             {examRetakes.length === 0 ? (
               <p className="text-sm text-muted-foreground">No retakes required.</p>
             ) : (
-              <ul className="space-y-2">
-                {examRetakes.map((r) => (
-                  <RetakeRow
-                    key={r.id}
-                    name={studentById(r.studentId)?.name ?? ""}
-                    status={r.status}
-                    date={r.date}
-                    time={r.time}
-                    room={r.room}
-                    versionLabel={exam.versions.find((v) => v.id === r.versionId)?.label}
-                    onSchedule={(date, time, room) => {
-                      const nextVersion = exam.versions[exam.versions.length - 1]?.id;
-                      scheduleRetake(r.id, { date, time, room, versionId: nextVersion });
-                      toast.success("Retake scheduled", {
-                        description: `${studentById(r.studentId)?.name} · ${date} ${time} · ${room}`,
+              <>
+                {toSchedule.length > 1 && (
+                  <SlotForm
+                    title={`Book one slot for all ${toSchedule.length} students who need a retake`}
+                    defaultRoom={exam.room}
+                    submitLabel={`Book for ${toSchedule.length} students`}
+                    onBook={(slot) => {
+                      scheduleRetakes(
+                        toSchedule.map((r) => r.id),
+                        { ...slot, versionId: retakeVersionId },
+                      );
+                      toast.success(`${toSchedule.length} retakes booked`, {
+                        description: `${formatDate(slot.date)} · ${slot.time} · ${slot.room}`,
                       });
                     }}
                   />
-                ))}
-              </ul>
+                )}
+                <ul className="space-y-2">
+                  {examRetakes.map((r) => (
+                    <RetakeRow
+                      key={r.id}
+                      name={studentById(r.studentId)?.name ?? ""}
+                      status={r.status}
+                      date={r.date}
+                      time={r.time}
+                      room={r.room}
+                      defaultRoom={exam.room}
+                      versionLabel={exam.versions.find((v) => v.id === r.versionId)?.label}
+                      onSchedule={(slot) => {
+                        scheduleRetake(r.id, { ...slot, versionId: retakeVersionId });
+                        toast.success("Retake scheduled", {
+                          description: `${studentById(r.studentId)?.name} · ${formatDate(slot.date)} ${slot.time} · ${slot.room}`,
+                        });
+                      }}
+                    />
+                  ))}
+                </ul>
+              </>
             )}
           </Panel>
         </TabsContent>
@@ -329,12 +372,20 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
+/** A retake time and place. */
+interface Slot {
+  date: string;
+  time: string;
+  room: string;
+}
+
 function RetakeRow({
   name,
   status,
   date,
   time,
   room,
+  defaultRoom,
   versionLabel,
   onSchedule,
 }: {
@@ -343,11 +394,12 @@ function RetakeRow({
   date?: string | undefined;
   time?: string | undefined;
   room?: string | undefined;
+  defaultRoom: string;
   versionLabel?: string | undefined;
-  onSchedule: (date: string, time: string, room: string) => void;
+  onSchedule: (slot: Slot) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ date: date ?? "2026-11-24", time: time ?? "14:30", room: room ?? "B210" });
+  const scheduled = status === "scheduled" && date;
 
   return (
     <li className="rounded-md border border-border p-3">
@@ -355,31 +407,80 @@ function RetakeRow({
         <div>
           <p className="text-sm font-medium">{name}</p>
           <p className="text-xs text-muted-foreground">
-            {status === "scheduled"
-              ? `${formatDate(date!)} · ${time} · ${room}${versionLabel ? ` · ${versionLabel}` : ""}`
+            {scheduled
+              ? `${formatDate(date)} · ${time} · ${room}${versionLabel ? ` · ${versionLabel}` : ""}`
               : "Absent — needs scheduling"}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <StatusPill tone={status === "scheduled" ? "success" : "warning"}>
-            {status === "scheduled" ? "Scheduled" : "Needs scheduling"}
+          <StatusPill tone={scheduled ? "success" : "warning"}>
+            {scheduled ? "Scheduled" : "Needs scheduling"}
           </StatusPill>
           <Button size="sm" variant="outline" onClick={() => setEditing((v) => !v)}>
-            {status === "scheduled" ? "Reschedule" : "Schedule retake"}
+            {scheduled ? "Reschedule" : "Schedule retake"}
           </Button>
         </div>
       </div>
 
       {editing && (
-        <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-border pt-3">
-          <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-40" />
-          <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="w-32" />
-          <Input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} className="w-28" placeholder="Room" />
-          <Button size="sm" onClick={() => { onSchedule(form.date, form.time, form.room); setEditing(false); }}>
-            Confirm
-          </Button>
-        </div>
+        <SlotForm
+          initial={{ date: date ?? "", time: time ?? "14:30", room: room ?? defaultRoom }}
+          defaultRoom={defaultRoom}
+          submitLabel="Confirm"
+          onBook={(slot) => {
+            onSchedule(slot);
+            setEditing(false);
+          }}
+        />
       )}
     </li>
+  );
+}
+
+/** Date, time and room for a retake; books once a date is chosen. */
+function SlotForm({
+  title,
+  initial,
+  defaultRoom,
+  submitLabel,
+  onBook,
+}: {
+  title?: string;
+  initial?: Slot;
+  defaultRoom: string;
+  submitLabel: string;
+  onBook: (slot: Slot) => void;
+}) {
+  const [slot, setSlot] = useState<Slot>(initial ?? { date: "", time: "14:30", room: defaultRoom });
+  return (
+    <div className={title ? "mb-3 rounded-md bg-muted/50 p-3" : "mt-3 border-t border-border pt-3"}>
+      {title && <p className="mb-2 text-sm font-medium">{title}</p>}
+      <div className="flex flex-wrap items-end gap-2">
+        <Input
+          type="date"
+          aria-label="Date"
+          value={slot.date}
+          onChange={(e) => setSlot({ ...slot, date: e.target.value })}
+          className="w-40"
+        />
+        <Input
+          type="time"
+          aria-label="Time"
+          value={slot.time}
+          onChange={(e) => setSlot({ ...slot, time: e.target.value })}
+          className="w-32"
+        />
+        <Input
+          aria-label="Room"
+          value={slot.room}
+          onChange={(e) => setSlot({ ...slot, room: e.target.value })}
+          className="w-28"
+          placeholder="Room"
+        />
+        <Button size="sm" disabled={!slot.date} onClick={() => onBook(slot)}>
+          {submitLabel}
+        </Button>
+      </div>
+    </div>
   );
 }
