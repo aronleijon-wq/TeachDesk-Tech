@@ -120,7 +120,7 @@ export type GenerateResult = z4.infer<typeof GenerateOutput>;
 
 /**
  * Generates an equivalent exam version with Claude. Server-side only.
- * Needs ANTHROPIC_API_KEY in the server environment (.env.local when running locally).
+ * Needs ANTHROPIC_API_KEY on the server (see claude.ts).
  */
 export const generateEquivalentVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
