@@ -21,8 +21,7 @@ export async function fetchItems(workspaceId: string): Promise<StoredItem[]> {
     .from("workspace_items")
     .select("kind, id, data, version")
     .eq("workspace_id", workspaceId)
-    .order("created_at")
-    .order("id");
+    .order("seq");
   if (error) throw error;
   return data;
 }

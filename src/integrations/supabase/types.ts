@@ -161,6 +161,7 @@ export type Database = {
           data: Json
           id: string
           kind: string
+          seq: number
           updated_at: string
           updated_by: string | null
           version: number
@@ -171,6 +172,7 @@ export type Database = {
           data: Json
           id: string
           kind: string
+          seq?: never
           updated_at?: string
           updated_by?: string | null
           version?: number
@@ -181,6 +183,7 @@ export type Database = {
           data?: Json
           id?: string
           kind?: string
+          seq?: never
           updated_at?: string
           updated_by?: string | null
           version?: number
