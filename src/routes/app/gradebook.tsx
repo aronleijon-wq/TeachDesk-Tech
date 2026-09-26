@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/primitives";
+import { toCsv } from "@/lib/csv";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +22,30 @@ export const Route = createFileRoute("/app/gradebook")({
 function Gradebook() {
   const { exams, classes, students } = useStore();
   const [classId, setClassId] = useState(classes[0]?.id ?? "");
-  const classExams = exams.filter((e) => e.classId === classId && e.versions.length > 0);
+  const classExams = exams
+    .filter((e) => e.classId === classId && e.status !== "draft")
+    .sort((a, b) => a.date.localeCompare(b.date));
   const classStudents = students.filter((s) => s.classId === classId);
+
+  /** Downloads the class's results as a spreadsheet (CSV) file. */
+  const exportCsv = () => {
+    const rows = [
+      ["Student", ...classExams.map((e) => `${e.title} (${e.totalPoints} p)`)],
+      ...classStudents.map((s) => [
+        s.name,
+        ...classExams.map((e) => {
+          const rec = e.attendance.find((a) => a.studentId === s.id);
+          return rec?.status === "absent" ? "Absent" : (rec?.score ?? "");
+        }),
+      ]),
+    ];
+    const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${classes.find((c) => c.id === classId)?.name ?? "Class"} results.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -31,7 +53,7 @@ function Gradebook() {
         title="Gradebook"
         subtitle="Results per student and exam."
         actions={
-          <Button variant="outline" onClick={() => toast.success("Export started", { description: "CSV will download when ready." })}>
+          <Button variant="outline" onClick={exportCsv} disabled={classStudents.length === 0}>
             <Download className="size-4" /> Export CSV
           </Button>
         }

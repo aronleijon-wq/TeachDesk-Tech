@@ -8,7 +8,7 @@ import { HeroProduct, RetakeFlow } from "@/components/marketing/product-visuals"
 import { cn } from "@/lib/utils";
 import { SITE_URL } from "@/lib/site";
 import { PlanFeatures } from "@/components/plan-features";
-import { PLANS, PRICE_NOTE, formatPrice, yearlyOffer, type Plan } from "@/lib/pricing";
+import { PLANS, PRICE_NOTE, TRIAL_DAYS, formatPrice, yearlyOffer, type Plan } from "@/lib/pricing";
 
 const title = "TeachDesk — Lärarverktyget för prov, omprov och rättning";
 const description =
@@ -145,7 +145,7 @@ function Problem() {
             <span className="text-sm text-muted-foreground">exam → attendance → grading → retake → results</span>
           </div>
           <p className="mt-6 text-lg font-medium">TeachDesk brings the workflow together.</p>
-          <p className="mt-1 text-sm text-muted-foreground">One place to work. Connected to the systems your school already uses.</p>
+          <p className="mt-1 text-sm text-muted-foreground">One place to work, alongside the systems your school already uses.</p>
         </Reveal>
       </div>
     </section>
@@ -153,11 +153,11 @@ function Problem() {
 }
 
 const FEATURES = [
-  { icon: BookOpen, title: "Exams", body: "Create exams from scratch, from an upload or with AI assistance. Track attendance and submissions in one view." },
+  { icon: BookOpen, title: "Exams", body: "Write exams yourself, read in an existing one from a PDF or photo, or generate one with AI. Track attendance and results in one view." },
   { icon: Repeat, title: "Equivalent retakes", body: "Turn an existing exam into a genuinely equivalent version for students who need a retake." },
-  { icon: FileCheck2, title: "Grading", body: "Rubrics, scores and AI-suggested feedback in the gradebook — with the teacher making every final call." },
-  { icon: Users, title: "Student follow-up", body: "See which students missed exams, submitted late or need attention, without tracking it by hand." },
-  { icon: CalendarDays, title: "Scheduling", body: "Exams, retakes and assignment deadlines on one calendar, across every class you teach." },
+  { icon: FileCheck2, title: "Grading", body: "Enter each student's score and see every result in one gradebook, ready to export to Excel." },
+  { icon: Users, title: "Student follow-up", body: "See which students missed an exam, still need a retake or have missing work — without tracking it by hand." },
+  { icon: CalendarDays, title: "Scheduling", body: "Exams and retakes on one calendar, across every class you teach." },
   { icon: Sparkles, title: "AI assistance", body: "AI drafts the repetitive parts. Nothing is applied until you review and approve it." },
 ];
 
@@ -192,10 +192,10 @@ function Retake() {
 }
 
 const HOW = [
-  ["01", "Connect", "Connect TeachDesk with the school's existing systems."],
-  ["02", "Set up", "Classes, students and relevant information are available in TeachDesk."],
-  ["03", "Work", "Teachers manage their workflows inside TeachDesk."],
-  ["04", "Sync", "Relevant information can be synchronized back to connected systems."],
+  ["01", "Sign in", `Sign in with Google or email. New accounts get ${TRIAL_DAYS} days of Pro for free.`],
+  ["02", "Add your classes", "Paste your class lists straight from SchoolSoft or a spreadsheet."],
+  ["03", "Work", "Create exams, mark attendance, book retakes and enter results in one place."],
+  ["04", "Follow up", "The dashboard shows who needs a retake, what's left to grade and who has missing work."],
 ];
 
 function HowItWorks() {
@@ -378,7 +378,7 @@ function Teachers() {
   );
 }
 
-const AI_EXAMPLES = ["Generating equivalent exams", "Analyzing exam structure", "Grading suggestions", "Feedback suggestions", "Summarizing class results", "Identifying follow-up tasks"];
+const AI_EXAMPLES = ["Equivalent retake versions", "Generating new exams", "Reading exams from PDFs and photos", "Answering questions about TeachDesk"];
 
 function AI() {
   return (
@@ -396,9 +396,9 @@ function AI() {
         </Reveal>
         <Reveal delay={120} className="grid items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
           {[
-            { icon: Sparkles, t: "AI suggestion", b: "Feedback drafted for 24 answers", tone: "border-primary/25 bg-primary-soft/60" },
-            { icon: UserCheck, t: "Teacher review", b: "Edit, reject or accept each one", tone: "border-border bg-surface" },
-            { icon: CheckCircle2, t: "Final decision", b: "Only approved work is saved", tone: "border-success/30 bg-success/8" },
+            { icon: Sparkles, t: "AI draft", b: "Version B of an exam: same skills, new numbers", tone: "border-primary/25 bg-primary-soft/60" },
+            { icon: UserCheck, t: "Teacher review", b: "Edit any question, or generate it again", tone: "border-border bg-surface" },
+            { icon: CheckCircle2, t: "Final decision", b: "Only versions you approve are used", tone: "border-success/30 bg-success/8" },
           ].flatMap((s, i, arr) => {
             const card = (
               <div key={s.t} className={cn("rounded-xl border p-5", s.tone)}>
@@ -421,7 +421,7 @@ const SCHOOL_POINTS = [
   ["Easier teacher workflows", "Exams, retakes and grading in one place."],
   ["Less administrative overhead", "Fewer manual hand-offs between systems."],
   ["Centralized tools", "One workspace instead of scattered tools."],
-  ["Existing systems stay", "TeachDesk connects to your infrastructure."],
+  ["Existing systems stay", "TeachDesk works alongside SchoolSoft, Vklass and Unikum."],
   ["Controlled AI usage", "Teachers approve every AI output."],
   ["Permissions", "Role-based access for teachers and staff."],
   ["Scales with you", "From one department to a whole organization."],

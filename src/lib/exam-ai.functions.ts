@@ -186,18 +186,19 @@ const ExtractInput = z
     message: "Paste the exam text or choose a file.",
   });
 
-const ExtractOutput = z4.object({
+/** Questions for a new exam, read from an existing one or generated. */
+const ExamDraftOutput = z4.object({
   questions: z4.array(QuestionOutput),
   objectives: z4.array(z4.string()),
   warnings: z4.array(z4.string()),
 });
 
-export type ExtractResult = z4.infer<typeof ExtractOutput>;
+export type ExamDraft = z4.infer<typeof ExamDraftOutput>;
 
 export const extractExamQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ExtractInput.parse(input))
-  .handler(async ({ data, context }): Promise<ExtractResult> => {
+  .handler(async ({ data, context }): Promise<ExamDraft> => {
     await requirePro(context.supabase, "Importing existing exams");
     const instruction = [
       `Below is an existing ${data.subject} exam${data.examTitle ? ` called "${data.examTitle}"` : ""}, written by a teacher.`,
@@ -234,9 +235,59 @@ export const extractExamQuestions = createServerFn({ method: "POST" })
     content.push({ type: "text", text: instruction });
 
     const result = await runStructured(
-      ExtractOutput,
+      ExamDraftOutput,
       content,
       "This exam is too long to read in one go. Try splitting it into two parts.",
+    );
+    await recordAiUse(context.supabase);
+    return result;
+  });
+
+// ---------------------------------------------------------------------------
+// Generate a new exam from topics and learning objectives
+// ---------------------------------------------------------------------------
+
+const GenerateExamInput = z.object({
+  subject: z.string().max(200),
+  examTitle: z.string().max(200),
+  topics: z.string().max(2000),
+  objectives: z.array(z.string().max(500)).max(20),
+  difficulty: z.enum(["Easy", "Mixed", "Hard"]),
+  totalPoints: z.number().int().min(1).max(200),
+  durationMin: z.number().int().min(10).max(300),
+});
+
+export const generateExam = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => GenerateExamInput.parse(input))
+  .handler(async ({ data, context }): Promise<ExamDraft> => {
+    await requirePro(context.supabase, "Generating exams with AI");
+    const difficulty =
+      data.difficulty === "Mixed"
+        ? "a mix of easy, medium and hard questions"
+        : `mostly ${data.difficulty.toLowerCase()} questions`;
+    const instruction = [
+      `Write a ${data.subject} exam called "${data.examTitle}" for students at a Swedish school.`,
+      `Topics: ${data.topics.trim() || "choose them from the title and the learning objectives"}.`,
+      data.objectives.length > 0
+        ? `Learning objectives to test:\n${data.objectives.map((o) => `- ${o}`).join("\n")}`
+        : "No learning objectives were given: choose 3 to 5 that fit the title and topics.",
+      `Difficulty: ${difficulty}.`,
+      `Students have ${data.durationMin} minutes, and the points must add up to exactly ${data.totalPoints}.`,
+      "",
+      "- Write in the language of the title and topics (Swedish unless they are in English).",
+      "- Every question must be solvable and unambiguous, with clean values.",
+      "- For each question give its type, topic, skill, difficulty, points, the question text, a concise",
+      "  correct answer, short grading criteria and the learning objective it tests.",
+      "- List the exam's learning objectives in objectives.",
+      "- In warnings, note anything the teacher should check before using the exam, one short sentence",
+      "  each, or leave it empty.",
+    ].join("\n");
+
+    const result = await runStructured(
+      ExamDraftOutput,
+      instruction,
+      "The exam came out too long. Try fewer topics or fewer points.",
     );
     await recordAiUse(context.supabase);
     return result;

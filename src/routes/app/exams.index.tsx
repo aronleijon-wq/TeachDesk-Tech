@@ -7,6 +7,7 @@ import { EmptyState, PageHeader, ProgressBar, StatusPill, formatDate } from "@/c
 import { useStore } from "@/lib/store";
 import { NewExamDialog } from "@/components/new-exam-dialog";
 import { cn } from "@/lib/utils";
+import { examStage, type ExamStage } from "@/lib/workspace";
 
 export const Route = createFileRoute("/app/exams/")({
   head: () => ({
@@ -21,6 +22,13 @@ export const Route = createFileRoute("/app/exams/")({
 });
 
 const filters = ["All", "Upcoming", "Completed", "Needs grading", "Retakes", "Drafts"] as const;
+
+const stageLabel: Record<ExamStage, { text: string; tone: "neutral" | "primary" | "warning" | "success" }> = {
+  draft: { text: "Draft", tone: "neutral" },
+  upcoming: { text: "Upcoming", tone: "primary" },
+  "needs-grading": { text: "Needs grading", tone: "warning" },
+  completed: { text: "Completed", tone: "success" },
+};
 
 function ExamsPage() {
   const { exams, retakes, classById, classSize } = useStore();
@@ -39,13 +47,13 @@ function ExamsPage() {
       if (!matchesQuery) return false;
       switch (filter) {
         case "Upcoming":
-          return e.status === "upcoming";
+          return examStage(e) === "upcoming";
         case "Completed":
-          return e.status === "completed";
+          return examStage(e) === "completed";
         case "Needs grading":
-          return e.status === "needs-grading";
+          return examStage(e) === "needs-grading";
         case "Drafts":
-          return e.status === "draft";
+          return examStage(e) === "draft";
         case "Retakes":
           return retakes.some((r) => r.examId === e.id);
         default:
@@ -102,7 +110,7 @@ function ExamsPage() {
           icon={BookOpen}
           title="No exams match this filter"
           description="Try another filter, or create a new exam to get started."
-          action={<Button onClick={() => setDialogOpen(true)}><Plus className="size-4" /> New exam</Button>}
+          action={<Button onClick={() => { setAiMode(false); setDialogOpen(true); }}><Plus className="size-4" /> New exam</Button>}
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -111,6 +119,7 @@ function ExamsPage() {
             const done = e.attendance.filter((a) => a.status === "completed").length;
             const absent = e.attendance.filter((a) => a.status === "absent").length;
             const examRetakes = retakes.filter((r) => r.examId === e.id).length;
+            const stage = stageLabel[examStage(e)];
             return (
               <Link
                 key={e.id}
@@ -123,25 +132,13 @@ function ExamsPage() {
                     <p className="label-xs">{classById(e.classId)?.name}</p>
                     <p className="mt-1 text-[15px] font-semibold">{e.title}</p>
                   </div>
-                  <StatusPill
-                    tone={
-                      e.status === "completed"
-                        ? "success"
-                        : e.status === "needs-grading"
-                          ? "warning"
-                          : e.status === "draft"
-                            ? "neutral"
-                            : "primary"
-                    }
-                  >
-                    {e.status === "needs-grading" ? "Needs grading" : e.status.charAt(0).toUpperCase() + e.status.slice(1)}
-                  </StatusPill>
+                  <StatusPill tone={stage.tone}>{stage.text}</StatusPill>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {formatDate(e.date)} · {e.time} · {e.totalPoints} points · {total} students
                 </p>
                 <div className="mt-3 flex items-center gap-3">
-                  <ProgressBar value={total ? (done / total) * 100 : 0} tone={e.status === "completed" ? "success" : "primary"} />
+                  <ProgressBar value={total ? (done / total) * 100 : 0} tone={stage.tone === "success" ? "success" : "primary"} />
                   <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{done}/{total}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -155,12 +152,15 @@ function ExamsPage() {
         </div>
       )}
 
-      <NewExamDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        aiFirst={aiMode}
-        onCreated={(id) => navigate({ to: "/app/exams/$examId", params: { examId: id } })}
-      />
+      {/* Mounted only while open, so every new exam starts from an empty form. */}
+      {dialogOpen && (
+        <NewExamDialog
+          open
+          onOpenChange={setDialogOpen}
+          aiFirst={aiMode}
+          onCreated={(id) => navigate({ to: "/app/exams/$examId", params: { examId: id } })}
+        />
+      )}
     </div>
   );
 }
