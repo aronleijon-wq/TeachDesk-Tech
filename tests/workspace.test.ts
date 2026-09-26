@@ -91,6 +91,9 @@ test("averages and attendance come from exam results", () => {
     average: 75,
     attendanceRate: 100,
     missingWork: 0,
+    retakesToSchedule: 0,
+    retakeDates: [],
+    upToDate: true,
   });
   assert.equal(rules.studentStats(ws, ws.students[1]!).attendanceRate, 0);
   assert.equal(rules.studentStats(ws, ws.students[2]!).average, undefined);
@@ -139,4 +142,26 @@ test("stored data from an older version loads as a complete workspace", () => {
   assert.deepEqual(partial.classes, [newClass]);
   assert.deepEqual(partial.students, []);
   assert.deepEqual(partial.events, []);
+});
+
+test("a student who missed an exam isn't up to date until they've taken the retake", () => {
+  let ws = classWithExam();
+  const leo = ws.students[1]!;
+  assert.equal(rules.studentStats(ws, leo).upToDate, true);
+
+  ws = rules.setAttendance(ws, "exam-1", leo.id, "absent");
+  assert.equal(rules.studentStats(ws, leo).retakesToSchedule, 1);
+  assert.equal(rules.studentStats(ws, leo).upToDate, false);
+
+  ws = rules.scheduleRetake(ws, ws.retakes[0]!.id, {
+    date: "2099-01-20",
+    time: "14:00",
+    room: "B214",
+  });
+  assert.deepEqual(rules.studentStats(ws, leo).retakeDates, ["2099-01-20"]);
+  assert.equal(rules.studentStats(ws, leo).retakesToSchedule, 0);
+  assert.equal(rules.studentStats(ws, leo).upToDate, false);
+
+  ws = rules.setAttendance(ws, "exam-1", leo.id, "completed");
+  assert.equal(rules.studentStats(ws, leo).upToDate, true);
 });

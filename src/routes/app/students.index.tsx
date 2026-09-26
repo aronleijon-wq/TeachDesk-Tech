@@ -3,7 +3,8 @@ import { Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { ClassDialog, type ClassDialogTarget } from "@/components/class-dialog";
-import { EmptyState, PageHeader, StatusPill } from "@/components/primitives";
+import { FollowUp } from "@/components/follow-up";
+import { EmptyState, PageHeader } from "@/components/primitives";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -179,7 +180,7 @@ function StudentsPage() {
                     <Th>Class</Th>
                     <Th className="text-right">Average</Th>
                     <Th className="text-right">Attendance</Th>
-                    <Th className="text-right">Missing work</Th>
+                    <Th className="text-right">Follow-up</Th>
                     <Th className="w-10">
                       <span className="sr-only">Remove</span>
                     </Th>
@@ -209,11 +210,7 @@ function StudentsPage() {
                           {percent(stats.attendanceRate)}
                         </td>
                         <td className="px-4 py-2.5 text-right">
-                          {stats.missingWork > 0 ? (
-                            <StatusPill tone="warning">{stats.missingWork} missing</StatusPill>
-                          ) : (
-                            <StatusPill tone="success">Up to date</StatusPill>
-                          )}
+                          <FollowUp stats={stats} />
                         </td>
                         <td className="px-2 py-2.5 text-right">
                           <ConfirmButton
