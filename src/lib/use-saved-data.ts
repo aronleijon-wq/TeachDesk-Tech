@@ -1,5 +1,5 @@
-// React hooks that connect TeachDesk's data to where it is saved: the profile and the
-// teacher's own workspace in the database, and the demo workspace in the browser.
+// React hooks that connect TeachDesk's data to where it is saved: the profile, schools and
+// workspaces in the database, and the demo workspace in the browser.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { createAutosave, type SaveState } from "./autosave";
@@ -9,13 +9,14 @@ import {
   fetchItems,
   fetchItemVersions,
   fetchProfile,
-  openPersonalWorkspace,
+  openWorkspace,
   saveItems,
   updateProfile,
   type EditableProfile,
   type StoredProfile,
 } from "./cloud";
 import { createDemoWorkspace } from "./demo-data";
+import { fetchSchools, type School } from "./schools";
 import { emptyWorkspace, type Workspace } from "./types";
 import {
   afterSave,
@@ -68,14 +69,43 @@ export function useProfile(userId: string, defaults: EditableProfile) {
   return { profile, status, save, reload: load };
 }
 
-// --- The teacher's own workspace ------------------------------------------------------
+// --- Schools ------------------------------------------------------------------------
+
+/** The schools the teacher belongs to. */
+export function useSchools(userId: string) {
+  const [schools, setSchools] = useState<School[] | null>(null);
+  const [status, setStatus] = useState<LoadStatus>("loading");
+
+  const load = useCallback(async () => {
+    setStatus("loading");
+    try {
+      setSchools(await fetchSchools(userId));
+      setStatus("ready");
+    } catch {
+      setStatus("error");
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { schools, status, reload: load };
+}
+
+// --- A workspace in the database -----------------------------------------------------
 
 /**
- * The teacher's own workspace, saved in the database item by item. Changes show at once
- * and are saved a moment later. `moveFromBrowser` fills a brand-new workspace with data
- * kept in this browser before database saving existed.
+ * A school's shared workspace, or with `schoolId` null the teacher's personal one, saved
+ * in the database item by item. Changes show at once and are saved a moment later.
+ * `moveFromBrowser` fills a brand-new workspace with data kept in this browser before
+ * database saving existed.
+ *
+ * Use one per workspace: give the component a `key` that changes with `schoolId`.
  */
-export function useCloudWorkspace(moveFromBrowser: Workspace | null) {
+export function useCloudWorkspace(schoolId: string | null, moveFromBrowser: Workspace | null) {
+  // Read once: the data is only ever moved when this workspace first loads.
+  const [toMove] = useState(moveFromBrowser);
   const [workspace, setWorkspace] = useState<Workspace>(emptyWorkspace);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [saveState, setSaveState] = useState<SaveState>("saved");
@@ -91,11 +121,11 @@ export function useCloudWorkspace(moveFromBrowser: Workspace | null) {
 
   /** Loads everything stored and makes it the saved state. */
   const loadStored = useCallback(async () => {
-    const id = workspaceId.current ?? (workspaceId.current = await openPersonalWorkspace());
+    const id = workspaceId.current ?? (workspaceId.current = await openWorkspace(schoolId));
     const items = await fetchItems(id);
     saved.current = savedFromItems(items);
     return workspaceFromItems(items);
-  }, []);
+  }, [schoolId]);
 
   const autosave = useMemo(
     () =>
@@ -113,7 +143,7 @@ export function useCloudWorkspace(moveFromBrowser: Workspace | null) {
             show(await loadStored());
             toast.warning("Updated with changes made elsewhere", {
               description:
-                "Something you edited was changed on another device at the same time, so the latest version was loaded. Please check your last change.",
+                "Something you edited was changed at the same time — by a colleague or on another device — so the latest version was loaded. Please check your last change.",
             });
           } catch {
             toast.error("Couldn't load the latest version", {
@@ -131,21 +161,21 @@ export function useCloudWorkspace(moveFromBrowser: Workspace | null) {
     try {
       const stored = await loadStored();
       const isNew = saved.current.size === 0;
-      show(isNew && moveFromBrowser ? moveFromBrowser : stored);
+      show(isNew && toMove ? toMove : stored);
       // Classes kept in this browser before database saving are saved to the account now.
-      if (isNew && moveFromBrowser) autosave.changed();
+      if (isNew && toMove) autosave.changed();
       setStatus("ready");
     } catch {
       setStatus("error");
     }
-  }, [loadStored, moveFromBrowser, show, autosave]);
+  }, [loadStored, toMove, show, autosave]);
 
   useEffect(() => {
     void load();
     return () => autosave.dispose();
   }, [load, autosave]);
 
-  // Pick up changes made on another device when the teacher comes back to this tab.
+  // Pick up changes by colleagues or from other devices when the teacher returns to this tab.
   useEffect(() => {
     const refresh = async () => {
       const id = workspaceId.current;

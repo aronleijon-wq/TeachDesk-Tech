@@ -80,27 +80,59 @@ export const PRICE_NOTE = `Every new account starts with ${TRIAL_DAYS} days of P
 
 // --- A teacher's plan -------------------------------------------------------------------
 
+/** What matters about a teacher's school for their plan. */
+export interface SchoolTerms {
+  /** "pilot", "active" (a paying school) or "ended". */
+  status: string;
+  pilotEndsAt: string | null;
+}
+
 export interface Access {
   /** What the teacher can use right now. */
   level: "pro" | "free";
-  /** Days left of the free Pro trial, or null if not on a trial. */
-  trialDaysLeft: number | null;
+  /** Why they have Pro: they pay, their school pays or runs a pilot, or their free trial. */
+  via: "plan" | "school" | "pilot" | "trial" | null;
+  /** Days left of the pilot or trial; null when nothing runs out. */
+  daysLeft: number | null;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const daysUntil = (iso: string, now: Date) =>
+  Math.ceil((new Date(iso).getTime() - now.getTime()) / DAY_MS);
 
-/** Pro if the teacher pays for it or their trial is still running, otherwise Free. */
-export function accessFor(plan: string, trialEndsAt: string, now = new Date()): Access {
-  if (plan === "pro") return { level: "pro", trialDaysLeft: null };
-  const msLeft = new Date(trialEndsAt).getTime() - now.getTime();
-  return msLeft > 0
-    ? { level: "pro", trialDaysLeft: Math.ceil(msLeft / DAY_MS) }
-    : { level: "free", trialDaysLeft: null };
+/**
+ * Pro if the teacher pays for it, belongs to a paying school or a running school pilot, or
+ * their free trial is running; otherwise Free. Matches has_pro_access() in the database.
+ */
+export function accessFor(
+  plan: string,
+  trialEndsAt: string,
+  schools: SchoolTerms[],
+  now = new Date(),
+): Access {
+  if (plan === "pro") return { level: "pro", via: "plan", daysLeft: null };
+  if (schools.some((s) => s.status === "active"))
+    return { level: "pro", via: "school", daysLeft: null };
+
+  const pilotDays = Math.max(
+    0,
+    ...schools.map((s) =>
+      s.status === "pilot" && s.pilotEndsAt ? daysUntil(s.pilotEndsAt, now) : 0,
+    ),
+  );
+  if (pilotDays > 0) return { level: "pro", via: "pilot", daysLeft: pilotDays };
+
+  const trialDays = daysUntil(trialEndsAt, now);
+  if (trialDays > 0) return { level: "pro", via: "trial", daysLeft: trialDays };
+  return { level: "free", via: null, daysLeft: null };
 }
 
-/** "Pro", "Pro trial · 12 days left" or "Free". */
-export function accessLabel(access: Access): string {
-  if (access.level === "free") return "Free";
-  if (access.trialDaysLeft === null) return "Pro";
-  return `Pro trial · ${access.trialDaysLeft} ${access.trialDaysLeft === 1 ? "day" : "days"} left`;
+/** "Pro", "Enterprise", "School pilot · 21 days left", "Pro trial · 12 days left" or "Free". */
+export function accessLabel({ via, daysLeft }: Access): string {
+  const left = `${daysLeft} ${daysLeft === 1 ? "day" : "days"} left`;
+  if (via === "plan") return "Pro";
+  if (via === "school") return "Enterprise";
+  if (via === "pilot") return `School pilot · ${left}`;
+  if (via === "trial") return `Pro trial · ${left}`;
+  return "Free";
 }

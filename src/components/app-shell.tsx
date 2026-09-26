@@ -12,6 +12,7 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  School,
   Search,
   Settings,
   Sparkles,
@@ -19,7 +20,7 @@ import {
   Table2,
   Users,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Command,
   CommandEmpty,
@@ -43,6 +44,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { LogoMark, Wordmark } from "@/components/brand";
 import { SaveStatus } from "@/components/save-status";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { useAuth } from "@/lib/auth";
 import { initialsOf, useAttentionSummary, useStore } from "@/lib/store";
 import { accessLabel } from "@/lib/pricing";
@@ -58,13 +60,23 @@ const nav = [
   { to: "/app/ai-tools", label: "AI Tools", icon: Sparkles },
 ] as const;
 
-// Only shown to admins; the database enforces access either way.
-const adminNav = { to: "/app/admin", label: "Demo requests", icon: Inbox } as const;
+// Only shown to those it's for; the database enforces access either way.
+const staffNav = [
+  { to: "/app/admin", label: "Demo requests", icon: Inbox },
+  { to: "/app/admin/schools", label: "Schools", icon: School },
+] as const;
+const schoolAdminNav = { to: "/app/school", label: "School", icon: School } as const;
 
 const secondary = [
   { to: "/app/settings", label: "Settings", icon: Settings },
   { to: "/app/help", label: "Help", icon: LifeBuoy },
 ] as const;
+
+/** True if the nav link leads to this page or one inside it; the dashboard only matches itself. */
+function leadsTo(to: string, pathname: string) {
+  if (to === "/app") return pathname === "/app" || pathname === "/app/";
+  return pathname === to || pathname.startsWith(`${to}/`);
+}
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -129,11 +141,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { dark, setDark } = useDarkMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { missedExams, toGrade, needsScheduling } = useAttentionSummary();
-  const { profile, flush } = useStore();
+  const { profile, flush, schools, openSchool } = useStore();
   const { isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const teacher = { ...profile, initials: initialsOf(profile.name), plan: accessLabel(profile.access) };
-  const subtitle = [teacher.school, teacher.plan].filter(Boolean).join(" · ");
+  const schoolName = openSchool?.name ?? teacher.school;
+  const subtitle = [schoolName, teacher.plan].filter(Boolean).join(" · ");
+  const extraNav = [...(isAdmin ? staffNav : []), ...(openSchool?.role === "admin" ? [schoolAdminNav] : [])];
+  // The nav item for this page: the one whose path matches the most of it.
+  const active = [...nav, ...extraNav, ...secondary]
+    .filter((item) => leadsTo(item.to, pathname))
+    .sort((a, b) => b.to.length - a.to.length)[0];
   const handleSignOut = async () => {
     // Finish saving first; without internet, ask before leaving unsaved changes behind.
     const saved = await flush();
@@ -155,13 +173,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const title = useMemo(() => {
-    const match = [...nav, adminNav, ...secondary].find(
-      (n) => n.to === pathname || (n.to !== "/app" && pathname.startsWith(n.to)),
-    );
-      return match?.label ?? "TeachDesk";
-  }, [pathname]);
-
   return (
     <TooltipProvider delayDuration={120}>
       <div className="flex min-h-screen bg-background">
@@ -177,12 +188,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <nav className="flex-1 space-y-0.5 px-2 py-2">
             {nav.map((item) => (
-              <NavLink key={item.to} {...item} collapsed={collapsed} />
+              <NavLink key={item.to} {...item} active={item === active} collapsed={collapsed} />
             ))}
             <div className="my-3 border-t border-sidebar-border" />
-            {isAdmin && <NavLink {...adminNav} collapsed={collapsed} />}
-            {secondary.map((item) => (
-              <NavLink key={item.to} {...item} collapsed={collapsed} />
+            {[...extraNav, ...secondary].map((item) => (
+              <NavLink key={item.to} {...item} active={item === active} collapsed={collapsed} />
             ))}
           </nav>
 
@@ -221,7 +231,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
             </Button>
-            <p className="truncate text-sm font-semibold">{title}</p>
+            <WorkspaceSwitcher />
+            {/* On phones the workspace name takes the title's place; pages show their own title. */}
+            <p className={cn("truncate text-sm font-semibold", schools.length > 0 && "hidden md:block")}>
+              {active?.label ?? "TeachDesk"}
+            </p>
             <SaveStatus />
 
             <div className="ml-auto flex items-center gap-1">
@@ -288,17 +302,18 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <Link to="/app/settings">Profile & settings</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/app/settings">{teacher.school ? `School — ${teacher.school}` : "Add your school"}</Link>
+                    <Link to="/app/settings">{schoolName ? `School — ${schoolName}` : "Add your school"}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/app/pricing">Plan — {teacher.plan}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {isAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link to={adminNav.to}>Demo requests</Link>
-                    </DropdownMenuItem>
-                  )}
+                  {isAdmin &&
+                    staffNav.map((item) => (
+                      <DropdownMenuItem key={item.to} asChild>
+                        <Link to={item.to}>{item.label}</Link>
+                      </DropdownMenuItem>
+                    ))}
                   <DropdownMenuItem onSelect={() => void handleSignOut()}>Sign out</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -310,22 +325,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Mobile bottom navigation */}
         <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-surface md:hidden">
-          {nav.slice(0, 5).map((item) => {
-            const active = item.to === "/app" ? pathname === "/app" || pathname === "/app/" : pathname.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex flex-col items-center gap-1 py-2 text-[10px] font-medium",
-                  active ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                <item.icon className="size-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+          {nav.slice(0, 5).map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "flex flex-col items-center gap-1 py-2 text-[10px] font-medium",
+                item === active ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <item.icon className="size-4" />
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
@@ -338,16 +350,15 @@ function NavLink({
   to,
   label,
   icon: Icon,
+  active,
   collapsed,
 }: {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
+  active: boolean;
   collapsed: boolean;
 }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const active = to === "/app" ? pathname === "/app" || pathname === "/app/" : pathname.startsWith(to);
-
   const link = (
     <Link
       to={to}

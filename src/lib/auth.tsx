@@ -1,7 +1,9 @@
 import type { Session, User } from "@supabase/supabase-js";
+import { useNavigate } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
+import { rememberReturnPath, takeReturnPath } from "./return-path";
 
 interface AuthValue {
   user: User | null;
@@ -9,13 +11,15 @@ interface AuthValue {
   loading: boolean;
   isAdmin: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
+  /** `returnTo` is where the link in the confirmation email should lead, if one is needed. */
   signUpWithPassword: (
     name: string,
     email: string,
     password: string,
+    returnTo: string,
   ) => Promise<{ needsConfirmation: boolean }>;
-  /** Resolves once signed in; if the browser is sent to Google instead, it never needs to. */
-  signInWithGoogle: () => Promise<void>;
+  /** Sends the browser to Google; once signed in, it continues to `returnTo`. */
+  signInWithGoogle: (returnTo: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -66,6 +70,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.rpc("is_admin").then(({ data, error }) => setIsAdmin(!error && data === true));
   }, [userId]);
 
+  // Signing in with Google or confirming an email lands on the site again; continue to the
+  // page the visitor was on their way to, like an invitation.
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!userId) return;
+    const path = takeReturnPath();
+    if (path) void navigate({ to: path });
+  }, [userId, navigate]);
+
   const value = useMemo<AuthValue>(
     () => ({
       user: session?.user ?? null,
@@ -75,22 +88,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         throwIf(error);
       },
-      async signUpWithPassword(name, email, password) {
+      async signUpWithPassword(name, email, password, returnTo) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { full_name: name }, emailRedirectTo: siteUrl("/app") },
         });
         throwIf(error);
+        if (!data.session) rememberReturnPath(returnTo);
         return { needsConfirmation: !data.session };
       },
-      async signInWithGoogle() {
-        // Google sign-in is brokered by Lovable Cloud, which then sets the Supabase session.
+      async signInWithGoogle(returnTo) {
+        // Google sign-in is brokered by Lovable Cloud, which then sets the Supabase session
+        // and comes back to the front page.
+        rememberReturnPath(returnTo);
         const result = await lovable.auth.signInWithOAuth("google", {
           redirect_uri: window.location.origin,
         });
-        if (result.error)
+        if (result.error) {
+          takeReturnPath(); // Not signing in after all, so forget where to go.
           throw friendly(result.error) ?? new Error("Google sign-in failed. Please try again.");
+        }
       },
       async sendPasswordReset(email) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {

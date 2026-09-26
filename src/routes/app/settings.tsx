@@ -121,7 +121,7 @@ function SettingsPage() {
           <div>
             <p className="text-sm font-medium">Show demo data</p>
             <p className="text-xs text-muted-foreground">
-              On: explore TeachDesk with example classes and students. Off: your own classes, students and exams.
+              On: explore TeachDesk with example classes and students. Off: your real classes, students and exams.
               Switching never deletes anything.
             </p>
           </div>
@@ -149,7 +149,8 @@ function SettingsPage() {
             <p className="text-sm font-medium">Where your data is saved</p>
             <p className="text-xs text-muted-foreground">
               Your classes, exams and profile are saved to your account automatically, so they're there on any device.
-              The demo is kept in this browser only. Resetting restores the demo — your own workspace is not touched.
+              A school's workspace is shared with the teachers at that school. The demo is kept in this browser only;
+              resetting it restores the example data and doesn't touch your real classes.
             </p>
           </div>
           <AlertDialog>

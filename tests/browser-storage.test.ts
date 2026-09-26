@@ -14,8 +14,14 @@ Object.assign(globalThis, {
   },
 });
 
-const { clearLegacyAccount, readDemoWorkspace, readLegacyAccount, writeDemoWorkspace } =
-  await import("@/lib/browser-storage");
+const {
+  clearLegacyAccount,
+  readDemoWorkspace,
+  readLegacyAccount,
+  readOpenSchool,
+  writeDemoWorkspace,
+  writeOpenSchool,
+} = await import("@/lib/browser-storage");
 const { createDemoWorkspace } = await import("@/lib/demo-data");
 
 const own = { classes: [{ id: "c1", name: "Matte 3C", subject: "Matte", room: "" }] };
@@ -70,4 +76,15 @@ test("old data can be cleared, and the demo is kept under its own key", () => {
   assert.equal(readDemoWorkspace("u1"), null);
   assert.equal(writeDemoWorkspace("u1", createDemoWorkspace()), true);
   assert.equal(readDemoWorkspace("u1")?.students.length, 81);
+});
+
+test("the open workspace is remembered per teacher: a school, personal, or not chosen yet", () => {
+  assert.equal(readOpenSchool("u5"), undefined);
+  writeOpenSchool("u5", "school-1");
+  assert.equal(readOpenSchool("u5"), "school-1");
+  writeOpenSchool("u5", null);
+  assert.equal(readOpenSchool("u5"), null);
+  assert.equal(readOpenSchool("u6"), undefined);
+  store.set("teachdesk:open-school:u6", JSON.stringify({ schoolId: 7 }));
+  assert.equal(readOpenSchool("u6"), undefined);
 });
