@@ -323,3 +323,16 @@ test("AI grading counts only once approved, with the teacher's points", () => {
   assert.equal(record(leo!.id).aiGrading, undefined);
   assert.equal(record(leo!.id).score, 4);
 });
+
+test("deleting an exam removes its results and retakes, and nothing else", () => {
+  let ws = classWithExam();
+  const leo = ws.students[1]!;
+  ws = rules.setAttendance(ws, "exam-1", leo.id, "absent");
+  assert.equal(ws.retakes.length, 1);
+
+  ws = rules.removeExam(ws, "exam-1");
+  assert.equal(ws.exams.length, 0);
+  assert.equal(ws.retakes.length, 0);
+  assert.equal(ws.students.length, 3);
+  assert.equal(ws.classes.length, 1);
+});

@@ -1,11 +1,12 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, Check, Sparkles } from "lucide-react";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Check, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
+import { ConfirmButton } from "@/components/confirm-button";
 import { GenerateVersionDialog } from "@/components/generate-version-dialog";
 import { GradeWithAi } from "@/components/grade-with-ai";
 import { AddQuestion, QuestionCard } from "@/components/question-editor";
@@ -34,12 +35,14 @@ function ExamDetail() {
     scheduleRetake,
     addQuestion,
     removeQuestion,
+    removeExam,
     updateQuestion,
     approveVersion,
     classById,
     studentById,
   } = useStore();
   const exam = exams.find((e) => e.id === examId);
+  const navigate = useNavigate();
   const [genOpen, setGenOpen] = useState(false);
   const [activeVersion, setActiveVersion] = useState(0);
 
@@ -63,9 +66,28 @@ function ExamDetail() {
         title={exam.title}
         subtitle={`${klass?.name} · ${formatDate(exam.date)} · ${exam.time} · ${exam.room} · ${exam.totalPoints} points`}
         actions={
-          <Button onClick={() => setGenOpen(true)} disabled={!exam.versions[0]?.questions.length}>
-            <Sparkles className="size-4" /> Generate equivalent version
-          </Button>
+          <>
+            <ConfirmButton
+              label={
+                <>
+                  <Trash2 className="size-4" /> Delete exam
+                </>
+              }
+              title={`Delete ${exam.title}?`}
+              description="Its questions, versions, results and retakes are deleted too. This can't be undone."
+              confirm="Delete exam"
+              onConfirm={() => {
+                // Leave the page first, so it never shows an exam that's gone.
+                void navigate({ to: "/app/exams" }).then(() => {
+                  removeExam(exam.id);
+                  toast.success(`${exam.title} deleted`);
+                });
+              }}
+            />
+            <Button onClick={() => setGenOpen(true)} disabled={!exam.versions[0]?.questions.length}>
+              <Sparkles className="size-4" /> Generate equivalent version
+            </Button>
+          </>
         }
       />
 

@@ -1,21 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ClassDialog, type ClassDialogTarget } from "@/components/class-dialog";
+import { ConfirmButton } from "@/components/confirm-button";
 import { FollowUp } from "@/components/follow-up";
 import { EmptyState, PageHeader } from "@/components/primitives";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FREE_CLASS_LIMIT } from "@/lib/pricing";
@@ -242,49 +232,6 @@ function StudentsPage() {
         onCreated={(id) => setClassFilter(id)}
       />
     </div>
-  );
-}
-
-/** A button that asks for confirmation before doing something that can't be undone. */
-function ConfirmButton({
-  label,
-  ariaLabel,
-  title,
-  description,
-  confirm,
-  onConfirm,
-  variant = "outline",
-}: {
-  label: ReactNode;
-  ariaLabel?: string;
-  title: string;
-  description: string;
-  confirm: string;
-  onConfirm: () => void;
-  variant?: "outline" | "ghost";
-}) {
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button
-          variant={variant}
-          size={variant === "ghost" ? "icon" : "default"}
-          aria-label={ariaLabel}
-        >
-          {label}
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>{confirm}</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }
 

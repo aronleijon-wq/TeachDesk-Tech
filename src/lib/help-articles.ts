@@ -134,6 +134,15 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         ],
       },
       {
+        id: "delete-exam",
+        title: "Delete an exam",
+        summary:
+          "On the Exams page, click the bin on the exam's card, or open the exam and click Delete exam. You're asked to confirm first.",
+        details: [
+          "Deleting an exam also deletes its questions, versions, results and retakes. This can't be undone.",
+        ],
+      },
+      {
         id: "attendance",
         title: "Mark who was at the exam",
         summary:
