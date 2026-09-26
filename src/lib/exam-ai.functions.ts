@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -7,6 +6,7 @@ import { z } from "zod";
 import * as z4 from "zod/v4";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { callClaude } from "./claude";
 import { FREE_AI_PER_MONTH } from "./pricing";
 
 const MODEL = "claude-opus-5";
@@ -46,51 +46,30 @@ async function recordAiUse(db: TeacherDatabase) {
   if (error) console.error("Couldn't record AI use", error);
 }
 
-function getClient() {
-  if (!process.env["ANTHROPIC_API_KEY"]) {
-    throw new Error(
-      "AI is not configured. Add ANTHROPIC_API_KEY to .env.local and restart the server.",
-    );
-  }
-  return new Anthropic();
-}
-
-/** Runs a structured-output request and turns API failures into messages a teacher can act on. */
+/** Runs a structured-output request and checks that a complete result came back. */
 async function runStructured<T>(
   schema: z4.ZodType<T>,
   content: string | BetaContentBlockParam[],
   tooLongMessage: string,
 ): Promise<T> {
-  const client = getClient();
-  try {
-    const response = await client.beta.messages.parse({
+  const response = await callClaude((client) =>
+    client.beta.messages.parse({
       model: MODEL,
       max_tokens: 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "medium", format: betaZodOutputFormat(schema) },
       messages: [{ role: "user", content }],
-    });
+    }),
+  );
 
-    if (response.stop_reason === "refusal") {
-      throw new Error("The AI declined this request. Try rewording or removing unusual content.");
-    }
-    if (response.stop_reason === "max_tokens") throw new Error(tooLongMessage);
-    if (!response.parsed_output)
-      throw new Error("The AI returned an incomplete result. Please try again.");
-    return response.parsed_output;
-  } catch (err) {
-    if (err instanceof Anthropic.AuthenticationError) {
-      throw new Error("The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in .env.local.");
-    }
-    if (err instanceof Anthropic.RateLimitError) {
-      throw new Error("AI is busy right now. Please try again in a moment.");
-    }
-    if (err instanceof Anthropic.APIError) {
-      throw new Error(`AI request failed (${err.status ?? "network error"}). Please try again.`);
-    }
-    throw err;
+  if (response.stop_reason === "refusal") {
+    throw new Error("The AI declined this request. Try rewording or removing unusual content.");
   }
+  if (response.stop_reason === "max_tokens") throw new Error(tooLongMessage);
+  if (!response.parsed_output)
+    throw new Error("The AI returned an incomplete result. Please try again.");
+  return response.parsed_output;
 }
 
 const QuestionOutput = z4.object({

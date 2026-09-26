@@ -346,23 +346,13 @@ export function useStore() {
   return ctx;
 }
 
+/** What needs the teacher's attention in the workspace that is showing. */
 export function useAttentionSummary() {
-  const { exams, retakes, assignments, students } = useStore();
-  return useMemo(() => {
-    const missedExams = exams.flatMap((e) =>
-      e.attendance
-        .filter((a) => a.status === "absent")
-        .flatMap((a) => {
-          const student = students.find((s) => s.id === a.studentId);
-          return student ? [{ exam: e, student }] : [];
-        }),
-    );
-    const toGrade = assignments.reduce((sum, a) => sum + a.toGrade, 0);
-    const needsScheduling = retakes.filter((r) => r.status === "needs-scheduling");
-    const missingWork = students.filter((s) => s.missingWork > 0);
-    const upcoming = exams.filter((e) => e.status === "upcoming");
-    return { missedExams, toGrade, needsScheduling, missingWork, upcoming, retakes };
-  }, [exams, retakes, assignments, students]);
+  const { classes, students, exams, retakes, assignments, events } = useStore();
+  return useMemo(
+    () => rules.attentionSummary({ classes, students, exams, retakes, assignments, events }),
+    [classes, students, exams, retakes, assignments, events],
+  );
 }
 
 /** The calendar for the workspace that is showing: lessons plus exams, retakes and deadlines. */

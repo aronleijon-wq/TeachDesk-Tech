@@ -327,6 +327,7 @@ export type Database = {
         Args: { admin_email: string; pilot_days?: number; school_name: string }
         Returns: string
       }
+      use_help_question: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never

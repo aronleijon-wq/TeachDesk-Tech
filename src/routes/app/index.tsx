@@ -4,6 +4,8 @@ import {
   ArrowRight,
   BookOpen,
   CalendarClock,
+  CheckCircle2,
+  ClipboardCheck,
   ClipboardList,
   FileWarning,
   RefreshCw,
@@ -11,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState, PageHeader, Panel, ProgressBar, StatCard, StatusPill, formatDate } from "@/components/primitives";
+import { attentionNotes, type AttentionKind } from "@/lib/attention";
 import { useAttentionSummary, useCalendar, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/app/")({
@@ -32,10 +35,21 @@ function greeting() {
   return "Good evening";
 }
 
+// How each kind of note looks on the dashboard, and what its button says.
+const noteStyle: Record<AttentionKind, { icon: typeof AlertTriangle; tone: "danger" | "warning" | "neutral"; cta: string }> = {
+  retakes: { icon: AlertTriangle, tone: "danger", cta: "Schedule retakes" },
+  "exam-results": { icon: ClipboardCheck, tone: "warning", cta: "Enter results" },
+  assignments: { icon: ClipboardList, tone: "warning", cta: "Start grading" },
+  "follow-up": { icon: FileWarning, tone: "neutral", cta: "Review students" },
+};
+
 function Dashboard() {
   const { exams, profile, classById, classSize, classes, demoMode } = useStore();
   const { today: todayEvents } = useCalendar();
-  const { missedExams, toGrade, needsScheduling, missingWork, upcoming, retakes } = useAttentionSummary();
+  const summary = useAttentionSummary();
+  const { upcoming, openRetakes, retakesToSchedule, papersToGrade, submissionsToGrade } = summary;
+  const notes = attentionNotes(summary, (classId) => classById(classId)?.name);
+  const [nextExam] = upcoming;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -57,56 +71,54 @@ function Dashboard() {
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Upcoming exams" value={upcoming.length} hint="Next 6 weeks" icon={BookOpen} />
-        <StatCard label="To grade" value={toGrade} hint="Across your assignments" icon={ClipboardList} />
-        <StatCard label="Missing work" value={missingWork.length} hint="Students affected" icon={FileWarning} />
-        <StatCard label="Retakes" value={retakes.length} hint={`${needsScheduling.length} need scheduling`} icon={RefreshCw} />
+        <StatCard
+          label="Upcoming exams"
+          value={upcoming.length}
+          hint={nextExam ? `Next: ${formatDate(nextExam.date)}` : "None planned"}
+          icon={BookOpen}
+        />
+        <StatCard
+          label="To grade"
+          value={papersToGrade + submissionsToGrade}
+          hint={`${papersToGrade} exam papers · ${submissionsToGrade} assignments`}
+          icon={ClipboardList}
+        />
+        <StatCard
+          label="Missing work"
+          value={summary.studentsToFollowUp.length}
+          hint="Students with missed exams or assignments"
+          icon={FileWarning}
+        />
+        <StatCard
+          label="Retakes"
+          value={openRetakes.length}
+          hint={`${retakesToSchedule.length} need scheduling`}
+          icon={RefreshCw}
+        />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           <Panel title="Needs attention" description="Items that block your day">
-            <div className="space-y-3">
-              {missedExams.length > 0 && (
-                <AttentionCard
-                  tone="danger"
-                  icon={AlertTriangle}
-                  title={`${missedExams.length} students missed an exam`}
-                  meta={`${classById(missedExams[0]!.exam.classId)?.name} · ${missedExams[0]!.exam.title}`}
-                  names={missedExams.map((m) => m.student.name)}
-                  to="/app/exams/$examId"
-                  params={{ examId: missedExams[0]!.exam.id }}
-                  cta="Schedule retake"
-                />
-              )}
-              <AttentionCard
-                tone="warning"
-                icon={ClipboardList}
-                title={`${toGrade} submissions need grading`}
-                meta="Mathematics 3C, Physics 2, Social Studies 3"
-                to="/app/assignments"
-                cta="Start grading"
-              />
-              {needsScheduling.length > 0 && (
-                <AttentionCard
-                  tone="primary"
-                  icon={RefreshCw}
-                  title={`${needsScheduling.length} retakes need scheduling`}
-                  meta="Derivatives — Exam 1"
-                  to="/app/exams/$examId"
-                  params={{ examId: "exam-derivatives-1" }}
-                  cta="Open retakes"
-                />
-              )}
-              <AttentionCard
-                tone="neutral"
-                icon={FileWarning}
-                title={`${missingWork.length} students have missing work`}
-                meta="Follow-up recommended before the next deadline"
-                to="/app/students"
-                cta="Review students"
-              />
-            </div>
+            {notes.length === 0 ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 className="size-4 text-success" /> You're all caught up — nothing needs your attention right now.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {notes.map((note) => (
+                  <AttentionCard
+                    key={note.kind}
+                    {...noteStyle[note.kind]}
+                    title={note.title}
+                    meta={note.detail}
+                    names={note.names}
+                    to={note.to}
+                    {...(note.params ? { params: note.params } : {})}
+                  />
+                ))}
+              </div>
+            )}
           </Panel>
 
           <Panel title="Upcoming exams" action={<Link className="text-xs font-medium text-primary" to="/app/exams">View all</Link>}>
@@ -166,8 +178,9 @@ function Dashboard() {
           </Panel>
 
           <Panel title="Retake queue" action={<CalendarClock className="size-4 text-muted-foreground" />}>
+            {openRetakes.length === 0 && <p className="text-sm text-muted-foreground">No retakes waiting.</p>}
             <ul className="space-y-2 text-sm">
-              {retakes.map((r) => {
+              {openRetakes.map((r) => {
                 const exam = exams.find((e) => e.id === r.examId);
                 return (
                   <li key={r.id} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">

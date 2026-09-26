@@ -9,6 +9,9 @@ export const TRIAL_DAYS = 14;
 export const FREE_CLASS_LIMIT = 2;
 /** Enforced in the database (ai_generations_left) — keep the two in sync. */
 export const FREE_AI_PER_MONTH = 3;
+/** Questions each teacher can ask the help assistant per day. Enforced in the database
+ * (use_help_question) — keep the two in sync. */
+export const HELP_QUESTIONS_PER_DAY = 20;
 
 export interface Plan {
   name: "Free" | "Pro" | "Enterprise";

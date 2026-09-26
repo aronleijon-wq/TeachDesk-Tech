@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { LogoMark, Wordmark } from "@/components/brand";
 import { SaveStatus } from "@/components/save-status";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
+import { attentionNotes } from "@/lib/attention";
 import { useAuth } from "@/lib/auth";
 import { initialsOf, useAttentionSummary, useStore } from "@/lib/store";
 import { accessLabel } from "@/lib/pricing";
@@ -140,8 +141,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const { dark, setDark } = useDarkMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { missedExams, toGrade, needsScheduling } = useAttentionSummary();
-  const { profile, flush, schools, openSchool } = useStore();
+  const { profile, flush, schools, openSchool, classById } = useStore();
+  const notes = attentionNotes(useAttentionSummary(), (classId) => classById(classId)?.name);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const teacher = { ...profile, initials: initialsOf(profile.name), plan: accessLabel(profile.access) };
@@ -251,29 +253,34 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Search className="size-4" />
               </Button>
 
-              <Popover>
+              <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
                     <Bell className="size-4" />
-                    <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
+                    {notes.length > 0 && <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-80 p-0">
                   <div className="border-b border-border px-4 py-3 text-sm font-semibold">Notifications</div>
-                  <ul className="divide-y divide-border text-sm">
-                    <li className="px-4 py-3">
-                      <p className="font-medium">{missedExams.length} students missed an exam</p>
-                      <p className="text-xs text-muted-foreground">Retakes can be scheduled now</p>
-                    </li>
-                    <li className="px-4 py-3">
-                      <p className="font-medium">{toGrade} submissions need grading</p>
-                      <p className="text-xs text-muted-foreground">Across 3 assignments</p>
-                    </li>
-                    <li className="px-4 py-3">
-                      <p className="font-medium">{needsScheduling.length} retakes need scheduling</p>
-                      <p className="text-xs text-muted-foreground">Mathematics 3C</p>
-                    </li>
-                  </ul>
+                  {notes.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-muted-foreground">You're all caught up.</p>
+                  ) : (
+                    <ul className="divide-y divide-border text-sm">
+                      {notes.map((note) => (
+                        <li key={note.kind}>
+                          <Link
+                            to={note.to}
+                            params={note.params ?? {}}
+                            className="block px-4 py-3 transition-colors hover:bg-accent"
+                            onClick={() => setNotificationsOpen(false)}
+                          >
+                            <p className="font-medium">{note.title}</p>
+                            <p className="text-xs text-muted-foreground">{note.detail}</p>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </PopoverContent>
               </Popover>
 
