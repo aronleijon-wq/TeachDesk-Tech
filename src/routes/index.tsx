@@ -478,8 +478,10 @@ function Security() {
 }
 
 /** Schools contact us for a quote; individual teachers can sign up straight away. */
-const planCta = (plan: Plan) =>
-  plan.price == null ? { label: "Contact us", to: "/demo" as const } : { label: "Get started", to: "/login" as const };
+const planCta = (plan: Plan) => {
+  if (plan.price == null) return { label: "Contact us", to: "/demo" as const };
+  return { label: plan.price === 0 ? "Start for free" : "Start free trial", to: "/login" as const };
+};
 
 function Pricing() {
   return (

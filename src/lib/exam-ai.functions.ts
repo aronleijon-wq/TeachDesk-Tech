@@ -1,9 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import * as z4 from "zod/v4";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
+import { FREE_AI_PER_MONTH } from "./pricing";
 
 const MODEL = "claude-opus-5";
 
@@ -11,9 +15,42 @@ const MODEL = "claude-opus-5";
 // Shared helpers
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Plans: the database decides what the signed-in teacher may use
+// ---------------------------------------------------------------------------
+
+type TeacherDatabase = SupabaseClient<Database>;
+
+/** Stops a free-plan teacher who has used this month's AI allowance. */
+async function checkAiAllowance(db: TeacherDatabase) {
+  const { data, error } = await db.rpc("ai_generations_left");
+  if (error) throw new Error("Couldn't check your plan. Please try again.");
+  const left = data as number | null; // null means unlimited (Pro)
+  if (left !== null && left <= 0) {
+    throw new Error(
+      `You've used this month's ${FREE_AI_PER_MONTH} free AI retakes. Upgrade to Pro for unlimited retakes.`,
+    );
+  }
+}
+
+/** Stops teachers without Pro (paid, trial or through their school). */
+async function requirePro(db: TeacherDatabase, feature: string) {
+  const { data, error } = await db.rpc("has_pro_access");
+  if (error) throw new Error("Couldn't check your plan. Please try again.");
+  if (!data) throw new Error(`${feature} is part of Pro. Upgrade to use it.`);
+}
+
+/** Counts a finished generation; a failed count never costs the teacher their result. */
+async function recordAiUse(db: TeacherDatabase) {
+  const { error } = await db.rpc("record_ai_generation");
+  if (error) console.error("Couldn't record AI use", error);
+}
+
 function getClient() {
   if (!process.env["ANTHROPIC_API_KEY"]) {
-    throw new Error("AI is not configured. Add ANTHROPIC_API_KEY to .env.local and restart the server.");
+    throw new Error(
+      "AI is not configured. Add ANTHROPIC_API_KEY to .env.local and restart the server.",
+    );
   }
   return new Anthropic();
 }
@@ -39,7 +76,8 @@ async function runStructured<T>(
       throw new Error("The AI declined this request. Try rewording or removing unusual content.");
     }
     if (response.stop_reason === "max_tokens") throw new Error(tooLongMessage);
-    if (!response.parsed_output) throw new Error("The AI returned an incomplete result. Please try again.");
+    if (!response.parsed_output)
+      throw new Error("The AI returned an incomplete result. Please try again.");
     return response.parsed_output;
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {
@@ -106,8 +144,10 @@ export type GenerateResult = z4.infer<typeof GenerateOutput>;
  * Needs ANTHROPIC_API_KEY in the server environment (.env.local when running locally).
  */
 export const generateEquivalentVersion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GenerateInput.parse(input))
-  .handler(async ({ data }): Promise<GenerateResult> => {
+  .handler(async ({ data, context }): Promise<GenerateResult> => {
+    await checkAiAllowance(context.supabase);
     const instruction = [
       `You are an experienced ${data.subject} teacher writing ${data.versionLabel} of the exam "${data.examTitle}".`,
       "This version is a retake for students who missed the original, so it must be fair: a student who could solve",
@@ -130,11 +170,13 @@ export const generateEquivalentVersion = createServerFn({ method: "POST" })
       JSON.stringify(data.questions),
     ].join("\n");
 
-    return runStructured(
+    const result = await runStructured(
       GenerateOutput,
       instruction,
       "This exam is too long to generate in one go. Try splitting it into two exams.",
     );
+    await recordAiUse(context.supabase);
+    return result;
   });
 
 // ---------------------------------------------------------------------------
@@ -150,12 +192,20 @@ const ExtractInput = z
     text: z.string().max(200_000).optional(),
     file: z
       .object({
-        mediaType: z.enum(["application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif"]),
+        mediaType: z.enum([
+          "application/pdf",
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/gif",
+        ]),
         data: z.string().max(MAX_FILE_BASE64_CHARS),
       })
       .optional(),
   })
-  .refine((d) => Boolean(d.text?.trim()) || Boolean(d.file), { message: "Paste the exam text or choose a file." });
+  .refine((d) => Boolean(d.text?.trim()) || Boolean(d.file), {
+    message: "Paste the exam text or choose a file.",
+  });
 
 const ExtractOutput = z4.object({
   questions: z4.array(QuestionOutput),
@@ -166,8 +216,10 @@ const ExtractOutput = z4.object({
 export type ExtractResult = z4.infer<typeof ExtractOutput>;
 
 export const extractExamQuestions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ExtractInput.parse(input))
-  .handler(async ({ data }): Promise<ExtractResult> => {
+  .handler(async ({ data, context }): Promise<ExtractResult> => {
+    await requirePro(context.supabase, "Importing existing exams");
     const instruction = [
       `Below is an existing ${data.subject} exam${data.examTitle ? ` called "${data.examTitle}"` : ""}, written by a teacher.`,
       "Extract every question into structured form so it can be used in an exam tool.",
@@ -189,16 +241,24 @@ export const extractExamQuestions = createServerFn({ method: "POST" })
     if (data.file) {
       content.push(
         data.file.mediaType === "application/pdf"
-          ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: data.file.data } }
-          : { type: "image", source: { type: "base64", media_type: data.file.mediaType, data: data.file.data } },
+          ? {
+              type: "document",
+              source: { type: "base64", media_type: "application/pdf", data: data.file.data },
+            }
+          : {
+              type: "image",
+              source: { type: "base64", media_type: data.file.mediaType, data: data.file.data },
+            },
       );
     }
     if (data.text?.trim()) content.push({ type: "text", text: `Exam text:\n${data.text}` });
     content.push({ type: "text", text: instruction });
 
-    return runStructured(
+    const result = await runStructured(
       ExtractOutput,
       content,
       "This exam is too long to read in one go. Try splitting it into two parts.",
     );
+    await recordAiUse(context.supabase);
+    return result;
   });

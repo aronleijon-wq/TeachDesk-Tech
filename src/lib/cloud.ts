@@ -1,60 +1,53 @@
-// Reading and writing a teacher's own data in the database. Row-level security in the
-// database makes sure each teacher can only reach their own rows.
+// Reading and writing teachers' data in the database. Row-level security in the database
+// decides who may see what; writes to a workspace go through one database function that
+// checks access and versions.
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Json } from "@/integrations/supabase/types";
 import type { SaveOutcome } from "./autosave";
-import { normalizeWorkspace, type Workspace } from "./types";
+import type { ItemChange, StoredItem } from "./workspace-items";
 
-// --- Workspace ----------------------------------------------------------------------
+// --- Workspaces ---------------------------------------------------------------------
 
-/** A workspace as stored. Version 0 means it hasn't been saved to the database yet. */
-export interface StoredWorkspace {
-  data: Workspace;
-  version: number;
-}
-
-export async function fetchWorkspace(userId: string): Promise<StoredWorkspace | null> {
-  const { data, error } = await supabase
-    .from("workspaces")
-    .select("data, version")
-    .eq("user_id", userId)
-    .maybeSingle();
+/** The signed-in teacher's personal workspace; created on their first visit. */
+export async function openPersonalWorkspace(): Promise<string> {
+  const { data, error } = await supabase.rpc("ensure_personal_workspace");
   if (error) throw error;
-  return data ? { data: normalizeWorkspace(data.data), version: data.version } : null;
+  return data;
 }
 
-/**
- * Saves only if the stored version is still the one this workspace is based on, so a
- * newer save from another device or tab is never overwritten.
- */
-export async function saveWorkspace(
-  userId: string,
-  workspace: Workspace,
-  version: number,
-): Promise<{ outcome: "saved"; version: number } | { outcome: Exclude<SaveOutcome, "saved"> }> {
-  const data = workspace as unknown as Json;
+/** All items in a workspace, oldest first. */
+export async function fetchItems(workspaceId: string): Promise<StoredItem[]> {
+  const { data, error } = await supabase
+    .from("workspace_items")
+    .select("kind, id, data, version")
+    .eq("workspace_id", workspaceId)
+    .order("seq");
+  if (error) throw error;
+  return data;
+}
 
-  if (version === 0) {
-    const { data: row, error } = await supabase
-      .from("workspaces")
-      .insert({ user_id: userId, data, version: 1 })
-      .select("version")
-      .single();
-    // A unique violation means another device created the workspace first.
-    if (error) return { outcome: error.code === "23505" ? "conflict" : "failed" };
-    return { outcome: "saved", version: row.version };
-  }
+/** Just the versions of a workspace's items — a cheap way to see if anyone else saved. */
+export async function fetchItemVersions(workspaceId: string) {
+  const { data, error } = await supabase
+    .from("workspace_items")
+    .select("kind, id, version")
+    .eq("workspace_id", workspaceId);
+  if (error) throw error;
+  return data;
+}
 
-  const { data: row, error } = await supabase
-    .from("workspaces")
-    .update({ data, version: version + 1 })
-    .eq("user_id", userId)
-    .eq("version", version)
-    .select("version")
-    .maybeSingle();
-  if (error) return { outcome: "failed" };
-  // No row updated: the stored version moved on since we loaded it.
-  return row ? { outcome: "saved", version: row.version } : { outcome: "conflict" };
+/** Error code from save_workspace_items when an item was changed by someone else. */
+const CHANGED_ELSEWHERE = "TD409";
+const ALREADY_EXISTS = "23505";
+
+/** Saves a batch of changes, all or nothing. */
+export async function saveItems(workspaceId: string, changes: ItemChange[]): Promise<SaveOutcome> {
+  const { error } = await supabase.rpc("save_workspace_items", {
+    target: workspaceId,
+    changes: changes as unknown as Json,
+  });
+  if (!error) return "saved";
+  return error.code === CHANGED_ELSEWHERE || error.code === ALREADY_EXISTS ? "conflict" : "failed";
 }
 
 // --- Profile --------------------------------------------------------------------------
@@ -63,25 +56,28 @@ export interface StoredProfile {
   name: string;
   role: string;
   school: string;
-  /** Set by TeachDesk (billing); teachers can't change it. */
+  /** "free" or "pro". Set by TeachDesk (billing); teachers can't change it. */
   plan: string;
+  /** When the free Pro trial ends (ISO date). */
+  trialEndsAt: string;
   showDemo: boolean;
 }
 
-export type EditableProfile = Omit<StoredProfile, "plan">;
+export type EditableProfile = Pick<StoredProfile, "name" | "role" | "school" | "showDemo">;
 
 type ProfileRow = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
-  "name" | "role" | "school" | "plan" | "show_demo"
+  "name" | "role" | "school" | "plan" | "trial_ends_at" | "show_demo"
 >;
 
-const PROFILE_COLUMNS = "name, role, school, plan, show_demo";
+const PROFILE_COLUMNS = "name, role, school, plan, trial_ends_at, show_demo";
 
 const fromRow = (row: ProfileRow): StoredProfile => ({
   name: row.name,
   role: row.role,
   school: row.school,
   plan: row.plan,
+  trialEndsAt: row.trial_ends_at,
   showDemo: row.show_demo,
 });
 
@@ -111,7 +107,7 @@ export async function createProfile(
     })
     .select(PROFILE_COLUMNS)
     .single();
-  if (error?.code === "23505") {
+  if (error?.code === ALREADY_EXISTS) {
     const existing = await fetchProfile(userId);
     if (existing) return existing;
   }

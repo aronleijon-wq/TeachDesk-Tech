@@ -1,11 +1,17 @@
-// The one place for TeachDesk's plans and prices. The public pricing section and the
-// in-app Plans page both read from here, so they always agree.
+// The one place for TeachDesk's plans, prices and plan limits. The public pricing section
+// and the in-app Plans page both read from here, so they always agree.
 //
-// Teacher and Professional are for teachers who pay themselves. Enterprise is for
-// schools and municipalities: no public price — they contact us for a quote.
+// Every new teacher gets Pro free for TRIAL_DAYS, then keeps the free plan unless they
+// upgrade. Enterprise is for schools and municipalities: no public price — they contact
+// us for a quote.
+
+export const TRIAL_DAYS = 14;
+export const FREE_CLASS_LIMIT = 2;
+/** Enforced in the database (ai_generations_left) — keep the two in sync. */
+export const FREE_AI_PER_MONTH = 3;
 
 export interface Plan {
-  name: "Teacher" | "Professional" | "Enterprise";
+  name: "Free" | "Pro" | "Enterprise";
   tagline: string;
   /** Monthly price in SEK, or null for "contact us". */
   price: number | null;
@@ -19,26 +25,27 @@ export interface Plan {
 
 export const PLANS: Plan[] = [
   {
-    name: "Teacher",
+    name: "Free",
     tagline: "The essentials, for teachers on their own.",
-    price: 129,
-    unit: "per month",
+    price: 0,
+    unit: "forever",
     features: [
-      { label: "Exams, classes and students" },
-      { label: "Attendance and retakes" },
+      { label: `Up to ${FREE_CLASS_LIMIT} classes` },
+      { label: "Exams, attendance and retakes" },
       { label: "Gradebook and calendar" },
+      { label: `${FREE_AI_PER_MONTH} AI-generated retakes per month` },
     ],
   },
   {
-    name: "Professional",
+    name: "Pro",
     tagline: "Every tool, for teachers on their own.",
     price: 229,
     unit: "per month",
     // Two months free when paying yearly.
     yearlyPrice: 229 * 10,
     features: [
-      { label: "Everything in Teacher" },
-      { label: "AI-generated equivalent retakes" },
+      { label: "Unlimited classes" },
+      { label: "Unlimited AI-generated retakes" },
       { label: "Import existing exams from text, PDF or photo" },
       { label: "Rubrics and analytics" },
       { label: "Exports", comingSoon: true },
@@ -51,7 +58,7 @@ export const PLANS: Plan[] = [
     unit: "tailored to your school",
     badge: "For schools",
     features: [
-      { label: "Professional for every teacher" },
+      { label: "Pro for every teacher" },
       { label: "Invoice billing and a data processing agreement" },
       { label: "Onboarding for your staff" },
       { label: "Shared exam library", comingSoon: true },
@@ -60,7 +67,8 @@ export const PLANS: Plan[] = [
   },
 ];
 
-export const formatPrice = (sek: number | null) => (sek == null ? "Let's talk" : `${sek.toLocaleString("sv-SE")} kr`);
+export const formatPrice = (sek: number | null) =>
+  sek == null ? "Let's talk" : `${sek.toLocaleString("sv-SE")} kr`;
 
 /** "or 2 290 kr per year — 2 months free", for plans with a yearly option. */
 export const yearlyOffer = (plan: Plan) =>
@@ -68,4 +76,31 @@ export const yearlyOffer = (plan: Plan) =>
     ? `or ${formatPrice(plan.yearlyPrice)} per year — ${Math.round(12 - plan.yearlyPrice / plan.price)} months free`
     : null;
 
-export const PRICE_NOTE = "Teacher and Professional are billed monthly (Professional also yearly). Enterprise is quoted per school.";
+export const PRICE_NOTE = `Every new account starts with ${TRIAL_DAYS} days of Pro for free — no card needed. Afterwards you keep the free plan unless you upgrade.`;
+
+// --- A teacher's plan -------------------------------------------------------------------
+
+export interface Access {
+  /** What the teacher can use right now. */
+  level: "pro" | "free";
+  /** Days left of the free Pro trial, or null if not on a trial. */
+  trialDaysLeft: number | null;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Pro if the teacher pays for it or their trial is still running, otherwise Free. */
+export function accessFor(plan: string, trialEndsAt: string, now = new Date()): Access {
+  if (plan === "pro") return { level: "pro", trialDaysLeft: null };
+  const msLeft = new Date(trialEndsAt).getTime() - now.getTime();
+  return msLeft > 0
+    ? { level: "pro", trialDaysLeft: Math.ceil(msLeft / DAY_MS) }
+    : { level: "free", trialDaysLeft: null };
+}
+
+/** "Pro", "Pro trial · 12 days left" or "Free". */
+export function accessLabel(access: Access): string {
+  if (access.level === "free") return "Free";
+  if (access.trialDaysLeft === null) return "Pro";
+  return `Pro trial · ${access.trialDaysLeft} ${access.trialDaysLeft === 1 ? "day" : "days"} left`;
+}

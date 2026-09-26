@@ -9,7 +9,11 @@ interface AuthValue {
   loading: boolean;
   isAdmin: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUpWithPassword: (name: string, email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
+  signUpWithPassword: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<{ needsConfirmation: boolean }>;
   /** Resolves once signed in; if the browser is sent to Google instead, it never needs to. */
   signInWithGoogle: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -24,8 +28,10 @@ function friendly(error: { message: string } | null): Error | null {
   if (!error) return null;
   const m = error.message.toLowerCase();
   if (m.includes("invalid login credentials")) return new Error("Wrong email or password.");
-  if (m.includes("email not confirmed")) return new Error("Confirm your email first — check your inbox for the link.");
-  if (m.includes("already registered")) return new Error("An account with this email already exists. Sign in instead.");
+  if (m.includes("email not confirmed"))
+    return new Error("Confirm your email first — check your inbox for the link.");
+  if (m.includes("already registered"))
+    return new Error("An account with this email already exists. Sign in instead.");
   if (m.includes("disabled") || m.includes("not enabled") || m.includes("signups not allowed"))
     return new Error("This sign-in method isn't switched on yet. Contact TeachDesk support.");
   if (m.includes("password")) return new Error(error.message);
@@ -80,11 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       async signInWithGoogle() {
         // Google sign-in is brokered by Lovable Cloud, which then sets the Supabase session.
-        const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-        if (result.error) throw friendly(result.error) ?? new Error("Google sign-in failed. Please try again.");
+        const result = await lovable.auth.signInWithOAuth("google", {
+          redirect_uri: window.location.origin,
+        });
+        if (result.error)
+          throw friendly(result.error) ?? new Error("Google sign-in failed. Please try again.");
       },
       async sendPasswordReset(email) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: siteUrl("/reset-password") });
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: siteUrl("/reset-password"),
+        });
         throwIf(error);
       },
       async updatePassword(password) {

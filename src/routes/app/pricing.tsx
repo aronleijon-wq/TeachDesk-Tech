@@ -11,7 +11,10 @@ export const Route = createFileRoute("/app/pricing")({
   head: () => ({
     meta: [
       { title: "Plans — TeachDesk" },
-      { name: "description", content: "Plans for individual teachers, departments and whole schools." },
+      {
+        name: "description",
+        content: "Plans for individual teachers, departments and whole schools.",
+      },
       { property: "og:title", content: "Plans — TeachDesk" },
       { property: "og:description", content: "Plans for teachers, departments and schools." },
     ],
@@ -38,30 +41,44 @@ function planRequestLink(plan: Plan, teacher: { name: string; email: string; sch
 
 function Pricing() {
   const { profile } = useStore();
+  const { level, trialDaysLeft } = profile.access;
+  const onTrial = trialDaysLeft !== null;
+  const subtitle = onTrial
+    ? `Your free Pro trial ends in ${trialDaysLeft} ${trialDaysLeft === 1 ? "day" : "days"}. Choose Pro to keep every tool — otherwise you'll move to the free plan.`
+    : `You're on the ${level === "pro" ? "Pro" : "Free"} plan.`;
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="Plans" subtitle={`You're on the ${profile.plan} plan.`} />
+      <PageHeader title="Plans" subtitle={subtitle} />
       <div className="grid gap-4 md:grid-cols-3">
         {PLANS.map((p) => {
-          const current = p.name === profile.plan;
+          const current = p.name === (level === "pro" ? "Pro" : "Free");
+          // The free plan needs no choosing, and a running trial can be turned into paid Pro.
+          const canChoose = p.price !== 0 && (!current || onTrial);
           return (
             <div
               key={p.name}
-              className={cn("flex flex-col rounded-lg border bg-surface p-5 shadow-card", current ? "border-primary" : "border-border")}
+              className={cn(
+                "flex flex-col rounded-lg border bg-surface p-5 shadow-card",
+                current ? "border-primary" : "border-border",
+              )}
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">{p.name}</h3>
-                {current && <StatusPill tone="primary">Current plan</StatusPill>}
+                {current && (
+                  <StatusPill tone="primary">{onTrial ? "Trial" : "Current plan"}</StatusPill>
+                )}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{p.tagline}</p>
               <p className="stat-number mt-3">{formatPrice(p.price)}</p>
               <p className="text-xs text-muted-foreground">{p.unit}</p>
               <p className="h-4 text-xs font-medium text-primary">{yearlyOffer(p)}</p>
               <PlanFeatures plan={p} className="mt-4 flex-1" />
-              {!current && (
+              {canChoose && (
                 <Button asChild className="mt-5 w-full" variant={p.badge ? "default" : "outline"}>
-                  <a href={planRequestLink(p, profile)}>{p.price == null ? "Contact us" : `Choose ${p.name}`}</a>
+                  <a href={planRequestLink(p, profile)}>
+                    {p.price == null ? "Contact us" : `Choose ${p.name}`}
+                  </a>
                 </Button>
               )}
             </div>

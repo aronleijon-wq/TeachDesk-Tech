@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader, Panel, StatusPill } from "@/components/primitives";
 import { useStore, type Profile } from "@/lib/store";
+import { accessLabel } from "@/lib/pricing";
 
 export const Route = createFileRoute("/app/settings")({
   head: () => ({
@@ -181,7 +182,9 @@ function SettingsPage() {
 
       <Panel title="Subscription">
         <div className="flex items-center justify-between">
-          <p className="text-sm">Plan: <span className="font-medium">{profile.plan}</span></p>
+          <p className="text-sm">
+            Plan: <span className="font-medium">{accessLabel(profile.access)}</span>
+          </p>
           <Button asChild variant="outline" size="sm">
             <Link to="/app/pricing">See plans</Link>
           </Button>
