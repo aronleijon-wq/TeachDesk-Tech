@@ -1,7 +1,7 @@
-import { Link } from "@tanstack/react-router";
 import { BookCopy, Check, Loader2, PenLine, Sparkles, Upload, type LucideIcon } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { DropZone, ExamDraftPreview, Field, ProNote } from "@/components/exam-draft";
 import { StatusPill } from "@/components/primitives";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,14 +21,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { extractExamQuestions, generateExam, type ExamDraft } from "@/lib/exam-ai.functions";
+import { extractExamQuestions, type ExamDraft } from "@/lib/exam-ai.functions";
+import { readPickedFile, type PickedFile } from "@/lib/picked-file";
 import { useStore } from "@/lib/store";
-import type { Exam, Question } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { newId, todayIso } from "@/lib/workspace";
 
 /** Where the new exam's questions come from. */
-type Source = "write" | "upload" | "ai" | "reuse";
+type Source = "write" | "upload" | "reuse";
 
 const SOURCES: { id: Source; icon: LucideIcon; title: string; description: string; pro?: true }[] =
   [
@@ -42,15 +40,8 @@ const SOURCES: { id: Source; icon: LucideIcon; title: string; description: strin
     {
       id: "upload",
       icon: Upload,
-      title: "Use an existing exam",
+      title: "Use an existing exam as it is",
       description: "Paste it, or upload a PDF or photo. AI reads the questions.",
-      pro: true,
-    },
-    {
-      id: "ai",
-      icon: Sparkles,
-      title: "Generate with AI",
-      description: "From your topics and learning objectives.",
       pro: true,
     },
     {
@@ -61,27 +52,7 @@ const SOURCES: { id: Source; icon: LucideIcon; title: string; description: strin
     },
   ];
 
-const STEPS = ["Basics", "Questions", "Details", "Review"];
-const DIFFICULTIES = ["Easy", "Mixed", "Hard"] as const;
-
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const binaryTypes = [
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-] as const;
-type BinaryType = (typeof binaryTypes)[number];
-
-function readAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
-    reader.onerror = () => reject(reader.error ?? new Error("Could not read the file."));
-    reader.readAsDataURL(file);
-  });
-}
+const STEPS = ["Basics", "Questions", "Review"];
 
 const lines = (text: string) =>
   text
@@ -89,26 +60,28 @@ const lines = (text: string) =>
     .map((line) => line.trim())
     .filter(Boolean);
 
-const pointsOf = (draft: ExamDraft) => draft.questions.reduce((sum, q) => sum + q.points, 0);
-
-/** Creates an exam. Mount it while open, so each new exam starts from an empty form. */
+/**
+ * Creates an exam step by step: the teacher writes the questions, reads in an existing exam
+ * or reuses an earlier one. Mount it while open, so each new exam starts from an empty form.
+ */
 export function NewExamDialog({
   open,
   onOpenChange,
-  aiFirst,
+  onGenerateWithAi,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  aiFirst?: boolean;
+  /** Switches to generating the exam with AI instead. */
+  onGenerateWithAi: () => void;
   onCreated: (id: string) => void;
 }) {
-  const { addExam, classes, students, exams, profile } = useStore();
+  const { classes, exams, profile, createExam } = useStore();
   const hasPro = profile.access.level === "pro";
   const firstClass = classes[0];
 
   const [step, setStep] = useState(0);
-  const [source, setSource] = useState<Source>(aiFirst ? "ai" : "write");
+  const [source, setSource] = useState<Source>("write");
   const [form, setForm] = useState({
     title: "",
     subject: firstClass?.subject ?? "",
@@ -118,16 +91,14 @@ export function NewExamDialog({
     duration: "90",
     room: firstClass?.room ?? "",
     points: "40",
-    topics: "",
-    difficulty: "Mixed" as (typeof DIFFICULTIES)[number],
     objectives: "",
   });
-  // The questions to start from: read from an existing exam, generated, or reused.
+  // The questions to start from: read from an existing exam, or reused.
   const [draft, setDraft] = useState<ExamDraft | null>(null);
-  const [working, setWorking] = useState(false);
+  const [reading, setReading] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState("");
+  const [file, setFile] = useState<Extract<PickedFile, { kind: "binary" }> | null>(null);
 
   const set = (key: keyof typeof form, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -149,138 +120,87 @@ export function NewExamDialog({
     setDraftError(null);
   };
 
-  /** Runs an AI step that fills in the questions; a failure is shown in the dialog. */
-  const fillWith = async (make: () => Promise<ExamDraft>, noneFound: string) => {
-    setWorking(true);
+  const startFrom = (next: ExamDraft) => {
+    setDraft(next);
+    setForm((f) => ({
+      ...f,
+      points: String(next.questions.reduce((sum, q) => sum + q.points, 0)),
+      objectives: f.objectives.trim() ? f.objectives : next.objectives.join("\n"),
+    }));
+  };
+
+  const pickFile = async (picked: File | undefined) => {
     setDraftError(null);
+    setDraft(null);
+    if (!picked) return;
     try {
-      const result = await make();
-      if (result.questions.length === 0) {
-        setDraft(null);
-        setDraftError(result.warnings.join(" ") || noneFound);
-        return;
+      const read = await readPickedFile(picked);
+      // Text goes into the paste box, so the teacher can see and tidy it.
+      if (read.kind === "text") {
+        setPastedText(read.text);
+        setFile(null);
+      } else {
+        setFile(read);
       }
-      setDraft(result);
-      setForm((f) => ({
-        ...f,
-        points: String(pointsOf(result)),
-        objectives: f.objectives.trim() ? f.objectives : result.objectives.join("\n"),
-      }));
     } catch (e) {
-      setDraftError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
-    } finally {
-      setWorking(false);
+      setDraftError(e instanceof Error ? e.message : "Couldn't read that file.");
     }
   };
 
-  const readExistingExam = () =>
-    fillWith(
-      async () =>
-        extractExamQuestions({
-          data: {
-            subject: form.subject,
-            examTitle: form.title,
-            ...(pastedText.trim() ? { text: pastedText } : {}),
-            ...(file
-              ? { file: { mediaType: file.type as BinaryType, data: await readAsBase64(file) } }
-              : {}),
-          },
-        }),
-      "No questions were found in that content.",
-    );
-
-  const generateWithAi = () =>
-    fillWith(
-      () =>
-        generateExam({
-          data: {
-            subject: form.subject,
-            examTitle: form.title || "Exam",
-            topics: form.topics,
-            objectives: lines(form.objectives),
-            difficulty: form.difficulty,
-            totalPoints: Number(form.points) || 40,
-            durationMin: Number(form.duration) || 90,
-          },
-        }),
-      "No questions came back. Try describing the topics in more detail.",
-    );
+  const readExistingExam = async () => {
+    setReading(true);
+    setDraftError(null);
+    try {
+      const result = await extractExamQuestions({
+        data: {
+          subject: form.subject,
+          examTitle: form.title,
+          ...(pastedText.trim() && { text: pastedText }),
+          ...(file && { file: { mediaType: file.mediaType, data: file.data } }),
+        },
+      });
+      if (result.questions.length === 0) {
+        setDraftError(result.warnings.join(" ") || "No questions were found in that content.");
+      } else {
+        startFrom(result);
+      }
+    } catch (e) {
+      setDraftError(e instanceof Error ? e.message : "Couldn't read the exam. Please try again.");
+    } finally {
+      setReading(false);
+    }
+  };
 
   const reusable = exams.filter((e) => e.versions[0]?.questions.length);
   const reuse = (examId: string) => {
     const earlier = exams.find((e) => e.id === examId);
-    const questions = earlier?.versions[0]?.questions ?? [];
-    const reused = { questions, objectives: earlier?.objectives ?? [], warnings: [] };
-    setDraft(reused);
-    setForm((f) => ({
-      ...f,
-      points: String(pointsOf(reused)),
-      objectives: reused.objectives.join("\n"),
-    }));
-  };
-
-  const pickFile = (f: File | undefined) => {
-    setDraftError(null);
-    setDraft(null);
-    if (!f) return setFile(null);
-    if (f.size > MAX_FILE_BYTES) return setDraftError("That file is larger than 10 MB.");
-    if (f.type.startsWith("text/") || /\.(txt|md)$/i.test(f.name)) {
-      // Plain text goes into the paste box so the teacher can see and tidy it.
-      void f.text().then(setPastedText);
-      return setFile(null);
-    }
-    if (!binaryTypes.includes(f.type as BinaryType)) {
-      return setDraftError(
-        "Use a PDF, a photo (PNG/JPG) or a text file. For Word files, save as PDF first.",
-      );
-    }
-    setFile(f);
+    startFrom({
+      questions: earlier?.versions[0]?.questions ?? [],
+      objectives: earlier?.objectives ?? [],
+      warnings: [],
+    });
   };
 
   // Each step can continue once it has what it needs.
-  const ready = [
-    Boolean(form.classId && form.date),
-    source === "write" || source === "ai" || Boolean(draft),
-    source !== "ai" || Boolean(draft),
-  ];
+  const ready = [Boolean(form.classId && form.date), source === "write" || Boolean(draft)];
+  const needsPro = source === "upload" && !hasPro;
 
   const create = () => {
-    const id = newId("exam");
-    const questions: Question[] = (draft?.questions ?? []).map((q, i) => ({
-      ...q,
-      id: `${id}-q${i + 1}`,
-      number: i + 1,
-    }));
-    const exam: Exam = {
-      id,
-      title: form.title.trim() || "Untitled exam",
-      subject: form.subject,
-      classId: form.classId,
-      date: form.date,
-      time: form.time,
-      durationMin: Number(form.duration) || 90,
-      room: form.room,
-      totalPoints: questions.reduce((sum, q) => sum + q.points, 0) || Number(form.points) || 0,
-      status: "upcoming",
-      objectives: lines(form.objectives),
-      versions: questions.length
-        ? [
-            {
-              id: `${id}-a`,
-              label: "Version A",
-              origin: "original",
-              createdAt: todayIso(),
-              approved: true,
-              questions,
-            },
-          ]
-        : [],
-      // Everyone in the class is expected; attendance is marked on the exam page.
-      attendance: students
-        .filter((s) => s.classId === form.classId)
-        .map((s) => ({ studentId: s.id, status: "pending" as const })),
-    };
-    addExam(exam);
+    const questions = draft?.questions ?? [];
+    const id = createExam(
+      {
+        title: form.title.trim() || "Untitled exam",
+        subject: form.subject,
+        classId: form.classId,
+        date: form.date,
+        time: form.time,
+        durationMin: Number(form.duration) || 90,
+        room: form.room,
+        totalPoints: Number(form.points) || 0,
+        objectives: lines(form.objectives),
+      },
+      questions,
+    );
     toast.success("Exam created", {
       description: questions.length
         ? `${questions.length} questions in Version A.`
@@ -290,15 +210,12 @@ export function NewExamDialog({
     onCreated(id);
   };
 
-  const sourceInfo = SOURCES.find((s) => s.id === source);
-  const needsPro = Boolean(sourceInfo?.pro) && !hasPro;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>New exam</DialogTitle>
-          <DialogDescription>Four short steps. You can change everything later.</DialogDescription>
+          <DialogDescription>Three short steps. You can change everything later.</DialogDescription>
         </DialogHeader>
 
         <ol className="flex flex-wrap items-center gap-2 text-xs">
@@ -415,6 +332,14 @@ export function NewExamDialog({
                     onSelect={() => chooseSource(option.id)}
                   />
                 ))}
+                <SourceOption
+                  icon={Sparkles}
+                  title="Generate a new exam with AI"
+                  description="Describe it, or base it on an earlier exam or other material."
+                  pro
+                  active={false}
+                  onSelect={onGenerateWithAi}
+                />
               </div>
 
               {needsPro && <ProNote />}
@@ -432,39 +357,23 @@ export function NewExamDialog({
                       placeholder={"1. Differentiate f(x) = 3x² + 5x − 2. (3 p)\n2. ..."}
                     />
                   </Field>
-                  <label
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      pickFile(e.dataTransfer.files?.[0]);
-                    }}
-                    className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border px-6 py-6 text-center transition-colors hover:border-primary/50"
-                  >
-                    <Upload className="size-5 text-muted-foreground" />
-                    <p className="mt-2 text-sm font-medium">
-                      {file?.name ?? "…or drop a file here"}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      PDF, photo (PNG/JPG) or text file · max 10 MB · Word: save as PDF first
-                    </p>
-                    <input
-                      type="file"
-                      accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md,application/pdf,image/*,text/plain"
-                      className="hidden"
-                      onChange={(e) => pickFile(e.target.files?.[0])}
-                    />
-                  </label>
+                  <DropZone
+                    fileName={file?.name}
+                    prompt="…or drop a file here"
+                    hint="PDF, photo or text file · max 10 MB · Word: save as PDF first"
+                    onFile={(picked) => void pickFile(picked)}
+                  />
                   <Button
                     onClick={() => void readExistingExam()}
-                    disabled={working || (!pastedText.trim() && !file)}
+                    disabled={reading || (!pastedText.trim() && !file)}
                     className="w-full"
                   >
-                    {working ? (
+                    {reading ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
                       <Sparkles className="size-4" />
                     )}
-                    {working
+                    {reading
                       ? "Reading your exam…"
                       : draft
                         ? "Read the exam again"
@@ -495,20 +404,31 @@ export function NewExamDialog({
                   </Field>
                 ))}
 
-              {source === "ai" && !needsPro && (
-                <p className="text-sm text-muted-foreground">
-                  Next, describe the topics and learning objectives, and AI writes the questions for
-                  you to review.
-                </p>
-              )}
-
-              {source !== "ai" && <DraftResult draft={draft} error={draftError} />}
+              {draftError && <p className="text-sm text-destructive">{draftError}</p>}
+              {draft && <ExamDraftPreview questions={draft.questions} warnings={draft.warnings} />}
             </div>
           )}
 
           {step === 2 && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Learning objectives (one per line)" className="sm:col-span-2">
+            <div className="space-y-4">
+              <dl className="grid gap-3 rounded-md border border-border p-4 text-sm sm:grid-cols-2">
+                <Row label="Title" value={form.title.trim() || "Untitled exam"} />
+                <Row label="Class" value={classes.find((c) => c.id === form.classId)?.name ?? ""} />
+                <Row label="Date" value={`${form.date} ${form.time}`} />
+                <Row
+                  label="Duration"
+                  value={[`${form.duration} min`, form.room].filter(Boolean).join(" · ")}
+                />
+                <Row
+                  label="Questions"
+                  value={
+                    draft
+                      ? `${draft.questions.length} (${form.points} points)`
+                      : "None yet — add them after creating the exam"
+                  }
+                />
+              </dl>
+              <Field label="Learning objectives (one per line)">
                 <Textarea
                   rows={4}
                   value={form.objectives}
@@ -516,81 +436,7 @@ export function NewExamDialog({
                   placeholder={"Apply the chain rule\nAnalyse functions with derivatives"}
                 />
               </Field>
-              {source === "ai" && (
-                <>
-                  <Field label="Topics">
-                    <Input
-                      value={form.topics}
-                      onChange={(e) => set("topics", e.target.value)}
-                      placeholder="Derivatives, tangents, optimisation"
-                    />
-                  </Field>
-                  <Field label="Difficulty">
-                    <Select
-                      value={form.difficulty}
-                      onValueChange={(v) =>
-                        setForm((f) => ({ ...f, difficulty: v as (typeof DIFFICULTIES)[number] }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DIFFICULTIES.map((d) => (
-                          <SelectItem key={d} value={d}>
-                            {d}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                  <div className="space-y-3 sm:col-span-2">
-                    {needsPro ? (
-                      <ProNote />
-                    ) : (
-                      <Button
-                        onClick={() => void generateWithAi()}
-                        disabled={working || (!form.topics.trim() && !form.objectives.trim())}
-                        className="w-full"
-                      >
-                        {working ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="size-4" />
-                        )}
-                        {working
-                          ? "Writing the questions — about half a minute…"
-                          : draft
-                            ? "Generate again"
-                            : "Generate questions"}
-                      </Button>
-                    )}
-                    <DraftResult draft={draft} error={draftError} />
-                  </div>
-                </>
-              )}
             </div>
-          )}
-
-          {step === 3 && (
-            <dl className="grid gap-3 rounded-md border border-border p-4 text-sm sm:grid-cols-2">
-              <Row label="Title" value={form.title.trim() || "Untitled exam"} />
-              <Row label="Class" value={classes.find((c) => c.id === form.classId)?.name ?? ""} />
-              <Row label="Date" value={`${form.date} ${form.time}`} />
-              <Row
-                label="Duration"
-                value={[`${form.duration} min`, form.room].filter(Boolean).join(" · ")}
-              />
-              <Row
-                label="Questions"
-                value={
-                  draft
-                    ? `${draft.questions.length} (${pointsOf(draft)} points)`
-                    : "None yet — add them after creating the exam"
-                }
-              />
-              <Row label="Learning objectives" value={String(lines(form.objectives).length)} />
-            </dl>
           )}
         </div>
 
@@ -602,7 +448,7 @@ export function NewExamDialog({
             {step === 0 ? "Cancel" : "Back"}
           </Button>
           {step < STEPS.length - 1 ? (
-            <Button onClick={() => setStep(step + 1)} disabled={!ready[step] || working}>
+            <Button onClick={() => setStep(step + 1)} disabled={!ready[step] || reading}>
               Continue
             </Button>
           ) : (
@@ -611,57 +457,6 @@ export function NewExamDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** The questions found or generated, or why there are none. */
-function DraftResult({ draft, error }: { draft: ExamDraft | null; error: string | null }) {
-  if (error) return <p className="text-sm text-destructive">{error}</p>;
-  if (!draft) return null;
-  return (
-    <div className="rounded-md border border-border p-4 text-sm">
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-medium">
-          {draft.questions.length} questions · {pointsOf(draft)} points
-        </p>
-        <StatusPill tone="success">Ready</StatusPill>
-      </div>
-      {draft.warnings.length > 0 && (
-        <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-          {draft.warnings.map((warning) => (
-            <li key={warning}>{warning}</li>
-          ))}
-        </ul>
-      )}
-      <ol className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
-        {draft.questions.map((q, i) => (
-          <li
-            key={i}
-            className="flex gap-3 border-t border-border pt-2 first:border-t-0 first:pt-0"
-          >
-            <span className="w-5 shrink-0 text-xs text-muted-foreground">{i + 1}.</span>
-            <span className="flex-1 whitespace-pre-line">{q.prompt}</span>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {q.points} p · {q.difficulty}
-            </span>
-          </li>
-        ))}
-      </ol>
-      <p className="mt-3 text-xs text-muted-foreground">
-        These become Version A. You can edit any question after creating the exam.
-      </p>
-    </div>
-  );
-}
-
-function ProNote() {
-  return (
-    <p className="rounded-md bg-primary-soft/50 px-3 py-2 text-sm">
-      This is part of Pro.{" "}
-      <Link to="/app/pricing" className="font-medium text-primary hover:underline">
-        See plans
-      </Link>
-    </p>
   );
 }
 
@@ -696,23 +491,6 @@ function SourceOption({
       <p className="mt-2 text-sm font-medium">{title}</p>
       <p className="text-xs text-muted-foreground">{description}</p>
     </button>
-  );
-}
-
-function Field({
-  label,
-  children,
-  className,
-}: {
-  label: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("space-y-1.5", className)}>
-      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
-      {children}
-    </div>
   );
 }
 

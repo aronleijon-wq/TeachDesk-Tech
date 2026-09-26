@@ -87,15 +87,30 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         id: "create-exam",
         title: "Create an exam",
         summary:
-          "Go to Exams → New exam and follow four short steps: basics, questions, details and review.",
+          "Go to Exams → New exam and follow three short steps: basics, questions and review.",
         steps: [
           "Enter the title, class, date, time and room.",
-          "Choose how to add the questions: write them yourself, use an existing exam (paste it, or upload a PDF or photo), generate them with AI, or reuse an earlier exam.",
-          "Add learning objectives, check the summary and click Create exam.",
+          "Choose how to add the questions: write them yourself, use an existing exam as it is (paste it, or upload a PDF or photo), or reuse an earlier exam.",
+          "Check the summary, add learning objectives if you like, and click Create exam.",
         ],
         details: [
-          "Reading an existing exam and generating a new one with AI are part of Pro.",
-          "If you write the questions yourself, add them on the exam's Questions tab after creating it.",
+          "Reading an existing exam is part of Pro. If you write the questions yourself, add them on the exam's Questions tab after creating it.",
+          "To have AI write a new exam for you, use Generate exam with AI instead.",
+        ],
+      },
+      {
+        id: "generate-exam",
+        title: "Generate an exam with AI",
+        summary:
+          "Go to Exams → Generate exam with AI. Describe the exam in your own words, add material to base it on, or both.",
+        steps: [
+          "Choose the class.",
+          "Describe the exam, for example the topics, length and level. Or drop in an earlier exam, course material or a list (PDF, photo, CSV or text file).",
+          "Click Generate exam. After about half a minute you see the questions: check them, choose the date and click Create exam.",
+        ],
+        details: [
+          "With material, AI writes a new exam in the same style and level; it doesn't copy the questions.",
+          "Generating exams is part of Pro. You can edit every question afterwards.",
         ],
       },
       {

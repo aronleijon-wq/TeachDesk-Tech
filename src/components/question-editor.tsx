@@ -11,11 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { Question } from "@/lib/types";
+import type { Question, QuestionDraft } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-/** A question as the teacher writes it; its id and number are set when it's added. */
-export type QuestionDraft = Omit<Question, "id" | "number">;
 
 const TYPES: Record<Question["type"], string> = {
   "short-answer": "Short answer",

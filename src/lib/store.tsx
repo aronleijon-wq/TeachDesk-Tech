@@ -19,7 +19,7 @@ import {
 import type { EditableProfile } from "./cloud";
 import { accessFor, type Access } from "./pricing";
 import type { School } from "./schools";
-import type { ClassGroup, Student, Workspace } from "./types";
+import type { ClassGroup, QuestionDraft, Student, Workspace } from "./types";
 import { useCloudWorkspace, useDemoWorkspace, useProfile, useSchools } from "./use-saved-data";
 import * as rules from "./workspace";
 
@@ -90,6 +90,8 @@ interface StoreValue extends Workspace {
   removeClass: Bound<typeof rules.removeClass>;
   /** Creates a class with its students and returns the new class id. */
   addClass: (details: Omit<ClassGroup, "id">, studentLines: string[]) => string;
+  /** Creates an exam for a class, with any questions as Version A, and returns its id. */
+  createExam: (details: rules.ExamDetails, questions: QuestionDraft[]) => string;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -284,6 +286,11 @@ function WorkspaceStore({
         const klass = { id: rules.newId("class"), ...details };
         update((current) => rules.addClass(current, klass, studentLines));
         return klass.id;
+      },
+      createExam: (details, questions) => {
+        const id = rules.newId("exam");
+        update((current) => rules.addExam(current, rules.examFor(current, id, details, questions)));
+        return id;
       },
     };
   }, [

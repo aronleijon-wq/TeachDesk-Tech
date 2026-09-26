@@ -36,6 +36,9 @@ export interface Question {
   objective: string;
 }
 
+/** A question before it's added to an exam, which gives it its id and number. */
+export type QuestionDraft = Omit<Question, "id" | "number">;
+
 export interface ExamVersion {
   id: string;
   label: string;

@@ -7,6 +7,7 @@ import type {
   Exam,
   ExamVersion,
   Question,
+  QuestionDraft,
   Retake,
   Student,
   Workspace,
@@ -89,6 +90,43 @@ export const addExam = (ws: Workspace, exam: Exam): Workspace => ({
   ...ws,
   exams: [exam, ...ws.exams],
 });
+
+/** What the teacher fills in when creating an exam. */
+export interface ExamDetails {
+  title: string;
+  subject: string;
+  classId: string;
+  date: string;
+  time: string;
+  durationMin: number;
+  room: string;
+  /** Used until the exam has questions; then the points follow them. */
+  totalPoints: number;
+  objectives: string[];
+}
+
+/** A new exam for a class: everyone in it is expected, and any questions become Version A. */
+export function examFor(
+  ws: Workspace,
+  id: string,
+  details: ExamDetails,
+  questions: QuestionDraft[],
+): Exam {
+  const exam: Exam = {
+    id,
+    ...details,
+    status: "upcoming",
+    versions: [],
+    attendance: ws.students
+      .filter((s) => s.classId === details.classId)
+      .map((s) => ({ studentId: s.id, status: "pending" as const })),
+  };
+  if (questions.length === 0) return exam;
+  return withOriginalQuestions(
+    exam,
+    questions.map((q, i) => ({ ...q, id: `${id}-q${i + 1}`, number: i + 1 })),
+  );
+}
 
 export const addVersion = (ws: Workspace, examId: string, version: ExamVersion): Workspace =>
   mapExam(ws, examId, (e) => ({ ...e, versions: [...e.versions, version] }));
