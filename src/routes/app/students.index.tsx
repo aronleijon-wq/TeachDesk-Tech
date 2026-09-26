@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FREE_CLASS_LIMIT } from "@/lib/pricing";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +25,10 @@ export const Route = createFileRoute("/app/students/")({
   head: () => ({
     meta: [
       { title: "Students — TeachDesk" },
-      { name: "description", content: "Track every student's progress, missing work, attendance and follow-ups." },
+      {
+        name: "description",
+        content: "Track every student's progress, missing work, attendance and follow-ups.",
+      },
       { property: "og:title", content: "Students — TeachDesk" },
       { property: "og:description", content: "Track progress, missing work and follow-ups." },
     ],
@@ -33,7 +37,17 @@ export const Route = createFileRoute("/app/students/")({
 });
 
 function StudentsPage() {
-  const { classes, students, classById, studentStats, removeClass, removeStudent } = useStore();
+  const {
+    classes,
+    students,
+    classById,
+    studentStats,
+    removeClass,
+    removeStudent,
+    demoMode,
+    profile,
+  } = useStore();
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [dialog, setDialog] = useState<ClassDialogTarget | null>(null);
@@ -46,12 +60,23 @@ function StudentsPage() {
     () =>
       students.filter(
         (s) =>
-          (activeFilter === "all" || s.classId === activeFilter) && s.name.toLowerCase().includes(query.toLowerCase()),
+          (activeFilter === "all" || s.classId === activeFilter) &&
+          s.name.toLowerCase().includes(query.toLowerCase()),
       ),
     [students, query, activeFilter],
   );
 
   const percent = (n: number | undefined) => (n == null ? "—" : `${n}%`);
+
+  // The free plan includes a few classes of your own; the demo has no limit.
+  const startNewClass = () => {
+    if (demoMode || profile.access.level === "pro" || classes.length < FREE_CLASS_LIMIT)
+      return setDialog("new");
+    toast.info(`The free plan includes ${FREE_CLASS_LIMIT} classes`, {
+      description: "Upgrade to Pro for unlimited classes.",
+      action: { label: "See plans", onClick: () => void navigate({ to: "/app/pricing" }) },
+    });
+  };
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -66,7 +91,11 @@ function StudentsPage() {
                   <UserPlus className="size-4" /> Add students
                 </Button>
                 <ConfirmButton
-                  label={<><Trash2 className="size-4" /> Delete class</>}
+                  label={
+                    <>
+                      <Trash2 className="size-4" /> Delete class
+                    </>
+                  }
                   title={`Delete ${selectedClass.name}?`}
                   description="The class, its students and their exams, results and retakes are removed. This can't be undone."
                   confirm="Delete class"
@@ -78,7 +107,7 @@ function StudentsPage() {
                 />
               </>
             )}
-            <Button onClick={() => setDialog("new")}>
+            <Button onClick={startNewClass}>
               <Plus className="size-4" /> New class
             </Button>
           </>
@@ -91,7 +120,7 @@ function StudentsPage() {
           title="Add your first class"
           description="Create a class and paste in your student list. You can copy it straight from SchoolSoft or a spreadsheet."
           action={
-            <Button onClick={() => setDialog("new")}>
+            <Button onClick={startNewClass}>
               <Plus className="size-4" /> New class
             </Button>
           }
@@ -101,7 +130,12 @@ function StudentsPage() {
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search students" className="pl-9" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search students"
+                className="pl-9"
+              />
             </div>
             <div className="flex flex-wrap gap-1">
               {[{ id: "all", name: "All classes" }, ...classes].map((c) => (
@@ -110,7 +144,9 @@ function StudentsPage() {
                   onClick={() => setClassFilter(c.id)}
                   className={cn(
                     "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                    activeFilter === c.id ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-accent",
+                    activeFilter === c.id
+                      ? "bg-primary-soft text-primary"
+                      : "text-muted-foreground hover:bg-accent",
                   )}
                 >
                   {c.name}
@@ -123,7 +159,9 @@ function StudentsPage() {
             <EmptyState
               icon={UserPlus}
               title={query ? "No students match your search" : "No students in this class yet"}
-              description={query ? "Try another name." : "Paste your student list to add everyone at once."}
+              description={
+                query ? "Try another name." : "Paste your student list to add everyone at once."
+              }
               action={
                 !query && selectedClass ? (
                   <Button onClick={() => setDialog({ addTo: selectedClass.id })}>
@@ -142,7 +180,9 @@ function StudentsPage() {
                     <Th className="text-right">Average</Th>
                     <Th className="text-right">Attendance</Th>
                     <Th className="text-right">Missing work</Th>
-                    <Th className="w-10"><span className="sr-only">Remove</span></Th>
+                    <Th className="w-10">
+                      <span className="sr-only">Remove</span>
+                    </Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -159,9 +199,15 @@ function StudentsPage() {
                             {s.name}
                           </Link>
                         </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">{classById(s.classId)?.name}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums">{percent(stats.average)}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums">{percent(stats.attendanceRate)}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground">
+                          {classById(s.classId)?.name}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">
+                          {percent(stats.average)}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">
+                          {percent(stats.attendanceRate)}
+                        </td>
                         <td className="px-4 py-2.5 text-right">
                           {stats.missingWork > 0 ? (
                             <StatusPill tone="warning">{stats.missingWork} missing</StatusPill>
@@ -193,7 +239,11 @@ function StudentsPage() {
         </>
       )}
 
-      <ClassDialog target={dialog} onClose={() => setDialog(null)} onCreated={(id) => setClassFilter(id)} />
+      <ClassDialog
+        target={dialog}
+        onClose={() => setDialog(null)}
+        onCreated={(id) => setClassFilter(id)}
+      />
     </div>
   );
 }
@@ -219,7 +269,11 @@ function ConfirmButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant={variant} size={variant === "ghost" ? "icon" : "default"} aria-label={ariaLabel}>
+        <Button
+          variant={variant}
+          size={variant === "ghost" ? "icon" : "default"}
+          aria-label={ariaLabel}
+        >
           {label}
         </Button>
       </AlertDialogTrigger>
@@ -239,7 +293,12 @@ function ConfirmButton({
 
 function Th({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={cn("px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground", className)}>
+    <th
+      className={cn(
+        "px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground",
+        className,
+      )}
+    >
       {children}
     </th>
   );

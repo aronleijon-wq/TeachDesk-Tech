@@ -45,6 +45,7 @@ import { LogoMark, Wordmark } from "@/components/brand";
 import { SaveStatus } from "@/components/save-status";
 import { useAuth } from "@/lib/auth";
 import { initialsOf, useAttentionSummary, useStore } from "@/lib/store";
+import { accessLabel } from "@/lib/pricing";
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
@@ -131,7 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { profile, flush } = useStore();
   const { isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
-  const teacher = { ...profile, initials: initialsOf(profile.name) };
+  const teacher = { ...profile, initials: initialsOf(profile.name), plan: accessLabel(profile.access) };
   const subtitle = [teacher.school, teacher.plan].filter(Boolean).join(" · ");
   const handleSignOut = async () => {
     // Finish saving first; without internet, ask before leaving unsaved changes behind.

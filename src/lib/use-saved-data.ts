@@ -6,15 +6,25 @@ import { createAutosave, type SaveState } from "./autosave";
 import { readDemoWorkspace, writeDemoWorkspace } from "./browser-storage";
 import {
   createProfile,
+  fetchItems,
+  fetchItemVersions,
   fetchProfile,
-  fetchWorkspace,
-  saveWorkspace,
+  openPersonalWorkspace,
+  saveItems,
   updateProfile,
   type EditableProfile,
   type StoredProfile,
 } from "./cloud";
 import { createDemoWorkspace } from "./demo-data";
 import { emptyWorkspace, type Workspace } from "./types";
+import {
+  afterSave,
+  changesSince,
+  savedFromItems,
+  versionsDiffer,
+  workspaceFromItems,
+  type SavedItems,
+} from "./workspace-items";
 
 export type LoadStatus = "loading" | "ready" | "error";
 export type WorkspaceChange = (ws: Workspace) => Workspace;
@@ -61,63 +71,74 @@ export function useProfile(userId: string, defaults: EditableProfile) {
 // --- The teacher's own workspace ------------------------------------------------------
 
 /**
- * The teacher's own workspace, saved in the database. Changes show at once and are saved a
- * moment later. `moveFromBrowser` is used when the account has no saved workspace yet.
+ * The teacher's own workspace, saved in the database item by item. Changes show at once
+ * and are saved a moment later. `moveFromBrowser` fills a brand-new workspace with data
+ * kept in this browser before database saving existed.
  */
-export function useCloudWorkspace(userId: string, moveFromBrowser: Workspace | null) {
+export function useCloudWorkspace(moveFromBrowser: Workspace | null) {
   const [workspace, setWorkspace] = useState<Workspace>(emptyWorkspace);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [saveState, setSaveState] = useState<SaveState>("saved");
   // The save loop runs outside React renders, so it reads the latest values from refs.
+  const workspaceId = useRef<string | null>(null);
   const current = useRef(workspace);
-  const version = useRef(0);
+  const saved = useRef<SavedItems>(new Map());
 
   const show = useCallback((ws: Workspace) => {
     current.current = ws;
     setWorkspace(ws);
   }, []);
 
+  /** Loads everything stored and makes it the saved state. */
+  const loadStored = useCallback(async () => {
+    const id = workspaceId.current ?? (workspaceId.current = await openPersonalWorkspace());
+    const items = await fetchItems(id);
+    saved.current = savedFromItems(items);
+    return workspaceFromItems(items);
+  }, []);
+
   const autosave = useMemo(
     () =>
       createAutosave({
         save: async () => {
-          const result = await saveWorkspace(userId, current.current, version.current);
-          if (result.outcome === "saved") version.current = result.version;
-          return result.outcome;
+          if (!workspaceId.current) return "failed";
+          const changes = changesSince(current.current, saved.current);
+          if (changes.length === 0) return "saved";
+          const outcome = await saveItems(workspaceId.current, changes);
+          if (outcome === "saved") saved.current = afterSave(saved.current, changes);
+          return outcome;
         },
         onConflict: async () => {
-          const latest = await fetchWorkspace(userId).catch(() => null);
-          if (!latest) {
+          try {
+            show(await loadStored());
+            toast.warning("Updated with changes made elsewhere", {
+              description:
+                "Something you edited was changed on another device at the same time, so the latest version was loaded. Please check your last change.",
+            });
+          } catch {
             toast.error("Couldn't load the latest version", {
               description: "Refresh the page to continue.",
             });
-            return;
           }
-          version.current = latest.version;
-          show(latest.data);
-          toast.warning("Updated from another device", {
-            description:
-              "Your workspace was changed somewhere else, so the latest version was loaded. Your last change wasn't saved.",
-          });
         },
         onStateChange: setSaveState,
       }),
-    [userId, show],
+    [show, loadStored],
   );
 
   const load = useCallback(async () => {
     setStatus("loading");
     try {
-      const stored = await fetchWorkspace(userId);
-      version.current = stored?.version ?? 0;
-      show(stored?.data ?? moveFromBrowser ?? emptyWorkspace());
+      const stored = await loadStored();
+      const isNew = saved.current.size === 0;
+      show(isNew && moveFromBrowser ? moveFromBrowser : stored);
       // Classes kept in this browser before database saving are saved to the account now.
-      if (!stored && moveFromBrowser) autosave.changed();
+      if (isNew && moveFromBrowser) autosave.changed();
       setStatus("ready");
     } catch {
       setStatus("error");
     }
-  }, [userId, moveFromBrowser, show, autosave]);
+  }, [loadStored, moveFromBrowser, show, autosave]);
 
   useEffect(() => {
     void load();
@@ -127,16 +148,19 @@ export function useCloudWorkspace(userId: string, moveFromBrowser: Workspace | n
   // Pick up changes made on another device when the teacher comes back to this tab.
   useEffect(() => {
     const refresh = async () => {
-      if (document.visibilityState !== "visible" || autosave.hasUnsaved) return;
-      const stored = await fetchWorkspace(userId).catch(() => null);
-      if (stored && stored.version !== version.current && !autosave.hasUnsaved) {
-        version.current = stored.version;
-        show(stored.data);
+      const id = workspaceId.current;
+      if (document.visibilityState !== "visible" || !id || autosave.hasUnsaved) return;
+      try {
+        if (!versionsDiffer(saved.current, await fetchItemVersions(id))) return;
+        const latest = await loadStored();
+        if (!autosave.hasUnsaved) show(latest);
+      } catch {
+        // Offline for now; the next visit or save will catch up.
       }
     };
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
-  }, [userId, autosave, show]);
+  }, [autosave, loadStored, show]);
 
   // Ask before the tab is closed while changes are still on their way to the database.
   useEffect(() => {

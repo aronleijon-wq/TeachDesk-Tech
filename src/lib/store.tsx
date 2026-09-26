@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import type { SaveState } from "./autosave";
 import { clearLegacyAccount, readLegacyAccount } from "./browser-storage";
 import type { EditableProfile } from "./cloud";
+import { accessFor, type Access } from "./pricing";
 import type { ClassGroup, Student, Workspace } from "./types";
 import { useCloudWorkspace, useDemoWorkspace, useProfile } from "./use-saved-data";
 import * as rules from "./workspace";
@@ -13,7 +14,8 @@ export interface Profile {
   email: string;
   role: string;
   school: string;
-  plan: string;
+  /** What the teacher can use right now: Pro (paid or trial) or Free. */
+  access: Access;
 }
 
 export function initialsOf(name: string) {
@@ -87,7 +89,7 @@ export function StoreProvider({
   }));
 
   const teacher = useProfile(userId, profileDefaults);
-  const own = useCloudWorkspace(userId, legacy?.own ?? null);
+  const own = useCloudWorkspace(legacy?.own ?? null);
   const demo = useDemoWorkspace(userId, legacy?.demo ?? null);
 
   // Once everything from the old browser storage is safely in the database, remove it so
@@ -112,7 +114,7 @@ export function StoreProvider({
         email: account.email,
         role: stored.role,
         school: stored.school,
-        plan: stored.plan,
+        access: accessFor(stored.plan, stored.trialEndsAt),
       },
     [stored, account.email],
   );

@@ -66,6 +66,7 @@ export type Database = {
           role: string
           school: string
           show_demo: boolean
+          trial_ends_at: string
           updated_at: string
           user_id: string
         }
@@ -75,6 +76,7 @@ export type Database = {
           role?: string
           school?: string
           show_demo?: boolean
+          trial_ends_at?: string
           updated_at?: string
           user_id: string
         }
@@ -84,29 +86,126 @@ export type Database = {
           role?: string
           school?: string
           show_demo?: boolean
+          trial_ends_at?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
       }
-      workspaces: {
+      ai_usage: {
         Row: {
-          data: Json
-          updated_at: string
+          generations: number
+          month: string
           user_id: string
-          version: number
         }
         Insert: {
-          data: Json
-          updated_at?: string
+          generations?: number
+          month: string
           user_id: string
-          version?: number
         }
         Update: {
-          data?: Json
-          updated_at?: string
+          generations?: number
+          month?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      memberships: {
+        Row: {
+          created_at: string
+          organization_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          organization_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          organization_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          pilot_ends_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          pilot_ends_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          pilot_ends_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      workspace_items: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          kind: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id: string
+          kind: string
+          updated_at?: string
+          updated_by?: string | null
           version?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          kind?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string | null
+          owner_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id?: string | null
+          owner_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string | null
+          owner_user_id?: string | null
         }
         Relationships: []
       }
@@ -115,7 +214,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_generations_left: { Args: never; Returns: number }
+      can_access_workspace: { Args: { target: string }; Returns: boolean }
+      ensure_personal_workspace: { Args: never; Returns: string }
+      has_pro_access: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      record_ai_generation: { Args: never; Returns: undefined }
+      save_workspace_items: {
+        Args: { changes: Json; target: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
