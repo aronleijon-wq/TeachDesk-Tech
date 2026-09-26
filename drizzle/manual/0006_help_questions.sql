@@ -1,6 +1,8 @@
--- Run by hand in the Lovable Cloud SQL editor, like 0004 and 0005. Deliberately NOT listed
--- in ../migrations/meta/_journal.json, so it is never run a second time.
--- Tested beforehand on Postgres 18 (PGlite) with the production migration history.
+-- Applied by hand in the Lovable Cloud SQL editor on 2026-09-26, like 0004 and 0005.
+-- Deliberately NOT listed in ../migrations/meta/_journal.json, so it is never run a second
+-- time. Tested beforehand on Postgres 18 (PGlite) with the production migration history:
+-- counting, the daily limit, per-teacher and per-day allowances, locked direct access and
+-- rollback on failure.
 
 -- A daily allowance of questions to the help center's Ask AI assistant, so its cost stays
 -- predictable. Only the number of questions is stored, never what was asked.
