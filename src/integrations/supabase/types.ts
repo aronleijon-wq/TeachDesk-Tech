@@ -110,6 +110,53 @@ export type Database = {
         }
         Relationships: []
       }
+      invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          created_by: string | null
+          email: string
+          expires_at: string
+          id: string
+          organization_id: string
+          role: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          email: string
+          expires_at?: string
+          id?: string
+          organization_id: string
+          role: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          role?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memberships: {
         Row: {
           created_at: string
@@ -129,7 +176,15 @@ export type Database = {
           role?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "memberships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organizations: {
         Row: {
@@ -189,7 +244,15 @@ export type Database = {
           version?: number
           workspace_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspace_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workspaces: {
         Row: {
@@ -210,22 +273,59 @@ export type Database = {
           organization_id?: string | null
           owner_user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: { Args: { invite_token: string }; Returns: string }
       ai_generations_left: { Args: never; Returns: number }
       can_access_workspace: { Args: { target: string }; Returns: boolean }
       ensure_personal_workspace: { Args: never; Returns: string }
       has_pro_access: { Args: never; Returns: boolean }
+      invitation_preview: {
+        Args: { invite_token: string }
+        Returns: {
+          email_hint: string
+          role: string
+          school: string
+          status: string
+        }[]
+      }
+      invite_to_school: {
+        Args: { invite_email: string; invite_role?: string; org: string }
+        Returns: string
+      }
       is_admin: { Args: never; Returns: boolean }
+      is_school_admin: { Args: { org: string }; Returns: boolean }
       record_ai_generation: { Args: never; Returns: undefined }
       save_workspace_items: {
         Args: { changes: Json; target: string }
         Returns: undefined
+      }
+      school_members: {
+        Args: { org: string }
+        Returns: {
+          email: string
+          joined_at: string
+          name: string
+          role: string
+          user_id: string
+        }[]
+      }
+      start_pilot: {
+        Args: { admin_email: string; pilot_days?: number; school_name: string }
+        Returns: string
       }
     }
     Enums: {

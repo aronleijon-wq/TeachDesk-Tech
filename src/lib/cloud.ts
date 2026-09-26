@@ -8,11 +8,23 @@ import type { ItemChange, StoredItem } from "./workspace-items";
 
 // --- Workspaces ---------------------------------------------------------------------
 
-/** The signed-in teacher's personal workspace; created on their first visit. */
-export async function openPersonalWorkspace(): Promise<string> {
-  const { data, error } = await supabase.rpc("ensure_personal_workspace");
+/**
+ * The id of a school's shared workspace, or with null the signed-in teacher's personal
+ * workspace (created on their first visit).
+ */
+export async function openWorkspace(schoolId: string | null): Promise<string> {
+  if (schoolId === null) {
+    const { data, error } = await supabase.rpc("ensure_personal_workspace");
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await supabase
+    .from("workspaces")
+    .select("id")
+    .eq("organization_id", schoolId)
+    .single();
   if (error) throw error;
-  return data;
+  return data.id;
 }
 
 /** All items in a workspace, oldest first. */

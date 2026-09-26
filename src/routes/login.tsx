@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
+import { safeReturnPath } from "@/lib/return-path";
 
 type Mode = "sign-in" | "sign-up" | "forgot";
 
 export const Route = createFileRoute("/login")({
-  // Only allow redirects back into the app, never to another site.
+  // Only allow redirects to the app or an invitation, never to another site.
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
-    const redirect = search["redirect"];
-    return typeof redirect === "string" && redirect.startsWith("/app") ? { redirect } : {};
+    const redirect = safeReturnPath(search["redirect"]);
+    return redirect ? { redirect } : {};
   },
   head: () => ({
     meta: [
@@ -33,8 +34,15 @@ const copy: Record<Mode, { title: string; subtitle: string; submit: string }> = 
   forgot: { title: "Reset your password", subtitle: "We'll email you a link to choose a new one.", submit: "Send reset link" },
 };
 
+// Shown instead when someone signs in to accept an invitation.
+const joiningCopy: Partial<Record<Mode, string>> = {
+  "sign-in": "Sign in to join your school on TeachDesk.",
+  "sign-up": "Use the email address your invitation was sent to.",
+};
+
 function LoginPage() {
   const { redirect = "/app" } = Route.useSearch();
+  const joining = redirect.startsWith("/invite/");
   const navigate = useNavigate();
   const auth = useAuth();
   const [mode, setMode] = useState<Mode>("sign-in");
@@ -75,7 +83,12 @@ function LoginPage() {
         await auth.sendPasswordReset(form.email);
         return setNotice("If an account exists for that email, a reset link is on its way.");
       }
-      const { needsConfirmation } = await auth.signUpWithPassword(form.name.trim(), form.email, form.password);
+      const { needsConfirmation } = await auth.signUpWithPassword(
+        form.name.trim(),
+        form.email,
+        form.password,
+        redirect,
+      );
       if (needsConfirmation) setNotice("Check your inbox and click the link to confirm your email.");
     });
   };
@@ -87,7 +100,7 @@ function LoginPage() {
   });
 
   return (
-    <AuthLayout title={copy[mode].title} subtitle={copy[mode].subtitle}>
+    <AuthLayout title={copy[mode].title} subtitle={(joining && joiningCopy[mode]) || copy[mode].subtitle}>
       {mode !== "forgot" && (
         <>
           <Button
@@ -95,7 +108,7 @@ function LoginPage() {
             variant="outline"
             className="w-full"
             disabled={busy}
-            onClick={() => void run(auth.signInWithGoogle)}
+            onClick={() => void run(() => auth.signInWithGoogle(redirect))}
           >
             <GoogleIcon /> Continue with Google
           </Button>

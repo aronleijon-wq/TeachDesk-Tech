@@ -17,7 +17,6 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppIndexRouteImport } from './routes/app/index'
-import { Route as AppAdminRouteImport } from './routes/app/admin'
 import { Route as AppAiToolsRouteImport } from './routes/app/ai-tools'
 import { Route as AppAnalyticsRouteImport } from './routes/app/analytics'
 import { Route as AppAssignmentsRouteImport } from './routes/app/assignments'
@@ -25,7 +24,11 @@ import { Route as AppCalendarRouteImport } from './routes/app/calendar'
 import { Route as AppGradebookRouteImport } from './routes/app/gradebook'
 import { Route as AppHelpRouteImport } from './routes/app/help'
 import { Route as AppPricingRouteImport } from './routes/app/pricing'
+import { Route as AppSchoolRouteImport } from './routes/app/school'
 import { Route as AppSettingsRouteImport } from './routes/app/settings'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as AppAdminIndexRouteImport } from './routes/app/admin.index'
+import { Route as AppAdminSchoolsRouteImport } from './routes/app/admin.schools'
 import { Route as AppExamsIndexRouteImport } from './routes/app/exams.index'
 import { Route as AppExamsExamIdRouteImport } from './routes/app/exams.$examId'
 import { Route as AppStudentsIndexRouteImport } from './routes/app/students.index'
@@ -71,11 +74,6 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAdminRoute = AppAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppAiToolsRoute = AppAiToolsRouteImport.update({
   id: '/ai-tools',
   path: '/ai-tools',
@@ -111,9 +109,29 @@ const AppPricingRoute = AppPricingRouteImport.update({
   path: '/pricing',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSchoolRoute = AppSchoolRouteImport.update({
+  id: '/school',
+  path: '/school',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminSchoolsRoute = AppAdminSchoolsRouteImport.update({
+  id: '/admin/schools',
+  path: '/admin/schools',
   getParentRoute: () => AppRoute,
 } as any)
 const AppExamsIndexRoute = AppExamsIndexRouteImport.update({
@@ -145,7 +163,6 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
-  '/app/admin': typeof AppAdminRoute
   '/app/ai-tools': typeof AppAiToolsRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/assignments': typeof AppAssignmentsRoute
@@ -153,10 +170,14 @@ export interface FileRoutesByFullPath {
   '/app/gradebook': typeof AppGradebookRoute
   '/app/help': typeof AppHelpRoute
   '/app/pricing': typeof AppPricingRoute
+  '/app/school': typeof AppSchoolRoute
   '/app/settings': typeof AppSettingsRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
+  '/app/admin/schools': typeof AppAdminSchoolsRoute
   '/app/exams/$examId': typeof AppExamsExamIdRoute
   '/app/students/$studentId': typeof AppStudentsStudentIdRoute
+  '/app/admin/': typeof AppAdminIndexRoute
   '/app/exams/': typeof AppExamsIndexRoute
   '/app/students/': typeof AppStudentsIndexRoute
 }
@@ -167,7 +188,6 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
-  '/app/admin': typeof AppAdminRoute
   '/app/ai-tools': typeof AppAiToolsRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/assignments': typeof AppAssignmentsRoute
@@ -175,10 +195,14 @@ export interface FileRoutesByTo {
   '/app/gradebook': typeof AppGradebookRoute
   '/app/help': typeof AppHelpRoute
   '/app/pricing': typeof AppPricingRoute
+  '/app/school': typeof AppSchoolRoute
   '/app/settings': typeof AppSettingsRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/app': typeof AppIndexRoute
+  '/app/admin/schools': typeof AppAdminSchoolsRoute
   '/app/exams/$examId': typeof AppExamsExamIdRoute
   '/app/students/$studentId': typeof AppStudentsStudentIdRoute
+  '/app/admin': typeof AppAdminIndexRoute
   '/app/exams': typeof AppExamsIndexRoute
   '/app/students': typeof AppStudentsIndexRoute
 }
@@ -191,7 +215,6 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
-  '/app/admin': typeof AppAdminRoute
   '/app/ai-tools': typeof AppAiToolsRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/assignments': typeof AppAssignmentsRoute
@@ -199,10 +222,14 @@ export interface FileRoutesById {
   '/app/gradebook': typeof AppGradebookRoute
   '/app/help': typeof AppHelpRoute
   '/app/pricing': typeof AppPricingRoute
+  '/app/school': typeof AppSchoolRoute
   '/app/settings': typeof AppSettingsRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/app/': typeof AppIndexRoute
+  '/app/admin/schools': typeof AppAdminSchoolsRoute
   '/app/exams/$examId': typeof AppExamsExamIdRoute
   '/app/students/$studentId': typeof AppStudentsStudentIdRoute
+  '/app/admin/': typeof AppAdminIndexRoute
   '/app/exams/': typeof AppExamsIndexRoute
   '/app/students/': typeof AppStudentsIndexRoute
 }
@@ -216,7 +243,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/reset-password'
     | '/terms'
-    | '/app/admin'
     | '/app/ai-tools'
     | '/app/analytics'
     | '/app/assignments'
@@ -224,10 +250,14 @@ export interface FileRouteTypes {
     | '/app/gradebook'
     | '/app/help'
     | '/app/pricing'
+    | '/app/school'
     | '/app/settings'
+    | '/invite/$token'
     | '/app/'
+    | '/app/admin/schools'
     | '/app/exams/$examId'
     | '/app/students/$studentId'
+    | '/app/admin/'
     | '/app/exams/'
     | '/app/students/'
   fileRoutesByTo: FileRoutesByTo
@@ -238,7 +268,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/reset-password'
     | '/terms'
-    | '/app/admin'
     | '/app/ai-tools'
     | '/app/analytics'
     | '/app/assignments'
@@ -246,10 +275,14 @@ export interface FileRouteTypes {
     | '/app/gradebook'
     | '/app/help'
     | '/app/pricing'
+    | '/app/school'
     | '/app/settings'
+    | '/invite/$token'
     | '/app'
+    | '/app/admin/schools'
     | '/app/exams/$examId'
     | '/app/students/$studentId'
+    | '/app/admin'
     | '/app/exams'
     | '/app/students'
   id:
@@ -261,7 +294,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/reset-password'
     | '/terms'
-    | '/app/admin'
     | '/app/ai-tools'
     | '/app/analytics'
     | '/app/assignments'
@@ -269,10 +301,14 @@ export interface FileRouteTypes {
     | '/app/gradebook'
     | '/app/help'
     | '/app/pricing'
+    | '/app/school'
     | '/app/settings'
+    | '/invite/$token'
     | '/app/'
+    | '/app/admin/schools'
     | '/app/exams/$examId'
     | '/app/students/$studentId'
+    | '/app/admin/'
     | '/app/exams/'
     | '/app/students/'
   fileRoutesById: FileRoutesById
@@ -285,6 +321,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
+  InviteTokenRoute: typeof InviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -345,13 +382,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/admin': {
-      id: '/app/admin'
-      path: '/admin'
-      fullPath: '/app/admin'
-      preLoaderRoute: typeof AppAdminRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/app/ai-tools': {
       id: '/app/ai-tools'
       path: '/ai-tools'
@@ -401,11 +431,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPricingRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/school': {
+      id: '/app/school'
+      path: '/school'
+      fullPath: '/app/school'
+      preLoaderRoute: typeof AppSchoolRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/settings': {
       id: '/app/settings'
       path: '/settings'
       fullPath: '/app/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/admin/': {
+      id: '/app/admin/'
+      path: '/admin'
+      fullPath: '/app/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/admin/schools': {
+      id: '/app/admin/schools'
+      path: '/admin/schools'
+      fullPath: '/app/admin/schools'
+      preLoaderRoute: typeof AppAdminSchoolsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/exams/': {
@@ -440,7 +498,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
-  AppAdminRoute: typeof AppAdminRoute
   AppAiToolsRoute: typeof AppAiToolsRoute
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAssignmentsRoute: typeof AppAssignmentsRoute
@@ -448,16 +505,18 @@ interface AppRouteChildren {
   AppGradebookRoute: typeof AppGradebookRoute
   AppHelpRoute: typeof AppHelpRoute
   AppPricingRoute: typeof AppPricingRoute
+  AppSchoolRoute: typeof AppSchoolRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppAdminSchoolsRoute: typeof AppAdminSchoolsRoute
   AppExamsExamIdRoute: typeof AppExamsExamIdRoute
   AppStudentsStudentIdRoute: typeof AppStudentsStudentIdRoute
+  AppAdminIndexRoute: typeof AppAdminIndexRoute
   AppExamsIndexRoute: typeof AppExamsIndexRoute
   AppStudentsIndexRoute: typeof AppStudentsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAdminRoute: AppAdminRoute,
   AppAiToolsRoute: AppAiToolsRoute,
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppAssignmentsRoute: AppAssignmentsRoute,
@@ -465,10 +524,13 @@ const AppRouteChildren: AppRouteChildren = {
   AppGradebookRoute: AppGradebookRoute,
   AppHelpRoute: AppHelpRoute,
   AppPricingRoute: AppPricingRoute,
+  AppSchoolRoute: AppSchoolRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppAdminSchoolsRoute: AppAdminSchoolsRoute,
   AppExamsExamIdRoute: AppExamsExamIdRoute,
   AppStudentsStudentIdRoute: AppStudentsStudentIdRoute,
+  AppAdminIndexRoute: AppAdminIndexRoute,
   AppExamsIndexRoute: AppExamsIndexRoute,
   AppStudentsIndexRoute: AppStudentsIndexRoute,
 }
@@ -483,6 +545,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
+  InviteTokenRoute: InviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

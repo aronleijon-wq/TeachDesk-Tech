@@ -1,11 +1,26 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { Button } from "@/components/ui/button";
 import type { SaveState } from "./autosave";
-import { clearLegacyAccount, readLegacyAccount } from "./browser-storage";
+import {
+  clearLegacyAccount,
+  readLegacyAccount,
+  readOpenSchool,
+  writeOpenSchool,
+  type LegacyAccount,
+} from "./browser-storage";
 import type { EditableProfile } from "./cloud";
 import { accessFor, type Access } from "./pricing";
+import type { School } from "./schools";
 import type { ClassGroup, Student, Workspace } from "./types";
-import { useCloudWorkspace, useDemoWorkspace, useProfile } from "./use-saved-data";
+import { useCloudWorkspace, useDemoWorkspace, useProfile, useSchools } from "./use-saved-data";
 import * as rules from "./workspace";
 
 /** The signed-in teacher as shown in the app. */
@@ -14,7 +29,7 @@ export interface Profile {
   email: string;
   role: string;
   school: string;
-  /** What the teacher can use right now: Pro (paid or trial) or Free. */
+  /** What the teacher can use right now: Pro (paid, through their school, or a trial) or Free. */
   access: Access;
 }
 
@@ -36,12 +51,22 @@ interface StoreValue extends Workspace {
   profile: Profile;
   saveProfile: (changes: Pick<EditableProfile, "name" | "role" | "school">) => Promise<void>;
 
-  /** True while the example workspace is showing instead of the teacher's own. */
+  /** The schools the teacher belongs to. */
+  schools: School[];
+  /** The school whose shared workspace is open, or null for the teacher's personal one. */
+  openSchool: School | null;
+  /**
+   * Opens a school's workspace, or with null the personal one, and leaves the demo. Fails
+   * if changes to the open workspace can't be saved first (e.g. no internet).
+   */
+  openWorkspace: (schoolId: string | null) => Promise<void>;
+
+  /** True while the example workspace is showing instead of a real one. */
   demoMode: boolean;
   setDemoMode: (on: boolean) => Promise<void>;
   resetDemo: () => void;
 
-  /** Whether the teacher's own workspace has reached the database (always "saved" in the demo). */
+  /** Whether the open workspace has reached the database (always "saved" in the demo). */
   saveState: SaveState;
   /** Saves pending changes right away (e.g. before signing out); false if some couldn't be saved. */
   flush: () => Promise<boolean>;
@@ -68,6 +93,10 @@ interface StoreValue extends Workspace {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
+/**
+ * Loads the signed-in teacher's profile, schools and demo, then opens a workspace: the one
+ * they opened last on this device, else their first school's, else their personal one.
+ */
 export function StoreProvider({
   userId,
   account,
@@ -80,6 +109,7 @@ export function StoreProvider({
   // Data saved in this browser by earlier versions of TeachDesk, read once so it can move
   // to the teacher's account.
   const [legacy] = useState(() => readLegacyAccount(userId));
+  const [legacyMoved, setLegacyMoved] = useState(false);
   const [profileDefaults] = useState<EditableProfile>(() => ({
     name: legacy?.profile.name ?? account.name,
     role: legacy?.profile.role ?? "Teacher",
@@ -89,38 +119,117 @@ export function StoreProvider({
   }));
 
   const teacher = useProfile(userId, profileDefaults);
-  const own = useCloudWorkspace(legacy?.own ?? null);
+  const member = useSchools(userId);
   const demo = useDemoWorkspace(userId, legacy?.demo ?? null);
-
-  // Once everything from the old browser storage is safely in the database, remove it so
-  // students' details don't linger on this device.
-  const moved = teacher.status === "ready" && own.status === "ready" && own.saveState === "saved";
-  useEffect(() => {
-    if (legacy && moved) clearLegacyAccount(userId);
-  }, [legacy, moved, userId]);
+  const [chosenSchool, setChosenSchool] = useState(() => readOpenSchool(userId));
 
   const stored = teacher.profile;
-  const demoMode = stored?.showDemo ?? true;
-  const { workspace: ws, update } = demoMode ? demo : own;
-  const { save: saveTeacher } = teacher;
-  const { reset: resetDemo } = demo;
-  const { saveState: ownSaveState, flush } = own;
-
+  const schools = member.schools;
   // Its own memo, so the profile only changes identity when the profile itself changes.
-  const shownProfile = useMemo<Profile | null>(
+  const profile = useMemo<Profile | null>(
     () =>
-      stored && {
-        name: stored.name,
+      stored &&
+      schools && {
+        // Teachers who joined through an invitation haven't chosen a name yet.
+        name: stored.name || account.name,
         email: account.email,
         role: stored.role,
         school: stored.school,
-        access: accessFor(stored.plan, stored.trialEndsAt),
+        access: accessFor(stored.plan, stored.trialEndsAt, schools),
       },
-    [stored, account.email],
+    [stored, schools, account.name, account.email],
   );
 
-  const value = useMemo<StoreValue | null>(() => {
-    if (!shownProfile) return null;
+  const chooseSchool = useCallback(
+    (schoolId: string | null) => {
+      writeOpenSchool(userId, schoolId);
+      setChosenSchool(schoolId);
+    },
+    [userId],
+  );
+
+  // Once the personal workspace holds everything from the old browser storage, remove it
+  // so students' details don't linger on this device.
+  const onLegacyMoved = useCallback(() => {
+    clearLegacyAccount(userId);
+    setLegacyMoved(true);
+  }, [userId]);
+
+  if (teacher.status === "error" || member.status === "error") {
+    return (
+      <LoadError
+        onRetry={() => {
+          if (teacher.status === "error") void teacher.reload();
+          if (member.status === "error") void member.reload();
+        }}
+      />
+    );
+  }
+  if (!stored || !schools || !profile) {
+    return <FullPageMessage>Loading your workspace…</FullPageMessage>;
+  }
+
+  const openSchool =
+    chosenSchool === null
+      ? null
+      : (schools.find((s) => s.id === chosenSchool) ?? schools[0] ?? null);
+
+  return (
+    <WorkspaceStore
+      // A new store for each workspace, so switching always starts from a clean slate.
+      key={openSchool?.id ?? "personal"}
+      school={openSchool}
+      schools={schools}
+      onOpenSchool={chooseSchool}
+      profile={profile}
+      saveProfile={teacher.save}
+      demo={demo}
+      demoMode={stored.showDemo}
+      legacy={openSchool || legacyMoved ? null : legacy}
+      onLegacyMoved={onLegacyMoved}
+    >
+      {children}
+    </WorkspaceStore>
+  );
+}
+
+/** The open workspace — or the demo, while it's showing — and everything the app does with it. */
+function WorkspaceStore({
+  school,
+  schools,
+  onOpenSchool,
+  profile,
+  saveProfile,
+  demo,
+  demoMode,
+  legacy,
+  onLegacyMoved,
+  children,
+}: {
+  school: School | null;
+  schools: School[];
+  onOpenSchool: (schoolId: string | null) => void;
+  profile: Profile;
+  saveProfile: (changes: Partial<EditableProfile>) => Promise<void>;
+  demo: ReturnType<typeof useDemoWorkspace>;
+  demoMode: boolean;
+  /** Old browser data still to move into the personal workspace, if it's the one open. */
+  legacy: LegacyAccount | null;
+  onLegacyMoved: () => void;
+  children: ReactNode;
+}) {
+  const cloud = useCloudWorkspace(school?.id ?? null, legacy?.own ?? null);
+
+  const moved = legacy !== null && cloud.status === "ready" && cloud.saveState === "saved";
+  useEffect(() => {
+    if (moved) onLegacyMoved();
+  }, [moved, onLegacyMoved]);
+
+  const { workspace: ws, update } = demoMode ? demo : cloud;
+  const { reset: resetDemo } = demo;
+  const { saveState: cloudSaveState, flush } = cloud;
+
+  const value = useMemo<StoreValue>(() => {
     // Applies a workspace rule to whichever workspace is showing.
     const bind =
       <A extends unknown[]>(rule: (ws: Workspace, ...args: A) => Workspace) =>
@@ -129,14 +238,28 @@ export function StoreProvider({
 
     return {
       ...ws,
-      profile: shownProfile,
-      saveProfile: (changes) => saveTeacher(changes),
+      profile,
+      saveProfile: (changes) => saveProfile(changes),
+
+      schools,
+      openSchool: school,
+      openWorkspace: async (schoolId) => {
+        // Finish saving this workspace before leaving it.
+        if (!(await flush())) {
+          throw new Error(
+            "Some changes haven't been saved yet. Check your internet connection and try again.",
+          );
+        }
+        onOpenSchool(schoolId);
+        // Leaving the demo is saved to the profile, so the teacher's other devices follow.
+        if (demoMode) await saveProfile({ showDemo: false });
+      },
 
       demoMode,
-      setDemoMode: (on) => saveTeacher({ showDemo: on }),
+      setDemoMode: (on) => saveProfile({ showDemo: on }),
       resetDemo,
 
-      saveState: demoMode ? "saved" : ownSaveState,
+      saveState: demoMode ? "saved" : cloudSaveState,
       flush,
 
       classById: (id) => ws.classes.find((c) => c.id === id),
@@ -161,30 +284,52 @@ export function StoreProvider({
         return klass.id;
       },
     };
-  }, [shownProfile, saveTeacher, demoMode, resetDemo, ownSaveState, flush, ws, update]);
+  }, [
+    ws,
+    update,
+    profile,
+    saveProfile,
+    schools,
+    school,
+    onOpenSchool,
+    demoMode,
+    resetDemo,
+    cloudSaveState,
+    flush,
+  ]);
 
-  if (teacher.status === "error" || own.status === "error") {
+  if (cloud.status === "error") {
+    return (
+      <LoadError onRetry={() => void cloud.reload()}>
+        {school && (
+          <Button variant="link" className="mt-2" onClick={() => onOpenSchool(null)}>
+            Open your personal workspace instead
+          </Button>
+        )}
+      </LoadError>
+    );
+  }
+  if (cloud.status !== "ready") {
     return (
       <FullPageMessage>
-        <p>Couldn't load your workspace. Check your internet connection and try again.</p>
-        <Button
-          className="mt-4"
-          onClick={() => {
-            if (teacher.status === "error") void teacher.reload();
-            if (own.status === "error") void own.reload();
-          }}
-        >
-          Try again
-        </Button>
+        {school ? `Opening ${school.name}…` : "Loading your workspace…"}
       </FullPageMessage>
     );
   }
 
-  if (!value || teacher.status !== "ready" || own.status !== "ready") {
-    return <FullPageMessage>Loading your workspace…</FullPageMessage>;
-  }
-
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+}
+
+function LoadError({ onRetry, children }: { onRetry: () => void; children?: ReactNode }) {
+  return (
+    <FullPageMessage>
+      <p>Couldn't load your workspace. Check your internet connection and try again.</p>
+      <Button className="mt-4" onClick={onRetry}>
+        Try again
+      </Button>
+      {children}
+    </FullPageMessage>
+  );
 }
 
 function FullPageMessage({ children }: { children: ReactNode }) {

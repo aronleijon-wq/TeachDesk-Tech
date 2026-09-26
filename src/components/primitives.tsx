@@ -51,6 +51,18 @@ export function Panel({
   );
 }
 
+/** A page the signed-in teacher can't use, and why. */
+export function NoAccess({ title, message }: { title: string; message: string }) {
+  return (
+    <div className="mx-auto max-w-3xl">
+      <PageHeader title={title} />
+      <Panel>
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </Panel>
+    </div>
+  );
+}
+
 export function StatCard({
   label,
   value,

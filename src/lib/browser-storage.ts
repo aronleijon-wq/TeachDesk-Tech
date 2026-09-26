@@ -1,9 +1,11 @@
 // What TeachDesk keeps in the browser. The demo workspace is example data, so it stays on
-// this device. Before TeachDesk saved to the database, everything lived here; that older
-// data is read once so it can be moved to the teacher's account, then removed.
+// this device, and so does which workspace the teacher last opened here. Before TeachDesk
+// saved to the database, everything lived here; that older data is read once so it can be
+// moved to the teacher's account, then removed.
 import { hasContent, normalizeWorkspace, type Workspace } from "./types";
 
 const demoKey = (userId: string) => `teachdesk:demo:${userId}`;
+const openSchoolKey = (userId: string) => `teachdesk:open-school:${userId}`;
 const legacyKey = (userId: string) => `teachdesk:workspace:${userId}`;
 
 /** Reads a saved value; null if missing, unreadable, or storage is blocked. */
@@ -33,6 +35,25 @@ export function writeDemoWorkspace(userId: string, demo: Workspace): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+// --- Which workspace is open --------------------------------------------------------
+
+/**
+ * The workspace the teacher opened last on this device: a school's id, null for their
+ * personal workspace, or undefined if they haven't chosen one here.
+ */
+export function readOpenSchool(userId: string): string | null | undefined {
+  const schoolId = read(openSchoolKey(userId))?.["schoolId"];
+  return typeof schoolId === "string" || schoolId === null ? schoolId : undefined;
+}
+
+export function writeOpenSchool(userId: string, schoolId: string | null) {
+  try {
+    window.localStorage.setItem(openSchoolKey(userId), JSON.stringify({ schoolId }));
+  } catch {
+    // Storage blocked: the default workspace opens next time.
   }
 }
 

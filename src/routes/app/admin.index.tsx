@@ -3,7 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Mail } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { PageHeader, Panel, StatusPill } from "@/components/primitives";
+import { NoAccess, PageHeader, Panel, StatusPill } from "@/components/primitives";
+import { StartPilotDialog, type PilotTarget } from "@/components/start-pilot-dialog";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -17,7 +19,7 @@ type Status = (typeof statuses)[number];
 const statusLabel: Record<Status, string> = { new: "New", contacted: "Contacted", closed: "Closed" };
 const statusTone = { new: "warning", contacted: "primary", closed: "neutral" } as const;
 
-export const Route = createFileRoute("/app/admin")({
+export const Route = createFileRoute("/app/admin/")({
   head: () => ({ meta: [{ title: "Demo requests — TeachDesk" }] }),
   component: AdminPage,
 });
@@ -26,6 +28,7 @@ function AdminPage() {
   const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Status | "all">("new");
+  const [pilotFor, setPilotFor] = useState<PilotTarget | null>(null);
 
   const requests = useQuery({
     queryKey: ["demo-requests"],
@@ -49,16 +52,7 @@ function AdminPage() {
     onError: () => toast.error("Couldn't update the status. Please try again."),
   });
 
-  if (!isAdmin) {
-    return (
-      <div className="mx-auto max-w-3xl">
-        <PageHeader title="Demo requests" subtitle="Admins only." />
-        <Panel>
-          <p className="text-sm text-muted-foreground">You don't have access to this page.</p>
-        </Panel>
-      </div>
-    );
-  }
+  if (!isAdmin) return <NoAccess title="Demo requests" message="Only TeachDesk staff can see demo requests." />;
 
   const all = requests.data ?? [];
   const counts = Object.fromEntries(statuses.map((s) => [s, all.filter((r) => r.status === s).length])) as Record<Status, number>;
@@ -66,7 +60,10 @@ function AdminPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="Demo requests" subtitle="People who asked for a demo on the website." />
+      <PageHeader
+        title="Demo requests"
+        subtitle="People who asked for a demo on the website. After the demo, start a pilot for their school."
+      />
 
       <div className="mb-4 flex flex-wrap gap-2">
         {([...statuses, "all"] as const).map((s) => (
@@ -99,14 +96,33 @@ function AdminPage() {
 
       <div className="space-y-3">
         {shown.map((r) => (
-          <RequestCard key={r.id} request={r} onStatus={(status) => setStatus.mutate({ id: r.id, status })} />
+          <RequestCard
+            key={r.id}
+            request={r}
+            onStatus={(status) => setStatus.mutate({ id: r.id, status })}
+            onStartPilot={() => setPilotFor({ school: r.organization, email: r.email })}
+          />
         ))}
       </div>
+
+      <StartPilotDialog
+        target={pilotFor}
+        onClose={() => setPilotFor(null)}
+        onStarted={() => void queryClient.invalidateQueries({ queryKey: ["schools"] })}
+      />
     </div>
   );
 }
 
-function RequestCard({ request: r, onStatus }: { request: DemoRequest; onStatus: (s: Status) => void }) {
+function RequestCard({
+  request: r,
+  onStatus,
+  onStartPilot,
+}: {
+  request: DemoRequest;
+  onStatus: (s: Status) => void;
+  onStartPilot: () => void;
+}) {
   const status = (statuses as readonly string[]).includes(r.status) ? (r.status as Status) : "new";
   const received = new Date(r.created_at).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" });
 
@@ -125,7 +141,10 @@ function RequestCard({ request: r, onStatus }: { request: DemoRequest; onStatus:
             <Mail className="size-3.5" /> {r.email}
           </a>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={onStartPilot}>
+            Start pilot
+          </Button>
           <StatusPill tone={statusTone[status]}>{statusLabel[status]}</StatusPill>
           <Select value={status} onValueChange={(v) => onStatus(v as Status)}>
             <SelectTrigger className="h-8 w-[130px]" aria-label="Change status">
