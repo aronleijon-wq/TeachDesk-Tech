@@ -33,7 +33,7 @@ export async function readPickedFile(file: File): Promise<PickedFile> {
   if (isText(file)) return { name: file.name, kind: "text", text: await file.text() };
   if (!(BINARY_TYPES as readonly string[]).includes(file.type)) {
     throw new Error(
-      "Use a PDF, a photo, or a text or CSV file. Save Word files as PDF, and Excel files as CSV.",
+      "Use a PDF, a photo saved as JPG or PNG, or a text or CSV file. Save Word files as PDF, and Excel files as CSV.",
     );
   }
   return {

@@ -26,24 +26,26 @@ export function Field({
   );
 }
 
-/** Click or drop a file here. */
+/** Click or drop a file here — or several, with `multiple`. */
 export function DropZone({
   fileName,
   prompt,
   hint,
-  onFile,
+  multiple = false,
+  onFiles,
 }: {
   fileName: string | undefined;
   prompt: string;
   hint: string;
-  onFile: (file: File | undefined) => void;
+  multiple?: boolean;
+  onFiles: (files: File[]) => void;
 }) {
   return (
     <label
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
-        onFile(e.dataTransfer.files?.[0]);
+        onFiles(Array.from(e.dataTransfer.files));
       }}
       className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border px-6 py-6 text-center transition-colors hover:border-primary/50"
     >
@@ -52,9 +54,13 @@ export function DropZone({
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
       <input
         type="file"
+        multiple={multiple}
         accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md,.csv,.tsv,application/pdf,image/*,text/plain,text/csv"
         className="hidden"
-        onChange={(e) => onFile(e.target.files?.[0])}
+        onChange={(e) => {
+          onFiles(Array.from(e.target.files ?? []));
+          e.target.value = ""; // Lets the same file be chosen again.
+        }}
       />
     </label>
   );

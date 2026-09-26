@@ -155,7 +155,7 @@ function Problem() {
 const FEATURES = [
   { icon: BookOpen, title: "Exams", body: "Write exams yourself, import an existing one from a PDF or photo, or generate one with AI. Track attendance and results in one view." },
   { icon: Repeat, title: "Equivalent retakes", body: "Turn an existing exam into a genuinely equivalent version for students who need a retake." },
-  { icon: FileCheck2, title: "Grading", body: "Enter each student's score and see every result in one gradebook, ready to export to Excel." },
+  { icon: FileCheck2, title: "Grading", body: "Upload the finished tests and AI suggests points for every answer — you approve each one. Every result in one gradebook, ready to export to Excel." },
   { icon: Users, title: "Student follow-up", body: "See which students missed an exam, still need a retake or have missing work — without tracking it by hand." },
   { icon: CalendarDays, title: "Scheduling", body: "Exams and retakes on one calendar, across every class you teach." },
   { icon: Sparkles, title: "AI assistance", body: "AI drafts the repetitive parts. Nothing is applied until you review and approve it." },
@@ -378,7 +378,7 @@ function Teachers() {
   );
 }
 
-const AI_EXAMPLES = ["Equivalent retake versions", "Generating new exams", "Importing exams from PDFs and photos", "Answering questions about TeachDesk"];
+const AI_EXAMPLES = ["Equivalent retake versions", "Generating new exams", "Importing exams from PDFs and photos", "Grading suggestions you approve", "Answering questions about TeachDesk"];
 
 function AI() {
   return (

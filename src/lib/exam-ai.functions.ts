@@ -319,3 +319,111 @@ export const generateExam = createServerFn({ method: "POST" })
     await recordAiUse(context.supabase);
     return result;
   });
+
+// ---------------------------------------------------------------------------
+// Suggest points for one student's finished paper, question by question
+// ---------------------------------------------------------------------------
+
+const GradePaperInput = z.object({
+  examTitle: z.string().max(200),
+  subject: z.string().max(200),
+  questions: z
+    .array(
+      z.object({
+        number: z.number(),
+        type: z.string().max(50),
+        points: z.number().min(0).max(1000),
+        prompt: z.string().max(5000),
+        expectedAnswer: z.string().max(5000),
+        gradingCriteria: z.string().max(5000),
+      }),
+    )
+    .min(1)
+    .max(100),
+  paper: ExamFile,
+});
+
+const GradedPaperOutput = z4.object({
+  studentName: z4.string(),
+  answers: z4.array(
+    z4.object({
+      number: z4.number(),
+      answer: z4.string(),
+      points: z4.number(),
+      reason: z4.string(),
+      unsure: z4.boolean(),
+    }),
+  ),
+  warnings: z4.array(z4.string()),
+});
+
+export interface GradedPaper {
+  /** The name written on the paper, or "" if there is none. */
+  studentName: string;
+  /** One suggestion per question, in the exam's order. */
+  questions: {
+    number: number;
+    answer: string;
+    points: number;
+    maxPoints: number;
+    reason: string;
+    unsure: boolean;
+  }[];
+  warnings: string[];
+}
+
+/** Points rounded to halves, within what the question gives. */
+const withinPoints = (points: number, max: number) =>
+  Math.min(max, Math.max(0, Math.round(points * 2) / 2));
+
+/** Suggests grades for one student's paper. The teacher reviews them before anything counts. */
+export const gradePaper = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => GradePaperInput.parse(input))
+  .handler(async ({ data, context }): Promise<GradedPaper> => {
+    await requirePro(context.supabase, "Grading with AI");
+    const instruction = [
+      `You are an experienced ${data.subject || "subject"} teacher at a Swedish school, suggesting points for one`,
+      `student's finished exam "${data.examTitle}". The student's paper is attached (scanned or photographed).`,
+      "Below are the exam's questions, with the points each gives, the expected answer and the grading criteria.",
+      "",
+      "For every question:",
+      "- answer: what the student wrote, in short (at most about 300 characters; for long answers, the key parts).",
+      "- points: from 0 up to the question's points, following the grading criteria. Give partial credit where",
+      "  the criteria allow it; half points are fine. An unanswered question gets 0.",
+      "- reason: one short sentence explaining the points, in the language of the exam.",
+      "- unsure: true if the handwriting is hard to read, the answer is ambiguous, or the paper doesn't show the",
+      "  question clearly.",
+      "",
+      "Also give studentName: the student's name as written on the paper, or an empty string if there is none.",
+      "In warnings, note anything the teacher should know, one short sentence each: unreadable or missing pages,",
+      "or a paper that doesn't seem to be this exam. Leave it empty if there is nothing.",
+      "The teacher reviews every suggestion before it counts, so be fair and exact rather than generous.",
+      "",
+      "Questions:",
+      JSON.stringify(data.questions),
+    ].join("\n");
+
+    const result = await runStructured(
+      GradedPaperOutput,
+      [...materialBlocks(undefined, data.paper), { type: "text" as const, text: instruction }],
+      "This paper is too long to grade in one go. Try uploading it in parts.",
+    );
+
+    // Every question gets a suggestion, with points the question can actually give.
+    return {
+      studentName: result.studentName.trim(),
+      questions: data.questions.map((q) => {
+        const found = result.answers.find((a) => a.number === q.number);
+        return {
+          number: q.number,
+          answer: found?.answer.slice(0, 500) ?? "",
+          points: found ? withinPoints(found.points, q.points) : 0,
+          maxPoints: q.points,
+          reason: found?.reason ?? "No answer was found on the paper.",
+          unsure: found?.unsure ?? true,
+        };
+      }),
+      warnings: result.warnings,
+    };
+  });

@@ -193,7 +193,7 @@ export function GenerateExamDialog({
                   fileName={undefined}
                   prompt="Drop an earlier exam, course material or a list"
                   hint="PDF, photo, CSV or text file · max 10 MB. AI writes a new exam in the same style — not a copy."
-                  onFile={(file) => void pickMaterial(file)}
+                  onFiles={([file]) => void pickMaterial(file)}
                 />
               )}
             </Field>

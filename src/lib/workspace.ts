@@ -1,6 +1,8 @@
 // Rules for changing a workspace. Every function is pure: it takes a workspace
 // and returns a new one, so the store can apply it to whichever workspace is active.
 import type {
+  AiGrading,
+  Attendance,
   AttendanceStatus,
   CalendarEvent,
   ClassGroup,
@@ -53,18 +55,70 @@ export function setAttendance(
   return next;
 }
 
+const mapAttendance = (
+  ws: Workspace,
+  examId: string,
+  studentId: string,
+  fn: (a: Attendance) => Attendance,
+): Workspace =>
+  mapExam(ws, examId, (e) => ({
+    ...e,
+    attendance: e.attendance.map((a) => (a.studentId === studentId ? fn(a) : a)),
+  }));
+
+/** A score entered by hand replaces any AI grading of the paper. */
 export const setScore = (
   ws: Workspace,
   examId: string,
   studentId: string,
   score: number,
 ): Workspace =>
-  mapExam(ws, examId, (e) => ({
-    ...e,
-    attendance: e.attendance.map((a) =>
-      a.studentId === studentId ? { ...a, score, status: "completed" } : a,
-    ),
+  mapAttendance(ws, examId, studentId, (a) => ({
+    ...a,
+    score,
+    status: "completed",
+    aiGrading: undefined,
   }));
+
+// --- Grading with AI ------------------------------------------------------------
+
+/** Keeps AI's suggested grading of a student's paper for the teacher to review. */
+export const suggestGrading = (
+  ws: Workspace,
+  examId: string,
+  studentId: string,
+  grading: AiGrading,
+): Workspace => mapAttendance(ws, examId, studentId, (a) => ({ ...a, aiGrading: grading }));
+
+/**
+ * Approves a student's AI grading with the points the teacher settled on, question by
+ * question. The student took the exam, the total becomes their score, and any retake is done.
+ */
+export function approveGrading(
+  ws: Workspace,
+  examId: string,
+  studentId: string,
+  points: number[],
+): Workspace {
+  const present = setAttendance(ws, examId, studentId, "completed");
+  return mapAttendance(present, examId, studentId, (a) => {
+    if (!a.aiGrading) return a;
+    const questions = a.aiGrading.questions.map((q, i) => ({
+      ...q,
+      points: points[i] ?? q.points,
+    }));
+    return {
+      ...a,
+      score: questions.reduce((sum, q) => sum + q.points, 0),
+      versionId: a.aiGrading.versionId,
+      aiGrading: { ...a.aiGrading, questions, approved: true },
+    };
+  });
+}
+
+/** Throws away a student's AI grading. */
+export const discardGrading = (ws: Workspace, examId: string, studentId: string): Workspace =>
+  mapAttendance(ws, examId, studentId, (a) => ({ ...a, aiGrading: undefined }));
 
 export const scheduleRetake = (
   ws: Workspace,

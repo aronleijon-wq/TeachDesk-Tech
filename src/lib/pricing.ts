@@ -51,6 +51,7 @@ export const PLANS: Plan[] = [
       { label: "Unlimited AI-generated retakes" },
       { label: "Generate new exams with AI" },
       { label: "Import your own exams from PDF, photo or text" },
+      { label: "Grade tests with AI — you approve every score" },
     ],
   },
   {

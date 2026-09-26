@@ -361,7 +361,7 @@ export function NewExamDialog({
                     fileName={file?.name}
                     prompt="…or drop a file here"
                     hint="PDF, photo or text file · max 10 MB · Word: save as PDF first"
-                    onFile={(picked) => void pickFile(picked)}
+                    onFiles={([picked]) => void pickFile(picked)}
                   />
                   <Button
                     onClick={() => void readExistingExam()}

@@ -177,6 +177,22 @@ export const HELP_CATEGORIES: HelpCategory[] = [
           "Open the exam's Grading tab and enter each student's score. Students appear there once they're marked Present.",
         details: [
           "The dashboard's To grade counts exam papers without a score once the exam day has passed, plus assignment submissions waiting to be graded.",
+          "With Pro, AI can suggest the scores from the students' finished tests: see Grade tests with AI.",
+        ],
+      },
+      {
+        id: "grade-with-ai",
+        title: "Grade tests with AI",
+        summary:
+          "Open the exam's Grading tab and drop in the students' finished tests, one file per student (a PDF, or a photo for one-page tests). AI suggests points for every question, with a reason.",
+        steps: [
+          "Scan or photograph each student's test. Phone scanning apps can make one PDF per student.",
+          "Drop the files on the Grading tab. AI grades about three at a time, around half a minute each, and finds the student from the name on the paper. If it can't, you choose the student. Stay on the Grading tab until it's done.",
+          "Under To review, check each student: open Review to see the answers, change points where you disagree, and click Approve. Only approved scores count.",
+        ],
+        details: [
+          "Answers that are hard to read or ambiguous are marked Check. AI grades against each question's expected answer and grading criteria, so fill those in for the best suggestions.",
+          "TeachDesk doesn't keep the uploaded files; they're only sent to be read. Grading with AI is part of Pro.",
         ],
       },
       {
@@ -298,7 +314,7 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         summary:
           "Only you — and the colleagues in your school's workspace — can see your classes and students.",
         details: [
-          "AI features only send what you choose, like an exam's questions, to our AI provider, and it isn't used to train AI models.",
+          "AI features only send what you choose, like an exam's questions or the tests you upload for grading, to our AI provider, and it isn't used to train AI models. TeachDesk doesn't keep uploaded tests.",
           "The privacy policy has the details.",
         ],
       },
