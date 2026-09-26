@@ -165,3 +165,36 @@ test("a student who missed an exam isn't up to date until they've taken the reta
   ws = rules.setAttendance(ws, "exam-1", leo.id, "completed");
   assert.equal(rules.studentStats(ws, leo).upToDate, true);
 });
+
+test("the dashboard counts held exams without results, retakes to book and students to follow up", () => {
+  let ws = classWithExam();
+  const [sara, leo] = ws.students;
+
+  // Before the exam day it's upcoming; afterwards everyone's result is still to enter.
+  assert.equal(rules.attentionSummary(ws, "2099-01-01").upcoming.length, 1);
+  assert.equal(rules.attentionSummary(ws, "2099-01-01").papersToGrade, 0);
+  assert.equal(rules.attentionSummary(ws, "2099-01-11").upcoming.length, 0);
+  assert.equal(rules.attentionSummary(ws, "2099-01-11").papersToGrade, 3);
+
+  // Leo was absent: no paper expected from him, but his retake needs booking.
+  ws = rules.setAttendance(ws, "exam-1", leo!.id, "absent");
+  ws = rules.setScore(ws, "exam-1", sara!.id, 15);
+  let summary = rules.attentionSummary(ws, "2099-01-11");
+  assert.equal(summary.papersToGrade, 1);
+  assert.deepEqual(
+    summary.retakesToSchedule.map((r) => r.student.name),
+    ["Leo Karlsson"],
+  );
+  assert.deepEqual(
+    summary.studentsToFollowUp.map((s) => s.name),
+    ["Leo Karlsson"],
+  );
+
+  // A booked retake no longer needs scheduling, but Leo still owes the exam.
+  const slot = { date: "2099-01-20", time: "14:00", room: "B214" };
+  ws = rules.scheduleRetake(ws, ws.retakes[0]!.id, slot);
+  summary = rules.attentionSummary(ws, "2099-01-11");
+  assert.equal(summary.retakesToSchedule.length, 0);
+  assert.equal(summary.openRetakes.length, 1);
+  assert.equal(summary.studentsToFollowUp.length, 1);
+});

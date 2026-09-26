@@ -8,6 +8,7 @@ import type {
   Exam,
   ExamVersion,
   Question,
+  Retake,
   Student,
   Workspace,
 } from "./types";
@@ -214,6 +215,17 @@ export function removeClass(ws: Workspace, classId: string): Workspace {
 export const classSize = (ws: Workspace, classId: string) =>
   ws.students.filter((s) => s.classId === classId).length;
 
+const findRetake = (ws: Workspace, examId: string, studentId: string) =>
+  ws.retakes.find((r) => r.examId === examId && r.studentId === studentId);
+
+/** The date of a booked retake, if it's booked. */
+const bookedDate = (retake: Retake | undefined) =>
+  retake?.status === "scheduled" ? retake.date : undefined;
+
+/** A missed exam needs a retake scheduled unless one is booked or already done. */
+const needsScheduling = (retake: Retake | undefined) =>
+  retake?.status !== "completed" && !bookedDate(retake);
+
 /**
  * A student's average and attendance (fixed figures for demo students, otherwise from their
  * exam results), and what they still have to do: retakes for missed exams and missing work.
@@ -237,16 +249,12 @@ export function studentStats(ws: Workspace, student: Student) {
       ? Math.round((held.filter((r) => r.status === "completed").length / held.length) * 100)
       : undefined);
 
-  // Every exam the student missed needs a retake until they're marked present. Its retake
-  // is either booked (has a date) or still to schedule.
-  const retakesNeeded = records
+  // Every exam the student missed needs a retake until they're marked present.
+  const missed = records
     .filter((r) => r.status === "absent")
-    .map((r) => ws.retakes.find((t) => t.examId === r.examId && t.studentId === student.id))
-    .filter((t) => t?.status !== "completed");
-  const retakeDates = retakesNeeded
-    .flatMap((t) => (t?.status === "scheduled" && t.date ? [t.date] : []))
-    .sort();
-  const retakesToSchedule = retakesNeeded.length - retakeDates.length;
+    .map((r) => findRetake(ws, r.examId, student.id));
+  const retakesToSchedule = missed.filter(needsScheduling).length;
+  const retakeDates = missed.flatMap((retake) => bookedDate(retake) ?? []).sort();
 
   return {
     average,
@@ -262,6 +270,60 @@ export function studentStats(ws: Workspace, student: Student) {
 }
 
 export type StudentStats = ReturnType<typeof studentStats>;
+
+// --- What needs attention -----------------------------------------------------
+
+/** An exam has taken place once its date has passed or attendance has been recorded. */
+export const isHeld = (exam: Exam, today: string) =>
+  exam.status === "completed" ||
+  exam.status === "needs-grading" ||
+  exam.date < today ||
+  exam.attendance.some((a) => a.status !== "pending");
+
+const sum = (numbers: number[]) => numbers.reduce((total, n) => total + n, 0);
+
+/** Everything waiting for the teacher: exams and work to grade, retakes to book, students to follow up. */
+export function attentionSummary(ws: Workspace, today = todayIso()) {
+  const exams = ws.exams.filter((e) => e.status !== "draft");
+  const upcoming = exams
+    .filter((e) => !isHeld(e, today))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+
+  // Papers without a result: everyone at a held exam who wasn't absent and has no score yet.
+  const examsToGrade = exams
+    .filter((e) => isHeld(e, today))
+    .map((exam) => ({
+      exam,
+      papers: exam.attendance.filter((a) => a.status !== "absent" && a.score == null).length,
+    }))
+    .filter(({ papers }) => papers > 0);
+  const assignmentsToGrade = ws.assignments.filter((a) => a.toGrade > 0);
+
+  // One entry per student and missed exam whose retake isn't booked yet.
+  const retakesToSchedule = exams.flatMap((exam) =>
+    exam.attendance.flatMap((a) => {
+      const student = ws.students.find((s) => s.id === a.studentId);
+      const waiting =
+        a.status === "absent" && needsScheduling(findRetake(ws, exam.id, a.studentId));
+      return student && waiting ? [{ exam, student }] : [];
+    }),
+  );
+
+  return {
+    upcoming,
+    examsToGrade,
+    papersToGrade: sum(examsToGrade.map((e) => e.papers)),
+    assignmentsToGrade,
+    submissionsToGrade: sum(assignmentsToGrade.map((a) => a.toGrade)),
+    retakesToSchedule,
+    /** Retakes that are booked or still to book. */
+    openRetakes: ws.retakes.filter((r) => r.status !== "completed"),
+    /** Students with a missed exam or missing assignments. */
+    studentsToFollowUp: ws.students.filter((s) => !studentStats(ws, s).upToDate),
+  };
+}
+
+export type AttentionSummary = ReturnType<typeof attentionSummary>;
 
 // --- Calendar -----------------------------------------------------------------
 

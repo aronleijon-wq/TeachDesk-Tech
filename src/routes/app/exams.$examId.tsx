@@ -226,7 +226,7 @@ function ExamDetail() {
         </TabsContent>
 
         <TabsContent value="grading" className="mt-4">
-          <Panel title="Grading" description="Objective questions are scored automatically. Open answers get a suggestion you confirm.">
+          <Panel title="Grading" description="Enter each student's score. Students appear here once they're marked present.">
             <ul className="divide-y divide-border">
               {exam.attendance.filter((a) => a.status === "completed").map((a) => (
                 <li key={a.studentId} className="flex items-center justify-between gap-3 py-2">
@@ -234,9 +234,17 @@ function ExamDetail() {
                   <span className="flex items-center gap-2">
                     <Input
                       type="number"
-                      defaultValue={a.score ?? 0}
+                      min={0}
+                      max={exam.totalPoints}
+                      defaultValue={a.score ?? ""}
+                      placeholder="—"
+                      aria-label={`Score for ${studentById(a.studentId)?.name ?? "student"}`}
                       className="h-8 w-20"
-                      onBlur={(e) => setScore(exam.id, a.studentId, Number(e.target.value))}
+                      onBlur={(e) => {
+                        // An empty box means not graded yet; only real scores are saved.
+                        const score = e.target.valueAsNumber;
+                        if (Number.isFinite(score) && score !== a.score) setScore(exam.id, a.studentId, score);
+                      }}
                     />
                     <span className="text-xs text-muted-foreground">/ {exam.totalPoints}</span>
                   </span>
