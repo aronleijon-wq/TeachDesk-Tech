@@ -1,5 +1,21 @@
 // Reading a file the teacher picks for AI to read: a PDF or photo is sent as it is, and a
 // text or CSV file as its text.
+import { defineMessages, type Language } from "./messages";
+
+const messages = defineMessages({
+  en: {
+    unreadable: "Could not read the file.",
+    tooBig: "That file is larger than 10 MB.",
+    wrongType:
+      "Use a PDF, a photo saved as JPG or PNG, or a text or CSV file. Save Word files as PDF, and Excel files as CSV.",
+  },
+  sv: {
+    unreadable: "Det gick inte att läsa filen.",
+    tooBig: "Filen är större än 10 MB.",
+    wrongType:
+      "Använd en PDF, ett foto sparat som JPG eller PNG, eller en text- eller CSV-fil. Spara Word-filer som PDF och Excel-filer som CSV.",
+  },
+});
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const BINARY_TYPES = [
@@ -15,11 +31,11 @@ export type PickedFile =
   | { name: string; kind: "binary"; mediaType: BinaryType; data: string }
   | { name: string; kind: "text"; text: string };
 
-function readAsBase64(file: File): Promise<string> {
+function readAsBase64(file: File, language: Language): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
-    reader.onerror = () => reject(reader.error ?? new Error("Could not read the file."));
+    reader.onerror = () => reject(reader.error ?? new Error(messages[language].unreadable));
     reader.readAsDataURL(file);
   });
 }
@@ -28,18 +44,15 @@ const isText = (file: File) =>
   file.type.startsWith("text/") || /\.(txt|md|csv|tsv)$/i.test(file.name);
 
 /** Reads a picked file; fails with a message fit to show if it's too big or can't be read. */
-export async function readPickedFile(file: File): Promise<PickedFile> {
-  if (file.size > MAX_FILE_BYTES) throw new Error("That file is larger than 10 MB.");
+export async function readPickedFile(file: File, language: Language): Promise<PickedFile> {
+  const t = messages[language];
+  if (file.size > MAX_FILE_BYTES) throw new Error(t.tooBig);
   if (isText(file)) return { name: file.name, kind: "text", text: await file.text() };
-  if (!(BINARY_TYPES as readonly string[]).includes(file.type)) {
-    throw new Error(
-      "Use a PDF, a photo saved as JPG or PNG, or a text or CSV file. Save Word files as PDF, and Excel files as CSV.",
-    );
-  }
+  if (!(BINARY_TYPES as readonly string[]).includes(file.type)) throw new Error(t.wrongType);
   return {
     name: file.name,
     kind: "binary",
     mediaType: file.type as BinaryType,
-    data: await readAsBase64(file),
+    data: await readAsBase64(file, language),
   };
 }

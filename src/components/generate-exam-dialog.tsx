@@ -21,8 +21,78 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { generateExam, type GeneratedExam } from "@/lib/exam-ai.functions";
+import { defineMessages, useLanguage, useMessages } from "@/lib/i18n";
 import { readPickedFile, type PickedFile } from "@/lib/picked-file";
 import { useStore } from "@/lib/store";
+
+const messages = defineMessages({
+  en: {
+    unreadable: "Couldn't read that file.",
+    noQuestions: "No questions came back. Try describing the exam in more detail.",
+    somethingWrong: "Something went wrong. Please try again.",
+    created: "Exam created",
+    createdText: (n: number) => `${n} questions in Version A.`,
+    title: "Generate an exam with AI",
+    reviewText: "Check the questions, then choose when the exam is.",
+    startText:
+      "Describe the exam, or add an earlier exam or other material to base it on. AI writes a new exam for you to review.",
+    class: "Class",
+    noClasses: "No classes yet",
+    addClassFirst: "Add your class on the Students page first.",
+    about: "What should the exam be about?",
+    aboutPlaceholder:
+      "For example: a 60-minute exam on derivatives — differentiation rules and tangent lines, about 30 points, mixed difficulty. Write in Swedish or English.",
+    material: "Base it on material (optional)",
+    removeFile: "Remove file",
+    dropPrompt: "Drop an earlier exam, course material or a list",
+    dropHint:
+      "PDF, photo, CSV or text file · max 10 MB. AI writes a new exam in the same style — not a copy.",
+    titleField: "Title",
+    date: "Date",
+    startTime: "Start time",
+    duration: "Duration (minutes)",
+    room: "Room",
+    back: "Back",
+    again: "Generate again",
+    create: "Create exam",
+    cancel: "Cancel",
+    working: "Writing your exam — about half a minute…",
+    generate: "Generate exam",
+  },
+  sv: {
+    unreadable: "Det gick inte att läsa filen.",
+    noQuestions: "Inga frågor kom tillbaka. Beskriv provet lite mer utförligt och försök igen.",
+    somethingWrong: "Något gick fel. Försök igen.",
+    created: "Provet har skapats",
+    createdText: (n) => `${n} frågor i Version A.`,
+    title: "Skapa ett prov med AI",
+    reviewText: "Granska frågorna och välj sedan när provet ska skrivas.",
+    startText:
+      "Beskriv provet, eller lägg till ett tidigare prov eller annat material att utgå från. AI skriver ett nytt prov som du granskar.",
+    class: "Klass",
+    noClasses: "Inga klasser än",
+    addClassFirst: "Lägg först till din klass på sidan Elever.",
+    about: "Vad ska provet handla om?",
+    aboutPlaceholder:
+      "Till exempel: ett prov på 60 minuter om derivator — deriveringsregler och tangenter, cirka 30 poäng, blandad svårighetsgrad. Skriv på svenska eller engelska.",
+    material: "Utgå från material (valfritt)",
+    removeFile: "Ta bort filen",
+    dropPrompt: "Släpp ett tidigare prov, kursmaterial eller en lista",
+    dropHint:
+      "PDF, foto, CSV- eller textfil · max 10 MB. AI skriver ett nytt prov i samma stil — ingen kopia.",
+    titleField: "Namn på provet",
+    date: "Datum",
+    startTime: "Starttid",
+    duration: "Skrivtid (minuter)",
+    room: "Sal",
+    back: "Tillbaka",
+    again: "Skapa igen",
+    create: "Skapa provet",
+    cancel: "Avbryt",
+    working: "Skriver ditt prov — ungefär en halv minut…",
+    generate: "Skapa prov",
+  },
+});
 
 /**
  * Generates an exam with AI from the teacher's description and/or material to base it on (an
@@ -39,6 +109,8 @@ export function GenerateExamDialog({
   onCreated: (id: string) => void;
 }) {
   const { classes, profile, createExam } = useStore();
+  const { language } = useLanguage();
+  const t = useMessages(messages);
   const hasPro = profile.access.level === "pro";
   const firstClass = classes[0];
 
@@ -64,9 +136,9 @@ export function GenerateExamDialog({
     setError(null);
     if (!file) return;
     try {
-      setMaterial(await readPickedFile(file));
+      setMaterial(await readPickedFile(file, language));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't read that file.");
+      setError(e instanceof Error ? e.message : t.unreadable);
     }
   };
 
@@ -87,10 +159,7 @@ export function GenerateExamDialog({
         },
       });
       if (result.questions.length === 0) {
-        setError(
-          result.warnings.join(" ") ||
-            "No questions came back. Try describing the exam in more detail.",
-        );
+        setError(result.warnings.join(" ") || t.noQuestions);
         return;
       }
       setGenerated(result);
@@ -101,7 +170,7 @@ export function GenerateExamDialog({
         room: d.room || klass?.room || "",
       }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setError(e instanceof Error ? e.message : t.somethingWrong);
     } finally {
       setWorking(false);
     }
@@ -123,9 +192,7 @@ export function GenerateExamDialog({
       },
       generated.questions,
     );
-    toast.success("Exam created", {
-      description: `${generated.questions.length} questions in Version A.`,
-    });
+    toast.success(t.created, { description: t.createdText(generated.questions.length) });
     onOpenChange(false);
     onCreated(id);
   };
@@ -135,21 +202,17 @@ export function GenerateExamDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" /> Generate an exam with AI
+            <Sparkles className="size-4 text-primary" /> {t.title}
           </DialogTitle>
-          <DialogDescription>
-            {generated
-              ? "Check the questions, then choose when the exam is."
-              : "Describe the exam, or add an earlier exam or other material to base it on. AI writes a new exam for you to review."}
-          </DialogDescription>
+          <DialogDescription>{generated ? t.reviewText : t.startText}</DialogDescription>
         </DialogHeader>
 
         {!generated ? (
           <div className="space-y-4">
-            <Field label="Class">
+            <Field label={t.class}>
               <Select value={classId} onValueChange={setClassId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="No classes yet" />
+                  <SelectValue placeholder={t.noClasses} />
                 </SelectTrigger>
                 <SelectContent>
                   {classes.map((c) => (
@@ -160,22 +223,20 @@ export function GenerateExamDialog({
                 </SelectContent>
               </Select>
               {classes.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Add your class on the Students page first.
-                </p>
+                <p className="text-xs text-muted-foreground">{t.addClassFirst}</p>
               )}
             </Field>
 
-            <Field label="What should the exam be about?">
+            <Field label={t.about}>
               <Textarea
                 rows={5}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="For example: a 60-minute exam on derivatives — differentiation rules and tangent lines, about 30 points, mixed difficulty. Write in Swedish or English."
+                placeholder={t.aboutPlaceholder}
               />
             </Field>
 
-            <Field label="Base it on material (optional)">
+            <Field label={t.material}>
               {material ? (
                 <div className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm">
                   <span className="truncate">{material.name}</span>
@@ -183,7 +244,7 @@ export function GenerateExamDialog({
                     size="sm"
                     variant="ghost"
                     onClick={() => setMaterial(null)}
-                    aria-label="Remove file"
+                    aria-label={t.removeFile}
                   >
                     <X className="size-4" />
                   </Button>
@@ -191,8 +252,8 @@ export function GenerateExamDialog({
               ) : (
                 <DropZone
                   fileName={undefined}
-                  prompt="Drop an earlier exam, course material or a list"
-                  hint="PDF, photo, CSV or text file · max 10 MB. AI writes a new exam in the same style — not a copy."
+                  prompt={t.dropPrompt}
+                  hint={t.dropHint}
                   onFiles={([file]) => void pickMaterial(file)}
                 />
               )}
@@ -205,10 +266,10 @@ export function GenerateExamDialog({
           <div className="space-y-4">
             <ExamDraftPreview questions={generated.questions} warnings={generated.warnings} />
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Title" className="sm:col-span-2">
+              <Field label={t.titleField} className="sm:col-span-2">
                 <Input value={details.title} onChange={(e) => set("title", e.target.value)} />
               </Field>
-              <Field label="Date">
+              <Field label={t.date}>
                 <Input
                   type="date"
                   required
@@ -216,14 +277,14 @@ export function GenerateExamDialog({
                   onChange={(e) => set("date", e.target.value)}
                 />
               </Field>
-              <Field label="Start time">
+              <Field label={t.startTime}>
                 <Input
                   type="time"
                   value={details.time}
                   onChange={(e) => set("time", e.target.value)}
                 />
               </Field>
-              <Field label="Duration (minutes)">
+              <Field label={t.duration}>
                 <Input
                   type="number"
                   min={10}
@@ -231,7 +292,7 @@ export function GenerateExamDialog({
                   onChange={(e) => set("duration", e.target.value)}
                 />
               </Field>
-              <Field label="Room">
+              <Field label={t.room}>
                 <Input value={details.room} onChange={(e) => set("room", e.target.value)} />
               </Field>
             </div>
@@ -242,7 +303,7 @@ export function GenerateExamDialog({
           {generated ? (
             <>
               <Button variant="ghost" onClick={() => setGenerated(null)}>
-                Back
+                {t.back}
               </Button>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => void generate()} disabled={working}>
@@ -251,17 +312,17 @@ export function GenerateExamDialog({
                   ) : (
                     <RefreshCw className="size-4" />
                   )}
-                  Generate again
+                  {t.again}
                 </Button>
                 <Button onClick={create} disabled={working || !details.date || !classId}>
-                  Create exam
+                  {t.create}
                 </Button>
               </div>
             </>
           ) : (
             <>
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t.cancel}
               </Button>
               <Button
                 onClick={() => void generate()}
@@ -272,7 +333,7 @@ export function GenerateExamDialog({
                 ) : (
                   <Sparkles className="size-4" />
                 )}
-                {working ? "Writing your exam — about half a minute…" : "Generate exam"}
+                {working ? t.working : t.generate}
               </Button>
             </>
           )}

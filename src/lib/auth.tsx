@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
+import { defineMessages, readLanguage } from "./i18n";
 import { rememberReturnPath, takeReturnPath } from "./return-path";
 
 interface AuthValue {
@@ -27,19 +28,46 @@ interface AuthValue {
 
 const AuthContext = createContext<AuthValue | null>(null);
 
+const messages = defineMessages({
+  en: {
+    wrongPassword: "Wrong email or password.",
+    confirmFirst: "Confirm your email first — check your inbox for the link.",
+    exists: "An account with this email already exists. Sign in instead.",
+    notEnabled: "This sign-in method isn't switched on yet. Contact TeachDesk support.",
+    passwordLength: (n: string) => `The password must be at least ${n} characters.`,
+    samePassword: "The new password must be different from the old one.",
+    somethingWrong: "Something went wrong. Please try again.",
+    googleFailed: "Google sign-in failed. Please try again.",
+    teacher: "Teacher",
+  },
+  sv: {
+    wrongPassword: "Fel e-postadress eller lösenord.",
+    confirmFirst: "Bekräfta din e-postadress först — länken finns i din inkorg.",
+    exists: "Det finns redan ett konto med den e-postadressen. Logga in i stället.",
+    notEnabled: "Det här inloggningssättet är inte påslaget än. Kontakta TeachDesks support.",
+    passwordLength: (n) => `Lösenordet måste ha minst ${n} tecken.`,
+    samePassword: "Det nya lösenordet måste skilja sig från det gamla.",
+    somethingWrong: "Något gick fel. Försök igen.",
+    googleFailed: "Inloggningen med Google misslyckades. Försök igen.",
+    teacher: "Lärare",
+  },
+});
+
 /** Supabase returns English technical messages; map the common ones to plain language. */
 function friendly(error: { message: string } | null): Error | null {
   if (!error) return null;
+  const t = messages[readLanguage()];
   const m = error.message.toLowerCase();
-  if (m.includes("invalid login credentials")) return new Error("Wrong email or password.");
-  if (m.includes("email not confirmed"))
-    return new Error("Confirm your email first — check your inbox for the link.");
-  if (m.includes("already registered"))
-    return new Error("An account with this email already exists. Sign in instead.");
+  if (m.includes("invalid login credentials")) return new Error(t.wrongPassword);
+  if (m.includes("email not confirmed")) return new Error(t.confirmFirst);
+  if (m.includes("already registered")) return new Error(t.exists);
   if (m.includes("disabled") || m.includes("not enabled") || m.includes("signups not allowed"))
-    return new Error("This sign-in method isn't switched on yet. Contact TeachDesk support.");
+    return new Error(t.notEnabled);
+  const length = m.match(/password should be at least (\d+)/)?.[1];
+  if (length) return new Error(t.passwordLength(length));
+  if (m.includes("different from the old password")) return new Error(t.samePassword);
   if (m.includes("password")) return new Error(error.message);
-  return new Error("Something went wrong. Please try again.");
+  return new Error(t.somethingWrong);
 }
 
 function throwIf(error: { message: string } | null) {
@@ -107,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         if (result.error) {
           takeReturnPath(); // Not signing in after all, so forget where to go.
-          throw friendly(result.error) ?? new Error("Google sign-in failed. Please try again.");
+          throw friendly(result.error) ?? new Error(messages[readLanguage()].googleFailed);
         }
       },
       async sendPasswordReset(email) {
@@ -139,5 +167,7 @@ export function useAuth() {
 /** Display name for a signed-in user: their chosen name, else the part of the email before @. */
 export function displayName(user: User) {
   const meta = user.user_metadata as { full_name?: string; name?: string };
-  return meta.full_name || meta.name || user.email?.split("@")[0] || "Teacher";
+  return (
+    meta.full_name || meta.name || user.email?.split("@")[0] || messages[readLanguage()].teacher
+  );
 }

@@ -11,16 +11,70 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { defineMessages, useMessages } from "@/lib/i18n";
+import { questionTerms } from "@/lib/question-terms";
 import type { Question, QuestionDraft } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const TYPES: Record<Question["type"], string> = {
-  "short-answer": "Short answer",
-  "open-ended": "Open answer",
-  calculation: "Calculation",
-  "multiple-choice": "Multiple choice",
-};
+const TYPES: Question["type"][] = ["short-answer", "open-ended", "calculation", "multiple-choice"];
 const DIFFICULTIES: Question["difficulty"][] = ["Easy", "Medium", "Hard"];
+
+const messages = defineMessages({
+  en: {
+    points: (n: number) => `${n} ${n === 1 ? "point" : "points"}`,
+    save: "Save question",
+    question: (n: number) => `Question ${n}`,
+    edit: "Edit",
+    remove: (n: number) => `Remove question ${n}`,
+    confirmRemove: (n: number) => `Remove question ${n}?`,
+    add: "Add question",
+    newQuestion: "New question",
+    fields: {
+      question: "Question",
+      type: "Type",
+      points: "Points",
+      difficulty: "Difficulty",
+      topic: "Topic",
+      skill: "Skill tested",
+      objective: "Learning objective",
+      expectedAnswer: "Expected answer",
+      criteria: "Grading criteria",
+    },
+    placeholders: {
+      question: "Differentiate f(x) = 3x² + 5x − 2.",
+      topic: "Derivatives",
+      skill: "Power rule",
+    },
+    cancel: "Cancel",
+  },
+  sv: {
+    points: (n) => `${n} poäng`,
+    save: "Spara frågan",
+    question: (n) => `Fråga ${n}`,
+    edit: "Redigera",
+    remove: (n) => `Ta bort fråga ${n}`,
+    confirmRemove: (n) => `Ta bort fråga ${n}?`,
+    add: "Lägg till fråga",
+    newQuestion: "Ny fråga",
+    fields: {
+      question: "Fråga",
+      type: "Typ",
+      points: "Poäng",
+      difficulty: "Svårighetsgrad",
+      topic: "Område",
+      skill: "Förmåga som prövas",
+      objective: "Lärandemål",
+      expectedAnswer: "Förväntat svar",
+      criteria: "Bedömningskriterier",
+    },
+    placeholders: {
+      question: "Derivera f(x) = 3x² + 5x − 2.",
+      topic: "Derivator",
+      skill: "Deriveringsregler",
+    },
+    cancel: "Avbryt",
+  },
+});
 
 const EMPTY_QUESTION: QuestionDraft = {
   type: "short-answer",
@@ -45,10 +99,12 @@ export function QuestionCard({
   onRemove?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const t = useMessages(messages);
+  const terms = useMessages(questionTerms);
   const details = [
-    `${question.points} ${question.points === 1 ? "point" : "points"}`,
-    TYPES[question.type],
-    question.difficulty,
+    t.points(question.points),
+    terms.types[question.type],
+    terms.difficulties[question.difficulty],
     question.skill,
   ].filter(Boolean);
 
@@ -57,7 +113,7 @@ export function QuestionCard({
       {editing ? (
         <QuestionForm
           initial={question}
-          submitLabel="Save question"
+          submitLabel={t.save}
           onSubmit={(draft) => {
             onSave({ ...question, ...draft });
             setEditing(false);
@@ -68,7 +124,7 @@ export function QuestionCard({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="label-xs">
-              Question {question.number}
+              {t.question(question.number)}
               {question.topic && ` · ${question.topic}`}
             </p>
             <p className="mt-1 whitespace-pre-line text-sm">{question.prompt}</p>
@@ -76,15 +132,15 @@ export function QuestionCard({
           </div>
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-              Edit
+              {t.edit}
             </Button>
             {onRemove && (
               <Button
                 size="sm"
                 variant="ghost"
-                aria-label={`Remove question ${question.number}`}
+                aria-label={t.remove(question.number)}
                 onClick={() => {
-                  if (window.confirm(`Remove question ${question.number}?`)) onRemove();
+                  if (window.confirm(t.confirmRemove(question.number))) onRemove();
                 }}
               >
                 <Trash2 className="size-4" />
@@ -100,19 +156,20 @@ export function QuestionCard({
 /** "Add question", which opens an empty question to fill in. */
 export function AddQuestion({ onAdd }: { onAdd: (question: QuestionDraft) => void }) {
   const [open, setOpen] = useState(false);
+  const t = useMessages(messages);
   if (!open) {
     return (
       <Button variant="outline" onClick={() => setOpen(true)}>
-        <Plus className="size-4" /> Add question
+        <Plus className="size-4" /> {t.add}
       </Button>
     );
   }
   return (
     <div className="rounded-lg border border-primary/30 bg-surface p-4 shadow-card">
-      <p className="mb-3 text-sm font-semibold">New question</p>
+      <p className="mb-3 text-sm font-semibold">{t.newQuestion}</p>
       <QuestionForm
         initial={EMPTY_QUESTION}
-        submitLabel="Add question"
+        submitLabel={t.add}
         onSubmit={(draft) => {
           onAdd(draft);
           setOpen(false);
@@ -135,6 +192,8 @@ function QuestionForm({
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<QuestionDraft>(initial);
+  const t = useMessages(messages);
+  const terms = useMessages(questionTerms);
   const text = (
     key: "prompt" | "topic" | "skill" | "expectedAnswer" | "gradingCriteria" | "objective",
   ) => ({
@@ -150,15 +209,10 @@ function QuestionForm({
 
   return (
     <form onSubmit={submit} className="grid gap-3 sm:grid-cols-3">
-      <Field label="Question" className="sm:col-span-3">
-        <Textarea
-          rows={3}
-          required
-          {...text("prompt")}
-          placeholder="Differentiate f(x) = 3x² + 5x − 2."
-        />
+      <Field label={t.fields.question} className="sm:col-span-3">
+        <Textarea rows={3} required {...text("prompt")} placeholder={t.placeholders.question} />
       </Field>
-      <Field label="Type">
+      <Field label={t.fields.type}>
         <Select
           value={draft.type}
           onValueChange={(v) => setDraft((d) => ({ ...d, type: v as Question["type"] }))}
@@ -167,15 +221,15 @@ function QuestionForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(TYPES).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
+            {TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {terms.types[type]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </Field>
-      <Field label="Points">
+      <Field label={t.fields.points}>
         <Input
           type="number"
           min={1}
@@ -184,7 +238,7 @@ function QuestionForm({
           onChange={(e) => setDraft((d) => ({ ...d, points: e.target.valueAsNumber || 0 }))}
         />
       </Field>
-      <Field label="Difficulty">
+      <Field label={t.fields.difficulty}>
         <Select
           value={draft.difficulty}
           onValueChange={(v) =>
@@ -197,25 +251,25 @@ function QuestionForm({
           <SelectContent>
             {DIFFICULTIES.map((d) => (
               <SelectItem key={d} value={d}>
-                {d}
+                {terms.difficulties[d]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </Field>
-      <Field label="Topic">
-        <Input {...text("topic")} placeholder="Derivatives" />
+      <Field label={t.fields.topic}>
+        <Input {...text("topic")} placeholder={t.placeholders.topic} />
       </Field>
-      <Field label="Skill tested">
-        <Input {...text("skill")} placeholder="Power rule" />
+      <Field label={t.fields.skill}>
+        <Input {...text("skill")} placeholder={t.placeholders.skill} />
       </Field>
-      <Field label="Learning objective">
+      <Field label={t.fields.objective}>
         <Input {...text("objective")} />
       </Field>
-      <Field label="Expected answer" className="sm:col-span-3">
+      <Field label={t.fields.expectedAnswer} className="sm:col-span-3">
         <Textarea rows={2} {...text("expectedAnswer")} />
       </Field>
-      <Field label="Grading criteria" className="sm:col-span-3">
+      <Field label={t.fields.criteria} className="sm:col-span-3">
         <Textarea rows={2} {...text("gradingCriteria")} />
       </Field>
       <div className="flex gap-2 sm:col-span-3">
@@ -223,7 +277,7 @@ function QuestionForm({
           {submitLabel}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
+          {t.cancel}
         </Button>
       </div>
     </form>

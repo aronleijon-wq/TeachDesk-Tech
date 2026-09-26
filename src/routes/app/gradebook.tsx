@@ -4,23 +4,47 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/primitives";
 import { toCsv } from "@/lib/csv";
+import { defineMessages, useMessages } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
+const messages = defineMessages({
+  en: {
+    pageTitle: "Gradebook — TeachDesk",
+    title: "Gradebook",
+    subtitle: "Results per student and exam.",
+    export: "Export CSV",
+    student: "Student",
+    absent: "Absent",
+    fileName: (className: string) => `${className} results.csv`,
+    class: "Class",
+    empty: "Results appear here per class.",
+    addClass: "Add your class",
+    toStart: "to get started.",
+  },
+  sv: {
+    pageTitle: "Resultat — TeachDesk",
+    title: "Resultat",
+    subtitle: "Resultat per elev och prov.",
+    export: "Exportera CSV",
+    student: "Elev",
+    absent: "Frånvarande",
+    fileName: (className) => `${className} resultat.csv`,
+    class: "Klass",
+    empty: "Resultaten visas här per klass.",
+    addClass: "Lägg till din klass",
+    toStart: "för att komma igång.",
+  },
+});
+
 export const Route = createFileRoute("/app/gradebook")({
-  head: () => ({
-    meta: [
-      { title: "Gradebook — TeachDesk" },
-      { name: "description", content: "Every result for every student and exam in one grid." },
-      { property: "og:title", content: "Gradebook — TeachDesk" },
-      { property: "og:description", content: "Every result for every student and exam." },
-    ],
-  }),
+  head: ({ match }) => ({ meta: [{ title: messages[match.context.language].pageTitle }] }),
   component: Gradebook,
 });
 
 function Gradebook() {
   const { exams, classes, students } = useStore();
+  const t = useMessages(messages);
   const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const classExams = exams
     .filter((e) => e.classId === classId && e.status !== "draft")
@@ -30,19 +54,19 @@ function Gradebook() {
   /** Downloads the class's results as a spreadsheet (CSV) file. */
   const exportCsv = () => {
     const rows = [
-      ["Student", ...classExams.map((e) => `${e.title} (${e.totalPoints} p)`)],
+      [t.student, ...classExams.map((e) => `${e.title} (${e.totalPoints} p)`)],
       ...classStudents.map((s) => [
         s.name,
         ...classExams.map((e) => {
           const rec = e.attendance.find((a) => a.studentId === s.id);
-          return rec?.status === "absent" ? "Absent" : (rec?.score ?? "");
+          return rec?.status === "absent" ? t.absent : (rec?.score ?? "");
         }),
       ]),
     ];
     const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${classes.find((c) => c.id === classId)?.name ?? "Class"} results.csv`;
+    link.download = t.fileName(classes.find((c) => c.id === classId)?.name ?? t.class);
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -50,11 +74,11 @@ function Gradebook() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        title="Gradebook"
-        subtitle="Results per student and exam."
+        title={t.title}
+        subtitle={t.subtitle}
         actions={
           <Button variant="outline" onClick={exportCsv} disabled={classStudents.length === 0}>
-            <Download className="size-4" /> Export CSV
+            <Download className="size-4" /> {t.export}
           </Button>
         }
       />
@@ -62,7 +86,11 @@ function Gradebook() {
       {classes.length === 0 && (
         <Panel>
           <p className="text-sm text-muted-foreground">
-            Results appear here per class. <Link to="/app/students" className="text-primary hover:underline">Add your class</Link> to get started.
+            {t.empty}{" "}
+            <Link to="/app/students" className="text-primary hover:underline">
+              {t.addClass}
+            </Link>{" "}
+            {t.toStart}
           </p>
         </Panel>
       )}
@@ -86,7 +114,7 @@ function Gradebook() {
         <table className="w-full min-w-[640px] text-sm">
           <thead className="border-b border-border bg-muted/50">
             <tr>
-              <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Student</th>
+              <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t.student}</th>
               {classExams.map((e) => (
                 <th key={e.id} className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {e.title}
@@ -103,7 +131,7 @@ function Gradebook() {
                   return (
                     <td key={e.id} className="px-4 py-2 text-right tabular-nums">
                       {rec?.status === "absent" ? (
-                        <span className="text-destructive">Absent</span>
+                        <span className="text-destructive">{t.absent}</span>
                       ) : rec?.score != null ? (
                         `${rec.score}/${e.totalPoints}`
                       ) : (

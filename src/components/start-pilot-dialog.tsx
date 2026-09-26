@@ -12,7 +12,46 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { defineMessages, useMessages } from "@/lib/i18n";
 import { invitationLink, startPilot } from "@/lib/schools";
+
+const messages = defineMessages({
+  en: {
+    failed: "Couldn't start the pilot",
+    failedText: "Check the details and your internet connection, then try again.",
+    started: "Pilot started",
+    start: "Start a pilot",
+    startedText: (school: string) =>
+      `${school} has TeachDesk with every Pro tool until the pilot ends.`,
+    startText:
+      "Creates the school and an invitation for its contact person, who becomes the school's admin and invites their colleagues.",
+    done: "Done",
+    school: "School",
+    schoolPlaceholder: "Enskede Gårds gymnasium",
+    email: "Contact person's email",
+    emailPlaceholder: "rektor@school.se",
+    days: "Length of the pilot (days)",
+    cancel: "Cancel",
+    submit: "Start pilot",
+  },
+  sv: {
+    failed: "Det gick inte att starta piloten",
+    failedText: "Kontrollera uppgifterna och internetanslutningen och försök igen.",
+    started: "Piloten har startat",
+    start: "Starta en pilot",
+    startedText: (school) => `${school} har TeachDesk med alla Pro-verktyg tills piloten tar slut.`,
+    startText:
+      "Skapar skolan och en inbjudan till kontaktpersonen, som blir skolans administratör och bjuder in sina kollegor.",
+    done: "Klar",
+    school: "Skola",
+    schoolPlaceholder: "Enskede Gårds gymnasium",
+    email: "Kontaktpersonens e-post",
+    emailPlaceholder: "rektor@skola.se",
+    days: "Pilotens längd (dagar)",
+    cancel: "Avbryt",
+    submit: "Starta piloten",
+  },
+});
 
 /** The school and the contact person to start a pilot for, e.g. from a demo request. */
 export interface PilotTarget {
@@ -35,6 +74,7 @@ export function StartPilotDialog({
   const [form, setForm] = useState({ school: "", email: "", days: String(DEFAULT_PILOT_DAYS) });
   const [created, setCreated] = useState<{ email: string; link: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const t = useMessages(messages);
 
   // Start from the target's details every time the dialog opens.
   useEffect(() => {
@@ -52,9 +92,7 @@ export function StartPilotDialog({
       setCreated({ email, link: invitationLink(token) });
       onStarted?.();
     } catch {
-      toast.error("Couldn't start the pilot", {
-        description: "Check the details and your internet connection, then try again.",
-      });
+      toast.error(t.failed, { description: t.failedText });
     } finally {
       setBusy(false);
     }
@@ -71,11 +109,9 @@ export function StartPilotDialog({
     <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{created ? "Pilot started" : "Start a pilot"}</DialogTitle>
+          <DialogTitle>{created ? t.started : t.start}</DialogTitle>
           <DialogDescription>
-            {created
-              ? `${form.school.trim()} has TeachDesk with every Pro tool until the pilot ends.`
-              : "Creates the school and an invitation for its contact person, who becomes the school's admin and invites their colleagues."}
+            {created ? t.startedText(form.school.trim()) : t.startText}
           </DialogDescription>
         </DialogHeader>
 
@@ -83,34 +119,34 @@ export function StartPilotDialog({
           <>
             <InvitationLinkBox {...created} />
             <DialogFooter>
-              <Button onClick={onClose}>Done</Button>
+              <Button onClick={onClose}>{t.done}</Button>
             </DialogFooter>
           </>
         ) : (
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="pilot-school">School</Label>
+              <Label htmlFor="pilot-school">{t.school}</Label>
               <Input
                 {...field("school")}
                 required
                 maxLength={200}
-                placeholder="Enskede Gårds gymnasium"
+                placeholder={t.schoolPlaceholder}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pilot-email">Contact person's email</Label>
-              <Input {...field("email")} type="email" required placeholder="rektor@school.se" />
+              <Label htmlFor="pilot-email">{t.email}</Label>
+              <Input {...field("email")} type="email" required placeholder={t.emailPlaceholder} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pilot-days">Length of the pilot (days)</Label>
+              <Label htmlFor="pilot-days">{t.days}</Label>
               <Input {...field("days")} type="number" required min={1} max={365} className="w-28" />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {t.cancel}
               </Button>
               <Button type="submit" disabled={busy}>
-                Start pilot
+                {t.submit}
               </Button>
             </DialogFooter>
           </form>

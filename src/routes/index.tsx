@@ -8,7 +8,10 @@ import { HeroProduct, RetakeFlow } from "@/components/marketing/product-visuals"
 import { cn } from "@/lib/utils";
 import { SITE_URL } from "@/lib/site";
 import { PlanFeatures } from "@/components/plan-features";
-import { PLANS, PRICE_NOTE, TRIAL_DAYS, formatPrice, yearlyOffer, type Plan } from "@/lib/pricing";
+import { TRIAL_DAYS, formatPrice, plans, priceNote, yearlyOffer, type Plan } from "@/lib/pricing";
+
+// The public site is in English for now; the app itself is in Swedish or English.
+const PLANS = plans("en");
 
 const title = "TeachDesk — Lärarverktyget för prov, omprov och rättning";
 const description =
@@ -509,10 +512,10 @@ function Pricing() {
                   )}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
-                <p className="mt-8 text-4xl font-semibold tracking-tight">{formatPrice(p.price)}</p>
+                <p className="mt-8 text-4xl font-semibold tracking-tight">{formatPrice(p.price, "en")}</p>
                 <p className="text-xs text-muted-foreground">{p.unit}</p>
-                <p className="h-4 text-xs font-medium text-primary">{yearlyOffer(p)}</p>
-                <PlanFeatures plan={p} className="mt-8 flex-1" />
+                <p className="h-4 text-xs font-medium text-primary">{yearlyOffer(p, "en")}</p>
+                <PlanFeatures plan={p} language="en" className="mt-8 flex-1" />
                 <Button asChild className={cn("mt-8", p.badge && primaryBtn)} variant={p.badge ? "default" : "outline"}>
                   <Link to={cta.to}>{cta.label}</Link>
                 </Button>
@@ -520,7 +523,7 @@ function Pricing() {
             );
           })}
         </div>
-        <p className="mt-8 text-center text-sm text-muted-foreground">{PRICE_NOTE}</p>
+        <p className="mt-8 text-center text-sm text-muted-foreground">{priceNote("en")}</p>
       </div>
     </section>
   );

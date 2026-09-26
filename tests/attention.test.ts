@@ -36,7 +36,7 @@ function classOfTwo() {
 
 test("with nothing waiting there are no notes", () => {
   const { ws } = classOfTwo();
-  assert.deepEqual(attentionNotes(rules.attentionSummary(ws, afterTheExams), className), []);
+  assert.deepEqual(attentionNotes(rules.attentionSummary(ws, afterTheExams), className, "en"), []);
 });
 
 test("notes say what needs doing, most urgent first, and open the exam it's about", () => {
@@ -45,7 +45,7 @@ test("notes say what needs doing, most urgent first, and open the exam it's abou
   ws = rules.setAttendance(ws, "e1", leo.id, "absent");
   ws = rules.setAttendance(ws, "e1", sara.id, "completed");
 
-  const notes = attentionNotes(rules.attentionSummary(ws, afterTheExams), className);
+  const notes = attentionNotes(rules.attentionSummary(ws, afterTheExams), className, "en");
   assert.deepEqual(
     notes.map((n) => [n.kind, n.title, n.detail]),
     [
@@ -64,7 +64,11 @@ test("things spread over several exams link to the exams page", () => {
   ws = rules.setAttendance(ws, "e1", leo.id, "absent");
   ws = rules.setAttendance(ws, "e2", sara.id, "absent");
 
-  const [retakes, results] = attentionNotes(rules.attentionSummary(ws, afterTheExams), className);
+  const [retakes, results] = attentionNotes(
+    rules.attentionSummary(ws, afterTheExams),
+    className,
+    "en",
+  );
   assert.equal(retakes!.title, "2 retakes need scheduling");
   assert.equal(retakes!.detail, "Missed Integraler and 1 more");
   assert.equal(retakes!.to, "/app/exams");

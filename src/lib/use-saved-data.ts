@@ -16,6 +16,7 @@ import {
   type StoredProfile,
 } from "./cloud";
 import { createDemoWorkspace } from "./demo-data";
+import { defineMessages, readLanguage } from "./i18n";
 import { fetchSchools, type School } from "./schools";
 import { emptyWorkspace, type Workspace } from "./types";
 import {
@@ -26,6 +27,28 @@ import {
   workspaceFromItems,
   type SavedItems,
 } from "./workspace-items";
+
+const messages = defineMessages({
+  en: {
+    conflict: "Updated with changes made elsewhere",
+    conflictText:
+      "Something you edited was changed at the same time — by a colleague or on another device — so the latest version was loaded. Please check your last change.",
+    reloadFailed: "Couldn't load the latest version",
+    reloadFailedText: "Refresh the page to continue.",
+    demoNotSaved: "Couldn't save the demo in this browser",
+    demoNotSavedText: "Its storage is full or blocked, so demo changes are lost on refresh.",
+  },
+  sv: {
+    conflict: "Uppdaterat med ändringar som gjorts någon annanstans",
+    conflictText:
+      "Något du ändrade ändrades samtidigt — av en kollega eller på en annan enhet — så den senaste versionen laddades. Kontrollera din senaste ändring.",
+    reloadFailed: "Det gick inte att ladda den senaste versionen",
+    reloadFailedText: "Ladda om sidan för att fortsätta.",
+    demoNotSaved: "Det gick inte att spara exempeldatan i den här webbläsaren",
+    demoNotSavedText:
+      "Lagringen är full eller blockerad, så ändringar försvinner när sidan laddas om.",
+  },
+});
 
 export type LoadStatus = "loading" | "ready" | "error";
 export type WorkspaceChange = (ws: Workspace) => Workspace;
@@ -141,14 +164,11 @@ export function useCloudWorkspace(schoolId: string | null, moveFromBrowser: Work
         onConflict: async () => {
           try {
             show(await loadStored());
-            toast.warning("Updated with changes made elsewhere", {
-              description:
-                "Something you edited was changed at the same time — by a colleague or on another device — so the latest version was loaded. Please check your last change.",
-            });
+            const t = messages[readLanguage()];
+            toast.warning(t.conflict, { description: t.conflictText });
           } catch {
-            toast.error("Couldn't load the latest version", {
-              description: "Refresh the page to continue.",
-            });
+            const t = messages[readLanguage()];
+            toast.error(t.reloadFailed, { description: t.reloadFailedText });
           }
         },
         onStateChange: setSaveState,
@@ -223,20 +243,20 @@ export function useCloudWorkspace(schoolId: string | null, moveFromBrowser: Work
 /** The demo workspace: example data, kept in this browser only. */
 export function useDemoWorkspace(userId: string, moveFromBrowser: Workspace | null) {
   const [workspace, setWorkspace] = useState(
-    () => readDemoWorkspace(userId) ?? moveFromBrowser ?? createDemoWorkspace(),
+    () => readDemoWorkspace(userId) ?? moveFromBrowser ?? createDemoWorkspace(readLanguage()),
   );
   const warned = useRef(false);
 
   useEffect(() => {
     if (writeDemoWorkspace(userId, workspace) || warned.current) return;
     warned.current = true;
-    toast.error("Couldn't save the demo in this browser", {
-      description: "Its storage is full or blocked, so demo changes are lost on refresh.",
-    });
+    const t = messages[readLanguage()];
+    toast.error(t.demoNotSaved, { description: t.demoNotSavedText });
   }, [userId, workspace]);
 
   const update = useCallback((change: WorkspaceChange) => setWorkspace(change), []);
-  const reset = useCallback(() => setWorkspace(createDemoWorkspace()), []);
+  // A fresh demo, in the language chosen now.
+  const reset = useCallback(() => setWorkspace(createDemoWorkspace(readLanguage())), []);
 
   return { workspace, update, reset };
 }

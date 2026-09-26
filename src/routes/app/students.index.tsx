@@ -8,22 +8,92 @@ import { FollowUp } from "@/components/follow-up";
 import { EmptyState, PageHeader } from "@/components/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { defineMessages, useMessages } from "@/lib/i18n";
 import { FREE_CLASS_LIMIT } from "@/lib/pricing";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
+const messages = defineMessages({
+  en: {
+    pageTitle: "Students — TeachDesk",
+    title: "Students",
+    subtitle: "Your classes, and each student's progress, missing work and follow-ups.",
+    percent: (n: number) => `${n}%`,
+    classLimit: `The free plan includes ${FREE_CLASS_LIMIT} classes`,
+    classLimitText: "Upgrade to Pro for unlimited classes.",
+    seePlans: "See plans",
+    addStudents: "Add students",
+    deleteClass: "Delete class",
+    deleteClassTitle: (name: string) => `Delete ${name}?`,
+    deleteClassText:
+      "The class, its students and their exams, results and retakes are removed. This can't be undone.",
+    deleted: (name: string) => `${name} deleted`,
+    newClass: "New class",
+    firstClass: "Add your first class",
+    firstClassText:
+      "Create a class and paste in your student list. You can copy it straight from SchoolSoft or a spreadsheet.",
+    search: "Search students",
+    allClasses: "All classes",
+    noMatch: "No students match your search",
+    noStudents: "No students in this class yet",
+    tryAnother: "Try another name.",
+    pasteList: "Paste your student list to add everyone at once.",
+    columns: {
+      student: "Student",
+      class: "Class",
+      average: "Average",
+      attendance: "Attendance",
+      followUp: "Follow-up",
+      remove: "Remove",
+    },
+    removeLabel: (name: string) => `Remove ${name}`,
+    removeTitle: (name: string) => `Remove ${name}?`,
+    removeText: "Their exam results and retakes are removed too. This can't be undone.",
+    removeConfirm: "Remove student",
+    removed: (name: string) => `${name} removed`,
+  },
+  sv: {
+    pageTitle: "Elever — TeachDesk",
+    title: "Elever",
+    subtitle: "Dina klasser och varje elevs utveckling, saknade uppgifter och uppföljning.",
+    percent: (n) => `${n.toLocaleString("sv-SE")} %`,
+    classLimit: `Gratisplanen har plats för ${FREE_CLASS_LIMIT} klasser`,
+    classLimitText: "Uppgradera till Pro för obegränsat antal klasser.",
+    seePlans: "Se abonnemang",
+    addStudents: "Lägg till elever",
+    deleteClass: "Ta bort klassen",
+    deleteClassTitle: (name) => `Ta bort ${name}?`,
+    deleteClassText:
+      "Klassen, dess elever och deras prov, resultat och omprov tas bort. Det går inte att ångra.",
+    deleted: (name) => `${name} har tagits bort`,
+    newClass: "Ny klass",
+    firstClass: "Lägg till din första klass",
+    firstClassText:
+      "Skapa en klass och klistra in elevlistan. Du kan kopiera den direkt från SchoolSoft eller ett kalkylark.",
+    search: "Sök elever",
+    allClasses: "Alla klasser",
+    noMatch: "Inga elever matchar sökningen",
+    noStudents: "Inga elever i klassen än",
+    tryAnother: "Prova ett annat namn.",
+    pasteList: "Klistra in elevlistan för att lägga till alla på en gång.",
+    columns: {
+      student: "Elev",
+      class: "Klass",
+      average: "Snitt",
+      attendance: "Närvaro",
+      followUp: "Uppföljning",
+      remove: "Ta bort",
+    },
+    removeLabel: (name) => `Ta bort ${name}`,
+    removeTitle: (name) => `Ta bort ${name}?`,
+    removeText: "Elevens provresultat och omprov tas också bort. Det går inte att ångra.",
+    removeConfirm: "Ta bort eleven",
+    removed: (name) => `${name} har tagits bort`,
+  },
+});
+
 export const Route = createFileRoute("/app/students/")({
-  head: () => ({
-    meta: [
-      { title: "Students — TeachDesk" },
-      {
-        name: "description",
-        content: "Track every student's progress, missing work, attendance and follow-ups.",
-      },
-      { property: "og:title", content: "Students — TeachDesk" },
-      { property: "og:description", content: "Track progress, missing work and follow-ups." },
-    ],
-  }),
+  head: ({ match }) => ({ meta: [{ title: messages[match.context.language].pageTitle }] }),
   component: StudentsPage,
 });
 
@@ -39,6 +109,7 @@ function StudentsPage() {
     profile,
   } = useStore();
   const navigate = useNavigate();
+  const t = useMessages(messages);
   const [query, setQuery] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [dialog, setDialog] = useState<ClassDialogTarget | null>(null);
@@ -57,49 +128,49 @@ function StudentsPage() {
     [students, query, activeFilter],
   );
 
-  const percent = (n: number | undefined) => (n == null ? "—" : `${n}%`);
+  const percent = (n: number | undefined) => (n == null ? "—" : t.percent(n));
 
   // The free plan includes a few classes of your own; the demo has no limit.
   const startNewClass = () => {
     if (demoMode || profile.access.level === "pro" || classes.length < FREE_CLASS_LIMIT)
       return setDialog("new");
-    toast.info(`The free plan includes ${FREE_CLASS_LIMIT} classes`, {
-      description: "Upgrade to Pro for unlimited classes.",
-      action: { label: "See plans", onClick: () => void navigate({ to: "/app/pricing" }) },
+    toast.info(t.classLimit, {
+      description: t.classLimitText,
+      action: { label: t.seePlans, onClick: () => void navigate({ to: "/app/pricing" }) },
     });
   };
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        title="Students"
-        subtitle="Your classes, and each student's progress, missing work and follow-ups."
+        title={t.title}
+        subtitle={t.subtitle}
         actions={
           <>
             {selectedClass && (
               <>
                 <Button variant="outline" onClick={() => setDialog({ addTo: selectedClass.id })}>
-                  <UserPlus className="size-4" /> Add students
+                  <UserPlus className="size-4" /> {t.addStudents}
                 </Button>
                 <ConfirmButton
                   label={
                     <>
-                      <Trash2 className="size-4" /> Delete class
+                      <Trash2 className="size-4" /> {t.deleteClass}
                     </>
                   }
-                  title={`Delete ${selectedClass.name}?`}
-                  description="The class, its students and their exams, results and retakes are removed. This can't be undone."
-                  confirm="Delete class"
+                  title={t.deleteClassTitle(selectedClass.name)}
+                  description={t.deleteClassText}
+                  confirm={t.deleteClass}
                   onConfirm={() => {
                     removeClass(selectedClass.id);
                     setClassFilter("all");
-                    toast.success(`${selectedClass.name} deleted`);
+                    toast.success(t.deleted(selectedClass.name));
                   }}
                 />
               </>
             )}
             <Button onClick={startNewClass}>
-              <Plus className="size-4" /> New class
+              <Plus className="size-4" /> {t.newClass}
             </Button>
           </>
         }
@@ -108,11 +179,11 @@ function StudentsPage() {
       {classes.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="Add your first class"
-          description="Create a class and paste in your student list. You can copy it straight from SchoolSoft or a spreadsheet."
+          title={t.firstClass}
+          description={t.firstClassText}
           action={
             <Button onClick={startNewClass}>
-              <Plus className="size-4" /> New class
+              <Plus className="size-4" /> {t.newClass}
             </Button>
           }
         />
@@ -124,12 +195,12 @@ function StudentsPage() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search students"
+                placeholder={t.search}
                 className="pl-9"
               />
             </div>
             <div className="flex flex-wrap gap-1">
-              {[{ id: "all", name: "All classes" }, ...classes].map((c) => (
+              {[{ id: "all", name: t.allClasses }, ...classes].map((c) => (
                 <button
                   key={c.id}
                   onClick={() => setClassFilter(c.id)}
@@ -149,14 +220,12 @@ function StudentsPage() {
           {visible.length === 0 ? (
             <EmptyState
               icon={UserPlus}
-              title={query ? "No students match your search" : "No students in this class yet"}
-              description={
-                query ? "Try another name." : "Paste your student list to add everyone at once."
-              }
+              title={query ? t.noMatch : t.noStudents}
+              description={query ? t.tryAnother : t.pasteList}
               action={
                 !query && selectedClass ? (
                   <Button onClick={() => setDialog({ addTo: selectedClass.id })}>
-                    <UserPlus className="size-4" /> Add students
+                    <UserPlus className="size-4" /> {t.addStudents}
                   </Button>
                 ) : undefined
               }
@@ -166,13 +235,13 @@ function StudentsPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-muted/50">
                   <tr className="text-left">
-                    <Th>Student</Th>
-                    <Th>Class</Th>
-                    <Th className="text-right">Average</Th>
-                    <Th className="text-right">Attendance</Th>
-                    <Th className="text-right">Follow-up</Th>
+                    <Th>{t.columns.student}</Th>
+                    <Th>{t.columns.class}</Th>
+                    <Th className="text-right">{t.columns.average}</Th>
+                    <Th className="text-right">{t.columns.attendance}</Th>
+                    <Th className="text-right">{t.columns.followUp}</Th>
                     <Th className="w-10">
-                      <span className="sr-only">Remove</span>
+                      <span className="sr-only">{t.columns.remove}</span>
                     </Th>
                   </tr>
                 </thead>
@@ -206,13 +275,13 @@ function StudentsPage() {
                           <ConfirmButton
                             variant="ghost"
                             label={<Trash2 className="size-4" />}
-                            ariaLabel={`Remove ${s.name}`}
-                            title={`Remove ${s.name}?`}
-                            description="Their exam results and retakes are removed too. This can't be undone."
-                            confirm="Remove student"
+                            ariaLabel={t.removeLabel(s.name)}
+                            title={t.removeTitle(s.name)}
+                            description={t.removeText}
+                            confirm={t.removeConfirm}
                             onConfirm={() => {
                               removeStudent(s.id);
-                              toast.success(`${s.name} removed`);
+                              toast.success(t.removed(s.name));
                             }}
                           />
                         </td>

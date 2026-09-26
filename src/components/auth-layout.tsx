@@ -1,9 +1,21 @@
 import type { ReactNode } from "react";
 import { Logo } from "@/components/marketing/site-chrome";
+import { LANGUAGE_NAMES, useLanguage } from "@/lib/i18n";
 
 export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+  const { language, setLanguage } = useLanguage();
+  const other = language === "sv" ? "en" : "sv";
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-surface px-4 py-12">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-surface px-4 py-12">
+      {/* Before signing in, visitors can switch language here; afterwards it's in Settings. */}
+      <button
+        type="button"
+        lang={other}
+        onClick={() => setLanguage(other)}
+        className="absolute right-4 top-4 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        {LANGUAGE_NAMES[other]}
+      </button>
       <Logo className="mb-8" />
       <div className="w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-[var(--shadow-panel)] sm:p-8">
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>

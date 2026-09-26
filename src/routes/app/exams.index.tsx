@@ -5,37 +5,104 @@ import { toast } from "sonner";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { EmptyState, PageHeader, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
+import { EmptyState, PageHeader, ProgressBar, StatusPill } from "@/components/primitives";
+import { defineMessages, useLanguage, useMessages } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { GenerateExamDialog } from "@/components/generate-exam-dialog";
 import { NewExamDialog } from "@/components/new-exam-dialog";
 import { cn } from "@/lib/utils";
 import { examStage, type ExamStage } from "@/lib/workspace";
 
+const filters = ["all", "upcoming", "completed", "needs-grading", "retakes", "drafts"] as const;
+
+const messages = defineMessages({
+  en: {
+    pageTitle: "Exams — TeachDesk",
+    title: "Exams",
+    subtitle: "Create, manage and track your exams.",
+    generate: "Generate exam with AI",
+    newExam: "New exam",
+    search: "Search exams",
+    filters: {
+      all: "All",
+      upcoming: "Upcoming",
+      completed: "Completed",
+      "needs-grading": "Needs grading",
+      retakes: "Retakes",
+      drafts: "Drafts",
+    } satisfies Record<(typeof filters)[number], string>,
+    stages: {
+      draft: "Draft",
+      upcoming: "Upcoming",
+      "needs-grading": "Needs grading",
+      completed: "Completed",
+    } satisfies Record<ExamStage, string>,
+    noMatch: "No exams match this filter",
+    noMatchText: "Try another filter, or create a new exam to get started.",
+    details: (points: number, students: number) =>
+      `${points} points · ${students} ${students === 1 ? "student" : "students"}`,
+    absent: (n: number) => `${n} absent`,
+    retakes: (n: number) => `${n} ${n === 1 ? "retake" : "retakes"}`,
+    versions: (n: number) => `${n} ${n === 1 ? "version" : "versions"}`,
+    deleteLabel: (title: string) => `Delete ${title}`,
+    deleteTitle: (title: string) => `Delete ${title}?`,
+    deleteText: "Its questions, versions, results and retakes are deleted too. This can't be undone.",
+    deleteConfirm: "Delete exam",
+    deleted: (title: string) => `${title} deleted`,
+  },
+  sv: {
+    pageTitle: "Prov — TeachDesk",
+    title: "Prov",
+    subtitle: "Skapa, hantera och följ upp dina prov.",
+    generate: "Skapa prov med AI",
+    newExam: "Nytt prov",
+    search: "Sök prov",
+    filters: {
+      all: "Alla",
+      upcoming: "Kommande",
+      completed: "Klara",
+      "needs-grading": "Att rätta",
+      retakes: "Omprov",
+      drafts: "Utkast",
+    },
+    stages: {
+      draft: "Utkast",
+      upcoming: "Kommande",
+      "needs-grading": "Att rätta",
+      completed: "Klart",
+    },
+    noMatch: "Inga prov matchar filtret",
+    noMatchText: "Prova ett annat filter eller skapa ett nytt prov.",
+    details: (points, students) =>
+      `${points} poäng · ${students} ${students === 1 ? "elev" : "elever"}`,
+    absent: (n) => `${n} frånvarande`,
+    retakes: (n) => `${n} omprov`,
+    versions: (n) => `${n} ${n === 1 ? "version" : "versioner"}`,
+    deleteLabel: (title) => `Ta bort ${title}`,
+    deleteTitle: (title) => `Ta bort ${title}?`,
+    deleteText: "Frågor, versioner, resultat och omprov tas också bort. Det går inte att ångra.",
+    deleteConfirm: "Ta bort provet",
+    deleted: (title) => `${title} har tagits bort`,
+  },
+});
+
 export const Route = createFileRoute("/app/exams/")({
-  head: () => ({
-    meta: [
-      { title: "Exams — TeachDesk" },
-      { name: "description", content: "Create, manage and track exams, versions, attendance and retakes." },
-      { property: "og:title", content: "Exams — TeachDesk" },
-      { property: "og:description", content: "Create, manage and track your exams." },
-    ],
-  }),
+  head: ({ match }) => ({ meta: [{ title: messages[match.context.language].pageTitle }] }),
   component: ExamsPage,
 });
 
-const filters = ["All", "Upcoming", "Completed", "Needs grading", "Retakes", "Drafts"] as const;
-
-const stageLabel: Record<ExamStage, { text: string; tone: "neutral" | "primary" | "warning" | "success" }> = {
-  draft: { text: "Draft", tone: "neutral" },
-  upcoming: { text: "Upcoming", tone: "primary" },
-  "needs-grading": { text: "Needs grading", tone: "warning" },
-  completed: { text: "Completed", tone: "success" },
+const stageTone: Record<ExamStage, "neutral" | "primary" | "warning" | "success"> = {
+  draft: "neutral",
+  upcoming: "primary",
+  "needs-grading": "warning",
+  completed: "success",
 };
 
 function ExamsPage() {
   const { exams, retakes, classById, classSize, removeExam } = useStore();
-  const [filter, setFilter] = useState<(typeof filters)[number]>("All");
+  const { formatDate } = useLanguage();
+  const t = useMessages(messages);
+  const [filter, setFilter] = useState<(typeof filters)[number]>("all");
   const [query, setQuery] = useState("");
   // Which way of creating an exam is open, if any.
   const [creating, setCreating] = useState<"manual" | "ai" | null>(null);
@@ -50,15 +117,15 @@ function ExamsPage() {
         (classById(e.classId)?.name ?? "").toLowerCase().includes(query.toLowerCase());
       if (!matchesQuery) return false;
       switch (filter) {
-        case "Upcoming":
+        case "upcoming":
           return examStage(e) === "upcoming";
-        case "Completed":
+        case "completed":
           return examStage(e) === "completed";
-        case "Needs grading":
+        case "needs-grading":
           return examStage(e) === "needs-grading";
-        case "Drafts":
+        case "drafts":
           return examStage(e) === "draft";
-        case "Retakes":
+        case "retakes":
           return retakes.some((r) => r.examId === e.id);
         default:
           return true;
@@ -69,15 +136,15 @@ function ExamsPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        title="Exams"
-        subtitle="Create, manage and track your exams."
+        title={t.title}
+        subtitle={t.subtitle}
         actions={
           <>
             <Button variant="outline" onClick={() => setCreating("ai")}>
-              <Sparkles className="size-4" /> Generate exam with AI
+              <Sparkles className="size-4" /> {t.generate}
             </Button>
             <Button onClick={() => setCreating("manual")}>
-              <Plus className="size-4" /> New exam
+              <Plus className="size-4" /> {t.newExam}
             </Button>
           </>
         }
@@ -89,7 +156,7 @@ function ExamsPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search exams"
+            placeholder={t.search}
             className="pl-9"
           />
         </div>
@@ -103,7 +170,7 @@ function ExamsPage() {
                 filter === f ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-accent",
               )}
             >
-              {f}
+              {t.filters[f]}
             </button>
           ))}
         </div>
@@ -112,9 +179,9 @@ function ExamsPage() {
       {visible.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title="No exams match this filter"
-          description="Try another filter, or create a new exam to get started."
-          action={<Button onClick={() => setCreating("manual")}><Plus className="size-4" /> New exam</Button>}
+          title={t.noMatch}
+          description={t.noMatchText}
+          action={<Button onClick={() => setCreating("manual")}><Plus className="size-4" /> {t.newExam}</Button>}
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -123,7 +190,7 @@ function ExamsPage() {
             const done = e.attendance.filter((a) => a.status === "completed").length;
             const absent = e.attendance.filter((a) => a.status === "absent").length;
             const examRetakes = retakes.filter((r) => r.examId === e.id).length;
-            const stage = stageLabel[examStage(e)];
+            const stage = examStage(e);
             return (
               <div
                 key={e.id}
@@ -135,32 +202,32 @@ function ExamsPage() {
                       <p className="label-xs">{classById(e.classId)?.name}</p>
                       <p className="mt-1 text-[15px] font-semibold">{e.title}</p>
                     </div>
-                    <StatusPill tone={stage.tone}>{stage.text}</StatusPill>
+                    <StatusPill tone={stageTone[stage]}>{t.stages[stage]}</StatusPill>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {formatDate(e.date)} · {e.time} · {e.totalPoints} points · {total} students
+                    {formatDate(e.date)} · {e.time} · {t.details(e.totalPoints, total)}
                   </p>
                   <div className="mt-3 flex items-center gap-3">
-                    <ProgressBar value={total ? (done / total) * 100 : 0} tone={stage.tone === "success" ? "success" : "primary"} />
+                    <ProgressBar value={total ? (done / total) * 100 : 0} tone={stage === "completed" ? "success" : "primary"} />
                     <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{done}/{total}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5 pr-10">
-                    {absent > 0 && <StatusPill tone="danger">{absent} absent</StatusPill>}
-                    {examRetakes > 0 && <StatusPill tone="primary">{examRetakes} retakes</StatusPill>}
-                    <StatusPill>{e.versions.length} versions</StatusPill>
+                    {absent > 0 && <StatusPill tone="danger">{t.absent(absent)}</StatusPill>}
+                    {examRetakes > 0 && <StatusPill tone="primary">{t.retakes(examRetakes)}</StatusPill>}
+                    <StatusPill>{t.versions(e.versions.length)}</StatusPill>
                   </div>
                 </Link>
                 <div className="absolute bottom-2 right-2">
                   <ConfirmButton
                     variant="ghost"
                     label={<Trash2 className="size-4" />}
-                    ariaLabel={`Delete ${e.title}`}
-                    title={`Delete ${e.title}?`}
-                    description="Its questions, versions, results and retakes are deleted too. This can't be undone."
-                    confirm="Delete exam"
+                    ariaLabel={t.deleteLabel(e.title)}
+                    title={t.deleteTitle(e.title)}
+                    description={t.deleteText}
+                    confirm={t.deleteConfirm}
                     onConfirm={() => {
                       removeExam(e.id);
-                      toast.success(`${e.title} deleted`);
+                      toast.success(t.deleted(e.title));
                     }}
                   />
                 </div>

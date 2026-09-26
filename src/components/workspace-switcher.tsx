@@ -9,8 +9,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { defineMessages, useMessages } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+
+const messages = defineMessages({
+  en: {
+    demo: "Demo data",
+    personal: "Personal",
+    switchFailed: "Couldn't switch workspace",
+    tryAgain: "Please try again.",
+    switchLabel: (name: string) => `Workspace: ${name}. Switch workspace`,
+    workspaces: "Workspaces",
+    shared: "Shared with your school",
+    onlyYou: "Only you",
+    demoDetail: "Example classes to try things on",
+  },
+  sv: {
+    demo: "Exempeldata",
+    personal: "Personlig",
+    switchFailed: "Det gick inte att byta arbetsyta",
+    tryAgain: "Försök igen.",
+    switchLabel: (name) => `Arbetsyta: ${name}. Byt arbetsyta`,
+    workspaces: "Arbetsytor",
+    shared: "Delas med din skola",
+    onlyYou: "Bara du",
+    demoDetail: "Exempelklasser att prova saker på",
+  },
+});
 
 /**
  * Switches between the teacher's school workspace, their personal one and the demo. Only
@@ -20,11 +46,12 @@ import { cn } from "@/lib/utils";
 export function WorkspaceSwitcher({ className }: { className?: string }) {
   const { schools, openSchool, openWorkspace, demoMode, setDemoMode } = useStore();
   const navigate = useNavigate();
+  const t = useMessages(messages);
   if (schools.length === 0) return null;
 
   const current = demoMode
-    ? { icon: FlaskConical, name: "Demo data" }
-    : { icon: openSchool ? School : User, name: openSchool?.name ?? "Personal" };
+    ? { icon: FlaskConical, name: t.demo }
+    : { icon: openSchool ? School : User, name: openSchool?.name ?? t.personal };
 
   const open = async (change: () => Promise<void>) => {
     try {
@@ -32,8 +59,8 @@ export function WorkspaceSwitcher({ className }: { className?: string }) {
       // The page that was showing may not exist in the other workspace.
       await navigate({ to: "/app" });
     } catch (e) {
-      toast.error("Couldn't switch workspace", {
-        description: e instanceof Error ? e.message : "Please try again.",
+      toast.error(t.switchFailed, {
+        description: e instanceof Error ? e.message : t.tryAgain,
       });
     }
   };
@@ -46,7 +73,7 @@ export function WorkspaceSwitcher({ className }: { className?: string }) {
             "flex min-w-0 max-w-56 items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-accent",
             className,
           )}
-          aria-label={`Workspace: ${current.name}. Switch workspace`}
+          aria-label={t.switchLabel(current.name)}
         >
           <current.icon className="size-4 shrink-0 text-primary" />
           <span className="truncate">{current.name}</span>
@@ -54,29 +81,31 @@ export function WorkspaceSwitcher({ className }: { className?: string }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel className="text-xs text-muted-foreground">Workspaces</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          {t.workspaces}
+        </DropdownMenuLabel>
         {schools.map((school) => (
           <Option
             key={school.id}
             icon={School}
             name={school.name}
-            detail="Shared with your school"
+            detail={t.shared}
             active={!demoMode && openSchool?.id === school.id}
             onSelect={() => void open(() => openWorkspace(school.id))}
           />
         ))}
         <Option
           icon={User}
-          name="Personal"
-          detail="Only you"
+          name={t.personal}
+          detail={t.onlyYou}
           active={!demoMode && !openSchool}
           onSelect={() => void open(() => openWorkspace(null))}
         />
         <DropdownMenuSeparator />
         <Option
           icon={FlaskConical}
-          name="Demo data"
-          detail="Example classes to try things on"
+          name={t.demo}
+          detail={t.demoDetail}
           active={demoMode}
           onSelect={() => void open(() => setDemoMode(true))}
         />

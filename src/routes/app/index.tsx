@@ -12,58 +12,142 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { EmptyState, PageHeader, Panel, ProgressBar, StatCard, StatusPill, formatDate } from "@/components/primitives";
+import { EmptyState, PageHeader, Panel, ProgressBar, StatCard, StatusPill } from "@/components/primitives";
 import { attentionNotes, type AttentionKind } from "@/lib/attention";
+import { defineMessages, formatLongDate, useLanguage, useMessages } from "@/lib/i18n";
 import { useAttentionSummary, useCalendar, useStore } from "@/lib/store";
 
+const messages = defineMessages({
+  en: {
+    pageTitle: "Dashboard — TeachDesk",
+    greeting: (hour: number, name: string) =>
+      `${hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"}, ${name || "there"}`,
+    subtitle: "Here's what needs your attention.",
+    addClassTitle: "Start by adding your class",
+    addClassText:
+      "Create a class and paste in your student list. Exams, retakes and the gradebook then use your own students.",
+    addClass: "Add your class",
+    upcomingExams: "Upcoming exams",
+    next: (date: string) => `Next: ${date}`,
+    nonePlanned: "None planned",
+    toGrade: "To grade",
+    toGradeHint: (papers: number, submissions: number) =>
+      `${papers} exam papers · ${submissions} assignments`,
+    missingWork: "Missing work",
+    missingWorkHint: "Students with missed exams or assignments",
+    retakes: "Retakes",
+    needScheduling: (n: number) => `${n} need scheduling`,
+    needsAttention: "Needs attention",
+    needsAttentionText: "Items that block your day",
+    allCaughtUp: "You're all caught up — nothing needs your attention right now.",
+    viewAll: "View all",
+    noUpcoming: "No upcoming exams",
+    noUpcomingText: "Create an exam to get started.",
+    students: (n: number) => `${n} ${n === 1 ? "student" : "students"}`,
+    openExam: "Open exam",
+    completed: (done: number, total: number) => `${done}/${total} completed`,
+    absent: (n: number) => `${n} absent`,
+    today: "Today",
+    nothingToday: "Nothing scheduled today.",
+    noRoom: "No room booked",
+    retake: "Retake",
+    retakeQueue: "Retake queue",
+    noRetakes: "No retakes waiting.",
+    notScheduled: "Not scheduled",
+    scheduled: "Scheduled",
+    needsScheduling: "Needs scheduling",
+    cta: {
+      retakes: "Schedule retakes",
+      "exam-results": "Enter results",
+      assignments: "Start grading",
+      "follow-up": "Review students",
+    } satisfies Record<AttentionKind, string>,
+  },
+  sv: {
+    pageTitle: "Översikt — TeachDesk",
+    greeting: (hour, name) =>
+      `${hour < 12 ? "God morgon" : hour < 18 ? "God eftermiddag" : "God kväll"}${name ? `, ${name}` : ""}`,
+    subtitle: "Här är det som behöver din uppmärksamhet.",
+    addClassTitle: "Börja med att lägga till din klass",
+    addClassText:
+      "Skapa en klass och klistra in elevlistan. Prov, omprov och resultat använder sedan dina egna elever.",
+    addClass: "Lägg till din klass",
+    upcomingExams: "Kommande prov",
+    next: (date) => `Nästa: ${date}`,
+    nonePlanned: "Inga inplanerade",
+    toGrade: "Att rätta",
+    toGradeHint: (papers, submissions) => `${papers} prov · ${submissions} uppgifter`,
+    missingWork: "Att följa upp",
+    missingWorkHint: "Elever med missade prov eller uppgifter",
+    retakes: "Omprov",
+    needScheduling: (n) => `${n} behöver bokas`,
+    needsAttention: "Behöver göras",
+    needsAttentionText: "Det här bör du ta hand om först",
+    allCaughtUp: "Du är i fas — inget behöver din uppmärksamhet just nu.",
+    viewAll: "Visa alla",
+    noUpcoming: "Inga kommande prov",
+    noUpcomingText: "Skapa ett prov för att komma igång.",
+    students: (n) => `${n} ${n === 1 ? "elev" : "elever"}`,
+    openExam: "Öppna provet",
+    completed: (done, total) => `${done}/${total} klara`,
+    absent: (n) => `${n} frånvarande`,
+    today: "Idag",
+    nothingToday: "Inget inplanerat idag.",
+    noRoom: "Ingen sal bokad",
+    retake: "Omprov",
+    retakeQueue: "Omprovskö",
+    noRetakes: "Inga omprov väntar.",
+    notScheduled: "Inte bokat",
+    scheduled: "Bokat",
+    needsScheduling: "Behöver bokas",
+    cta: {
+      retakes: "Boka omprov",
+      "exam-results": "Fyll i resultat",
+      assignments: "Börja bedöma",
+      "follow-up": "Se eleverna",
+    },
+  },
+});
+
 export const Route = createFileRoute("/app/")({
-  head: () => ({
-    meta: [
-      { title: "Dashboard — TeachDesk" },
-      { name: "description", content: "See what needs your attention today: missed exams, grading, retakes and missing work." },
-      { property: "og:title", content: "Dashboard — TeachDesk" },
-      { property: "og:description", content: "See what needs your attention today across your classes." },
-    ],
-  }),
+  head: ({ match }) => ({ meta: [{ title: messages[match.context.language].pageTitle }] }),
   component: Dashboard,
 });
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
-}
-
-// How each kind of note looks on the dashboard, and what its button says.
-const noteStyle: Record<AttentionKind, { icon: typeof AlertTriangle; tone: "danger" | "warning" | "neutral"; cta: string }> = {
-  retakes: { icon: AlertTriangle, tone: "danger", cta: "Schedule retakes" },
-  "exam-results": { icon: ClipboardCheck, tone: "warning", cta: "Enter results" },
-  assignments: { icon: ClipboardList, tone: "warning", cta: "Start grading" },
-  "follow-up": { icon: FileWarning, tone: "neutral", cta: "Review students" },
+// How each kind of note looks on the dashboard.
+const noteStyle: Record<AttentionKind, { icon: typeof AlertTriangle; tone: "danger" | "warning" | "neutral" }> = {
+  retakes: { icon: AlertTriangle, tone: "danger" },
+  "exam-results": { icon: ClipboardCheck, tone: "warning" },
+  assignments: { icon: ClipboardList, tone: "warning" },
+  "follow-up": { icon: FileWarning, tone: "neutral" },
 };
 
 function Dashboard() {
   const { exams, profile, classById, classSize, classes, demoMode } = useStore();
+  const { language, formatDate } = useLanguage();
+  const t = useMessages(messages);
   const { today: todayEvents } = useCalendar();
   const summary = useAttentionSummary();
   const { upcoming, openRetakes, retakesToSchedule, papersToGrade, submissionsToGrade } = summary;
-  const notes = attentionNotes(summary, (classId) => classById(classId)?.name);
+  const notes = attentionNotes(summary, (classId) => classById(classId)?.name, language);
   const [nextExam] = upcoming;
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title={`${greeting()}, ${profile.name.trim().split(/\s+/)[0] || "there"}`} subtitle="Here's what needs your attention." />
+      <PageHeader
+        title={t.greeting(new Date().getHours(), profile.name.trim().split(/\s+/)[0] ?? "")}
+        subtitle={t.subtitle}
+      />
 
       {!demoMode && classes.length === 0 && (
         <div className="mb-6">
           <EmptyState
             icon={Users}
-            title="Start by adding your class"
-            description="Create a class and paste in your student list. Exams, retakes and the gradebook then use your own students."
+            title={t.addClassTitle}
+            description={t.addClassText}
             action={
               <Button asChild>
-                <Link to="/app/students">Add your class</Link>
+                <Link to="/app/students">{t.addClass}</Link>
               </Button>
             }
           />
@@ -72,37 +156,37 @@ function Dashboard() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Upcoming exams"
+          label={t.upcomingExams}
           value={upcoming.length}
-          hint={nextExam ? `Next: ${formatDate(nextExam.date)}` : "None planned"}
+          hint={nextExam ? t.next(formatDate(nextExam.date)) : t.nonePlanned}
           icon={BookOpen}
         />
         <StatCard
-          label="To grade"
+          label={t.toGrade}
           value={papersToGrade + submissionsToGrade}
-          hint={`${papersToGrade} exam papers · ${submissionsToGrade} assignments`}
+          hint={t.toGradeHint(papersToGrade, submissionsToGrade)}
           icon={ClipboardList}
         />
         <StatCard
-          label="Missing work"
+          label={t.missingWork}
           value={summary.studentsToFollowUp.length}
-          hint="Students with missed exams or assignments"
+          hint={t.missingWorkHint}
           icon={FileWarning}
         />
         <StatCard
-          label="Retakes"
+          label={t.retakes}
           value={openRetakes.length}
-          hint={`${retakesToSchedule.length} need scheduling`}
+          hint={t.needScheduling(retakesToSchedule.length)}
           icon={RefreshCw}
         />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="space-y-6">
-          <Panel title="Needs attention" description="Items that block your day">
+          <Panel title={t.needsAttention} description={t.needsAttentionText}>
             {notes.length === 0 ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="size-4 text-success" /> You're all caught up — nothing needs your attention right now.
+                <CheckCircle2 className="size-4 text-success" /> {t.allCaughtUp}
               </p>
             ) : (
               <div className="space-y-3">
@@ -110,6 +194,7 @@ function Dashboard() {
                   <AttentionCard
                     key={note.kind}
                     {...noteStyle[note.kind]}
+                    cta={t.cta[note.kind]}
                     title={note.title}
                     meta={note.detail}
                     names={note.names}
@@ -121,9 +206,9 @@ function Dashboard() {
             )}
           </Panel>
 
-          <Panel title="Upcoming exams" action={<Link className="text-xs font-medium text-primary" to="/app/exams">View all</Link>}>
+          <Panel title={t.upcomingExams} action={<Link className="text-xs font-medium text-primary" to="/app/exams">{t.viewAll}</Link>}>
             {upcoming.length === 0 ? (
-              <EmptyState icon={BookOpen} title="No upcoming exams" description="Create an exam to get started." />
+              <EmptyState icon={BookOpen} title={t.noUpcoming} description={t.noUpcomingText} />
             ) : (
               <ul className="space-y-3">
                 {upcoming.map((e) => {
@@ -137,17 +222,18 @@ function Dashboard() {
                           <p className="label-xs">{classById(e.classId)?.name}</p>
                           <p className="mt-1 text-sm font-semibold">{e.title}</p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {formatDate(e.date)} · {e.time} · {e.room} · {total} students
+                            {formatDate(e.date)} · {e.time} · {e.room} · {t.students(total)}
                           </p>
                         </div>
                         <Button size="sm" variant="outline" asChild>
-                          <Link to="/app/exams/$examId" params={{ examId: e.id }}>Open exam</Link>
+                          <Link to="/app/exams/$examId" params={{ examId: e.id }}>{t.openExam}</Link>
                         </Button>
                       </div>
                       <div className="mt-3 flex items-center gap-3">
                         <ProgressBar value={total ? (done / total) * 100 : 0} />
                         <span className="shrink-0 text-xs text-muted-foreground">
-                          {done}/{total} completed{absent ? ` · ${absent} absent` : ""}
+                          {t.completed(done, total)}
+                          {absent ? ` · ${t.absent(absent)}` : ""}
                         </span>
                       </div>
                     </li>
@@ -159,8 +245,8 @@ function Dashboard() {
         </div>
 
         <div className="space-y-6">
-          <Panel title="Today" description={new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}>
-            {todayEvents.length === 0 && <p className="px-2 py-2 text-sm text-muted-foreground">Nothing scheduled today.</p>}
+          <Panel title={t.today} description={formatLongDate(new Date(), language, true)}>
+            {todayEvents.length === 0 && <p className="px-2 py-2 text-sm text-muted-foreground">{t.nothingToday}</p>}
             <ol className="space-y-1">
               {todayEvents.map((ev) => (
                 <li key={ev.id} className="flex gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent">
@@ -168,17 +254,17 @@ function Dashboard() {
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">{ev.title}</span>
                     <span className="block text-xs text-muted-foreground">
-                      {[ev.room, ev.students ? `${ev.students} students` : null].filter(Boolean).join(" · ") || "No room booked"}
+                      {[ev.room, ev.students ? t.students(ev.students) : null].filter(Boolean).join(" · ") || t.noRoom}
                     </span>
                   </span>
-                  {ev.kind === "retake" && <StatusPill tone="primary">Retake</StatusPill>}
+                  {ev.kind === "retake" && <StatusPill tone="primary">{t.retake}</StatusPill>}
                 </li>
               ))}
             </ol>
           </Panel>
 
-          <Panel title="Retake queue" action={<CalendarClock className="size-4 text-muted-foreground" />}>
-            {openRetakes.length === 0 && <p className="text-sm text-muted-foreground">No retakes waiting.</p>}
+          <Panel title={t.retakeQueue} action={<CalendarClock className="size-4 text-muted-foreground" />}>
+            {openRetakes.length === 0 && <p className="text-sm text-muted-foreground">{t.noRetakes}</p>}
             <ul className="space-y-2 text-sm">
               {openRetakes.map((r) => {
                 const exam = exams.find((e) => e.id === r.examId);
@@ -187,11 +273,11 @@ function Dashboard() {
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{exam?.title}</span>
                       <span className="block text-xs text-muted-foreground">
-                        {r.status === "scheduled" ? `${formatDate(r.date!)} · ${r.time} · ${r.room}` : "Not scheduled"}
+                        {r.status === "scheduled" ? `${formatDate(r.date!)} · ${r.time} · ${r.room}` : t.notScheduled}
                       </span>
                     </span>
                     <StatusPill tone={r.status === "scheduled" ? "success" : "warning"}>
-                      {r.status === "scheduled" ? "Scheduled" : "Needs scheduling"}
+                      {r.status === "scheduled" ? t.scheduled : t.needsScheduling}
                     </StatusPill>
                   </li>
                 );

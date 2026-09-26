@@ -2,6 +2,7 @@ import { createFileRoute, Navigate, Outlet, useRouterState } from "@tanstack/rea
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { displayName, useAuth } from "@/lib/auth";
+import { defineMessages, useMessages } from "@/lib/i18n";
 import { StoreProvider } from "@/lib/store";
 
 export const Route = createFileRoute("/app")({
@@ -9,14 +10,20 @@ export const Route = createFileRoute("/app")({
   component: AppLayout,
 });
 
+const messages = defineMessages({
+  en: { loading: "Loading…" },
+  sv: { loading: "Laddar…" },
+});
+
 function AppLayout() {
   const { user, loading } = useAuth();
+  const t = useMessages(messages);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Remember where the visitor was headed; the path changes once the redirect starts.
   const [requestedPath] = useState(pathname);
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Loading…</div>;
+    return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">{t.loading}</div>;
   }
   if (!user) {
     return <Navigate to="/login" search={{ redirect: requestedPath }} replace />;

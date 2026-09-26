@@ -17,11 +17,35 @@ import {
   type LegacyAccount,
 } from "./browser-storage";
 import type { EditableProfile } from "./cloud";
+import { defineMessages, readLanguage, useLanguage, useMessages } from "./i18n";
 import { accessFor, type Access } from "./pricing";
 import type { School } from "./schools";
 import type { ClassGroup, QuestionDraft, Student, Workspace } from "./types";
 import { useCloudWorkspace, useDemoWorkspace, useProfile, useSchools } from "./use-saved-data";
 import * as rules from "./workspace";
+
+const messages = defineMessages({
+  en: {
+    teacher: "Teacher",
+    loading: "Loading your workspace…",
+    opening: (school: string) => `Opening ${school}…`,
+    unsaved: "Some changes haven't been saved yet. Check your internet connection and try again.",
+    loadFailed: "Couldn't load your workspace. Check your internet connection and try again.",
+    tryAgain: "Try again",
+    openPersonal: "Open your personal workspace instead",
+  },
+  sv: {
+    teacher: "Lärare",
+    loading: "Laddar din arbetsyta…",
+    opening: (school) => `Öppnar ${school}…`,
+    unsaved:
+      "Vissa ändringar är inte sparade än. Kontrollera internetanslutningen och försök igen.",
+    loadFailed:
+      "Det gick inte att ladda din arbetsyta. Kontrollera internetanslutningen och försök igen.",
+    tryAgain: "Försök igen",
+    openPersonal: "Öppna din personliga arbetsyta i stället",
+  },
+});
 
 /** The signed-in teacher as shown in the app. */
 export interface Profile {
@@ -119,14 +143,16 @@ export function StoreProvider({
   // to the teacher's account.
   const [legacy] = useState(() => readLegacyAccount(userId));
   const [legacyMoved, setLegacyMoved] = useState(false);
+  const { language } = useLanguage();
   const [profileDefaults] = useState<EditableProfile>(() => ({
     name: legacy?.profile.name ?? account.name,
-    role: legacy?.profile.role ?? "Teacher",
+    role: legacy?.profile.role ?? messages[language].teacher,
     school: legacy?.profile.school ?? "",
     // New teachers start in the demo so there is something to explore.
     showDemo: legacy?.showDemo ?? true,
   }));
 
+  const t = useMessages(messages);
   const teacher = useProfile(userId, profileDefaults);
   const member = useSchools(userId);
   const demo = useDemoWorkspace(userId, legacy?.demo ?? null);
@@ -175,7 +201,7 @@ export function StoreProvider({
     );
   }
   if (!stored || !schools || !profile) {
-    return <FullPageMessage>Loading your workspace…</FullPageMessage>;
+    return <FullPageMessage>{t.loading}</FullPageMessage>;
   }
 
   const openSchool =
@@ -228,6 +254,7 @@ function WorkspaceStore({
   children: ReactNode;
 }) {
   const cloud = useCloudWorkspace(school?.id ?? null, legacy?.own ?? null);
+  const t = useMessages(messages);
 
   const moved = legacy !== null && cloud.status === "ready" && cloud.saveState === "saved";
   useEffect(() => {
@@ -255,9 +282,7 @@ function WorkspaceStore({
       openWorkspace: async (schoolId) => {
         // Finish saving this workspace before leaving it.
         if (!(await flush())) {
-          throw new Error(
-            "Some changes haven't been saved yet. Check your internet connection and try again.",
-          );
+          throw new Error(messages[readLanguage()].unsaved);
         }
         onOpenSchool(schoolId);
         // Leaving the demo is saved to the profile, so the teacher's other devices follow.
@@ -324,29 +349,26 @@ function WorkspaceStore({
       <LoadError onRetry={() => void cloud.reload()}>
         {school && (
           <Button variant="link" className="mt-2" onClick={() => onOpenSchool(null)}>
-            Open your personal workspace instead
+            {t.openPersonal}
           </Button>
         )}
       </LoadError>
     );
   }
   if (cloud.status !== "ready") {
-    return (
-      <FullPageMessage>
-        {school ? `Opening ${school.name}…` : "Loading your workspace…"}
-      </FullPageMessage>
-    );
+    return <FullPageMessage>{school ? t.opening(school.name) : t.loading}</FullPageMessage>;
   }
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
 function LoadError({ onRetry, children }: { onRetry: () => void; children?: ReactNode }) {
+  const t = useMessages(messages);
   return (
     <FullPageMessage>
-      <p>Couldn't load your workspace. Check your internet connection and try again.</p>
+      <p>{t.loadFailed}</p>
       <Button className="mt-4" onClick={onRetry}>
-        Try again
+        {t.tryAgain}
       </Button>
       {children}
     </FullPageMessage>

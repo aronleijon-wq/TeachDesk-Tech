@@ -11,6 +11,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { defineMessages, useMessages } from "@/lib/i18n";
+
+const messages = defineMessages({
+  en: { cancel: "Cancel" },
+  sv: { cancel: "Avbryt" },
+});
 
 /** A button that asks for confirmation before doing something that can't be undone. */
 export function ConfirmButton({
@@ -31,6 +37,7 @@ export function ConfirmButton({
   /** "ghost" is a small icon button, e.g. a bin in a list. */
   variant?: "outline" | "ghost";
 }) {
+  const t = useMessages(messages);
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -48,7 +55,7 @@ export function ConfirmButton({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm}>{confirm}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

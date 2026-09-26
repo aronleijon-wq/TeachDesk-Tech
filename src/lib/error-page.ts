@@ -1,9 +1,29 @@
-export function renderErrorPage(): string {
+// The last-resort page when rendering fails, in the language chosen on the device (the
+// cookie lib/i18n sets): Swedish unless English was chosen.
+const texts = {
+  sv: {
+    title: "Sidan kunde inte laddas",
+    text: "Något gick fel hos oss. Ladda om sidan eller gå tillbaka till startsidan.",
+    tryAgain: "Försök igen",
+    home: "Till startsidan",
+  },
+  en: {
+    title: "This page didn't load",
+    text: "Something went wrong on our end. You can try refreshing or head back home.",
+    tryAgain: "Try again",
+    home: "Go home",
+  },
+};
+
+export function renderErrorPage(request?: Request): string {
+  const cookie = request?.headers.get("cookie") ?? "";
+  const language = /(?:^|;\s*)teachdesk-language=en(?:;|$)/.test(cookie) ? "en" : "sv";
+  const t = texts[language];
   return `<!doctype html>
-<html lang="en">
+<html lang="${language}">
   <head>
     <meta charset="utf-8" />
-    <title>This page didn't load</title>
+    <title>${t.title}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       body { font: 15px/1.5 system-ui, -apple-system, sans-serif; background: #fafafa; color: #111; display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 1.5rem; }
@@ -18,11 +38,11 @@ export function renderErrorPage(): string {
   </head>
   <body>
     <div class="card">
-      <h1>This page didn't load</h1>
-      <p>Something went wrong on our end. You can try refreshing or head back home.</p>
+      <h1>${t.title}</h1>
+      <p>${t.text}</p>
       <div class="actions">
-        <button class="primary" onclick="location.reload()">Try again</button>
-        <a class="secondary" href="/">Go home</a>
+        <button class="primary" onclick="location.reload()">${t.tryAgain}</button>
+        <a class="secondary" href="/">${t.home}</a>
       </div>
     </div>
   </body>

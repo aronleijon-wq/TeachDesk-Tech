@@ -47,30 +47,102 @@ import { SaveStatus } from "@/components/save-status";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { attentionNotes } from "@/lib/attention";
 import { useAuth } from "@/lib/auth";
+import { defineMessages, useLanguage, useMessages } from "@/lib/i18n";
 import { initialsOf, useAttentionSummary, useStore } from "@/lib/store";
 import { accessLabel } from "@/lib/pricing";
 
+const messages = defineMessages({
+  en: {
+    nav: {
+      dashboard: "Dashboard",
+      exams: "Exams",
+      assignments: "Assignments",
+      students: "Students",
+      calendar: "Calendar",
+      gradebook: "Gradebook",
+      analytics: "Analytics",
+      aiTools: "AI Tools",
+      demoRequests: "Demo requests",
+      schools: "Schools",
+      school: "School",
+      settings: "Settings",
+      help: "Help",
+    },
+    search: "Search",
+    searchPlaceholder: "Search students, exams, assignments, classes...",
+    noResults: "No results found.",
+    missing: (n: number) => `${n} missing`,
+    unsavedSignOut:
+      "Some changes haven't been saved yet because there's no internet connection. Sign out anyway?",
+    toggleSidebar: "Toggle sidebar",
+    settingsFor: (name: string) => `${name} — settings`,
+    notifications: "Notifications",
+    allCaughtUp: "You're all caught up.",
+    toggleTheme: "Toggle theme",
+    profileSettings: "Profile & settings",
+    schoolLink: (school: string) => `School — ${school}`,
+    addSchool: "Add your school",
+    planLink: (plan: string) => `Plan — ${plan}`,
+    otherLanguage: "På svenska",
+    signOut: "Sign out",
+  },
+  sv: {
+    nav: {
+      dashboard: "Översikt",
+      exams: "Prov",
+      assignments: "Uppgifter",
+      students: "Elever",
+      calendar: "Kalender",
+      gradebook: "Resultat",
+      analytics: "Analys",
+      aiTools: "AI-verktyg",
+      demoRequests: "Demoförfrågningar",
+      schools: "Skolor",
+      school: "Skola",
+      settings: "Inställningar",
+      help: "Hjälp",
+    },
+    search: "Sök",
+    searchPlaceholder: "Sök elever, prov, uppgifter, klasser...",
+    noResults: "Inga träffar.",
+    missing: (n) => `${n} saknas`,
+    unsavedSignOut:
+      "Vissa ändringar är inte sparade än eftersom internetanslutningen saknas. Logga ut ändå?",
+    toggleSidebar: "Visa eller dölj sidomenyn",
+    settingsFor: (name) => `${name} — inställningar`,
+    notifications: "Aviseringar",
+    allCaughtUp: "Du är i fas.",
+    toggleTheme: "Byt mellan ljust och mörkt",
+    profileSettings: "Profil och inställningar",
+    schoolLink: (school) => `Skola — ${school}`,
+    addSchool: "Lägg till din skola",
+    planLink: (plan) => `Abonnemang — ${plan}`,
+    otherLanguage: "In English",
+    signOut: "Logga ut",
+  },
+});
+
 const nav = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/app/exams", label: "Exams", icon: BookOpen },
-  { to: "/app/assignments", label: "Assignments", icon: ClipboardList },
-  { to: "/app/students", label: "Students", icon: Users },
-  { to: "/app/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/app/gradebook", label: "Gradebook", icon: Table2 },
-  { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/app/ai-tools", label: "AI Tools", icon: Sparkles },
+  { to: "/app", key: "dashboard", icon: LayoutDashboard },
+  { to: "/app/exams", key: "exams", icon: BookOpen },
+  { to: "/app/assignments", key: "assignments", icon: ClipboardList },
+  { to: "/app/students", key: "students", icon: Users },
+  { to: "/app/calendar", key: "calendar", icon: CalendarDays },
+  { to: "/app/gradebook", key: "gradebook", icon: Table2 },
+  { to: "/app/analytics", key: "analytics", icon: BarChart3 },
+  { to: "/app/ai-tools", key: "aiTools", icon: Sparkles },
 ] as const;
 
 // Only shown to those it's for; the database enforces access either way.
 const staffNav = [
-  { to: "/app/admin", label: "Demo requests", icon: Inbox },
-  { to: "/app/admin/schools", label: "Schools", icon: School },
+  { to: "/app/admin", key: "demoRequests", icon: Inbox },
+  { to: "/app/admin/schools", key: "schools", icon: School },
 ] as const;
-const schoolAdminNav = { to: "/app/school", label: "School", icon: School } as const;
+const schoolAdminNav = { to: "/app/school", key: "school", icon: School } as const;
 
 const secondary = [
-  { to: "/app/settings", label: "Settings", icon: Settings },
-  { to: "/app/help", label: "Help", icon: LifeBuoy },
+  { to: "/app/settings", key: "settings", icon: Settings },
+  { to: "/app/help", key: "help", icon: LifeBuoy },
 ] as const;
 
 /** True if the nav link leads to this page or one inside it; the dashboard only matches itself. */
@@ -89,27 +161,28 @@ function useDarkMode() {
 
 function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { exams, assignments, students, classById } = useStore();
+  const t = useMessages(messages);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden p-0 sm:max-w-lg">
-        <DialogTitle className="sr-only">Search</DialogTitle>
+        <DialogTitle className="sr-only">{t.search}</DialogTitle>
         <Command>
-          <CommandInput placeholder="Search students, exams, assignments, classes..." />
+          <CommandInput placeholder={t.searchPlaceholder} />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup heading="Students">
+            <CommandEmpty>{t.noResults}</CommandEmpty>
+            <CommandGroup heading={t.nav.students}>
               {students.slice(0, 40).map((s) => (
                 <CommandItem key={s.id} value={`${s.name} ${classById(s.classId)?.name}`} asChild>
                   <Link to="/app/students/$studentId" params={{ studentId: s.id }} onClick={() => onOpenChange(false)}>
                     <span className="font-medium">{s.name}</span>
                     <span className="ml-2 text-xs text-muted-foreground">
-                      {classById(s.classId)?.name} · {s.missingWork} missing
+                      {classById(s.classId)?.name} · {t.missing(s.missingWork)}
                     </span>
                   </Link>
                 </CommandItem>
               ))}
             </CommandGroup>
-            <CommandGroup heading="Exams">
+            <CommandGroup heading={t.nav.exams}>
               {exams.map((e) => (
                 <CommandItem key={e.id} value={e.title} asChild>
                   <Link to="/app/exams/$examId" params={{ examId: e.id }} onClick={() => onOpenChange(false)}>
@@ -119,7 +192,7 @@ function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                 </CommandItem>
               ))}
             </CommandGroup>
-            <CommandGroup heading="Assignments">
+            <CommandGroup heading={t.nav.assignments}>
               {assignments.map((a) => (
                 <CommandItem key={a.id} value={a.title} asChild>
                   <Link to="/app/assignments" onClick={() => onOpenChange(false)}>
@@ -142,11 +215,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { dark, setDark } = useDarkMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { profile, flush, schools, openSchool, classById } = useStore();
-  const notes = attentionNotes(useAttentionSummary(), (classId) => classById(classId)?.name);
+  const { language, setLanguage } = useLanguage();
+  const t = useMessages(messages);
+  const notes = attentionNotes(
+    useAttentionSummary(),
+    (classId) => classById(classId)?.name,
+    language,
+  );
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
-  const teacher = { ...profile, initials: initialsOf(profile.name), plan: accessLabel(profile.access) };
+  const teacher = { ...profile, initials: initialsOf(profile.name), plan: accessLabel(profile.access, language) };
   const schoolName = openSchool?.name ?? teacher.school;
   const subtitle = [schoolName, teacher.plan].filter(Boolean).join(" · ");
   const extraNav = [...(isAdmin ? staffNav : []), ...(openSchool?.role === "admin" ? [schoolAdminNav] : [])];
@@ -157,7 +236,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const handleSignOut = async () => {
     // Finish saving first; without internet, ask before leaving unsaved changes behind.
     const saved = await flush();
-    if (!saved && !window.confirm("Some changes haven't been saved yet because there's no internet connection. Sign out anyway?")) {
+    if (!saved && !window.confirm(t.unsavedSignOut)) {
       return;
     }
     await signOut();
@@ -190,18 +269,32 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <nav className="flex-1 space-y-0.5 px-2 py-2">
             {nav.map((item) => (
-              <NavLink key={item.to} {...item} active={item === active} collapsed={collapsed} />
+              <NavLink
+                key={item.to}
+                to={item.to}
+                label={t.nav[item.key]}
+                icon={item.icon}
+                active={item === active}
+                collapsed={collapsed}
+              />
             ))}
             <div className="my-3 border-t border-sidebar-border" />
             {[...extraNav, ...secondary].map((item) => (
-              <NavLink key={item.to} {...item} active={item === active} collapsed={collapsed} />
+              <NavLink
+                key={item.to}
+                to={item.to}
+                label={t.nav[item.key]}
+                icon={item.icon}
+                active={item === active}
+                collapsed={collapsed}
+              />
             ))}
           </nav>
 
           <div className="border-t border-sidebar-border p-2">
             <Link
               to="/app/settings"
-              aria-label={collapsed ? `${teacher.name} — settings` : undefined}
+              aria-label={collapsed ? t.settingsFor(teacher.name) : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-sidebar-accent",
                 collapsed && "justify-center",
@@ -229,14 +322,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               size="icon"
               className="hidden md:inline-flex"
               onClick={() => setCollapsed((v) => !v)}
-              aria-label="Toggle sidebar"
+              aria-label={t.toggleSidebar}
             >
               {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
             </Button>
             <WorkspaceSwitcher />
             {/* On phones the workspace name takes the title's place; pages show their own title. */}
             <p className={cn("truncate text-sm font-semibold", schools.length > 0 && "hidden md:block")}>
-              {active?.label ?? "TeachDesk"}
+              {active ? t.nav[active.key] : "TeachDesk"}
             </p>
             <SaveStatus />
 
@@ -246,24 +339,24 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className="hidden h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm text-muted-foreground transition-colors hover:bg-accent sm:flex"
               >
                 <Search className="size-4" />
-                <span>Search</span>
+                <span>{t.search}</span>
                 <kbd className="ml-6 rounded border border-border px-1.5 text-[10px]">⌘K</kbd>
               </button>
-              <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => setSearchOpen(true)} aria-label="Search">
+              <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => setSearchOpen(true)} aria-label={t.search}>
                 <Search className="size-4" />
               </Button>
 
               <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+                  <Button variant="ghost" size="icon" aria-label={t.notifications} className="relative">
                     <Bell className="size-4" />
                     {notes.length > 0 && <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-80 p-0">
-                  <div className="border-b border-border px-4 py-3 text-sm font-semibold">Notifications</div>
+                  <div className="border-b border-border px-4 py-3 text-sm font-semibold">{t.notifications}</div>
                   {notes.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-muted-foreground">You're all caught up.</p>
+                    <p className="px-4 py-3 text-sm text-muted-foreground">{t.allCaughtUp}</p>
                   ) : (
                     <ul className="divide-y divide-border text-sm">
                       {notes.map((note) => (
@@ -284,10 +377,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </PopoverContent>
               </Popover>
 
-              <Button variant="ghost" size="icon" aria-label="Toggle theme" onClick={() => setDark(!dark)}>
+              <Button variant="ghost" size="icon" aria-label={t.toggleTheme} onClick={() => setDark(!dark)}>
                 {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
               </Button>
-              <Button variant="ghost" size="icon" asChild aria-label="Help">
+              <Button variant="ghost" size="icon" asChild aria-label={t.nav.help}>
                 <Link to="/app/help">
                   <HelpCircle className="size-4" />
                 </Link>
@@ -306,22 +399,28 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/app/settings">Profile & settings</Link>
+                    <Link to="/app/settings">{t.profileSettings}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/app/settings">{schoolName ? `School — ${schoolName}` : "Add your school"}</Link>
+                    <Link to="/app/settings">{schoolName ? t.schoolLink(schoolName) : t.addSchool}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/app/pricing">Plan — {teacher.plan}</Link>
+                    <Link to="/app/pricing">{t.planLink(teacher.plan)}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    lang={language === "sv" ? "en" : "sv"}
+                    onSelect={() => setLanguage(language === "sv" ? "en" : "sv")}
+                  >
+                    {t.otherLanguage}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   {isAdmin &&
                     staffNav.map((item) => (
                       <DropdownMenuItem key={item.to} asChild>
-                        <Link to={item.to}>{item.label}</Link>
+                        <Link to={item.to}>{t.nav[item.key]}</Link>
                       </DropdownMenuItem>
                     ))}
-                  <DropdownMenuItem onSelect={() => void handleSignOut()}>Sign out</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => void handleSignOut()}>{t.signOut}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -342,7 +441,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               )}
             >
               <item.icon className="size-4" />
-              {item.label}
+              {t.nav[item.key]}
             </Link>
           ))}
         </nav>

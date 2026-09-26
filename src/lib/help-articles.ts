@@ -1,8 +1,10 @@
-// The help center's articles. The Help page shows them, and the Ask AI assistant answers
-// from them, so both always describe TeachDesk the same way. Plan details come from
-// pricing.ts so they can't drift from the Plans page.
+// The help center's articles, in Swedish and English. The Help page shows them, and the Ask AI
+// assistant answers from them, so both always describe TeachDesk the same way. Plan details
+// come from pricing.ts so they can't drift from the Plans page. The articles name buttons and
+// pages exactly as they read in that language.
 import { LEGAL } from "./legal";
-import { FREE_AI_PER_MONTH, FREE_CLASS_LIMIT, PLANS, TRIAL_DAYS, formatPrice } from "./pricing";
+import type { Language } from "./messages";
+import { FREE_AI_PER_MONTH, FREE_CLASS_LIMIT, TRIAL_DAYS, formatPrice, plans } from "./pricing";
 
 export interface HelpArticle {
   id: string;
@@ -22,11 +24,10 @@ export interface HelpCategory {
   articles: HelpArticle[];
 }
 
-const pro = PLANS.find((p) => p.name === "Pro");
-const proPrice = pro?.price ? `${formatPrice(pro.price)} per month` : "a monthly price";
-const proYearly = pro?.yearlyPrice ? ` (or ${formatPrice(pro.yearlyPrice)} per year)` : "";
+const pro = plans("en").find((p) => p.name === "Pro");
+const price = (sek: number | null | undefined) => formatPrice(sek ?? null, "sv");
 
-export const HELP_CATEGORIES: HelpCategory[] = [
+const english: HelpCategory[] = [
   {
     id: "getting-started",
     title: "Getting started",
@@ -59,7 +60,7 @@ export const HELP_CATEGORIES: HelpCategory[] = [
           "Open Students and click New class.",
           "Enter the class name, and the subject and room if you like.",
           "Paste the student list, one student per line. You can copy it straight from SchoolSoft, Excel or Google Sheets.",
-          "Click Create. The students are added right away.",
+          "Click Create class. The students are added right away.",
         ],
         details: [
           "Names can be written “First Last” or “Last, First”, with an email address on the same line if you have one.",
@@ -139,7 +140,7 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         summary:
           "Open the exam and click Print. Choose the version, and the student copy or the answer key, then click Print or save as PDF.",
         details: [
-          "The student copy has lines for the name and class and room for every answer. The answer key (facit) shows each question's answer and grading criteria. Both are laid out for A4, with the headings in Swedish.",
+          "The student copy has lines for the name and class and room for every answer. The answer key shows each question's answer and grading criteria. Both are laid out for A4, in the language TeachDesk is set to.",
           "For a PDF, choose Save as PDF in the print dialog. The exam needs its questions first.",
         ],
       },
@@ -316,9 +317,19 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         summary: `Every new account gets ${TRIAL_DAYS} days of Pro for free. Afterwards you keep the free plan unless you upgrade.`,
         details: [
           `Free: up to ${FREE_CLASS_LIMIT} classes and ${FREE_AI_PER_MONTH} AI-generated retakes per month.`,
-          `Pro: ${proPrice}${proYearly} — unlimited classes and AI retakes, generating new exams with AI, and importing existing exams from PDFs and photos.`,
+          `Pro: ${price(pro?.price)} per month (or ${price(pro?.yearlyPrice)} per year) — unlimited classes and AI retakes, generating new exams with AI, and importing existing exams from PDFs and photos.`,
           "Enterprise: for whole schools and municipalities, with invoice billing. Contact us for a quote.",
           "To change plan, open the account menu (your initials, top right) and choose Plan.",
+        ],
+      },
+      {
+        id: "language",
+        title: "Change the language",
+        summary:
+          "TeachDesk is in Swedish or English. Change it in Settings → Language, or choose På svenska in the account menu (your initials, top right).",
+        details: [
+          "On the sign-in page, use the link at the top right. The choice is saved on this device.",
+          "Printed exams and AI's notes to you follow the language you choose.",
         ],
       },
       {
@@ -343,13 +354,341 @@ export const HELP_CATEGORIES: HelpCategory[] = [
   },
 ];
 
+const swedish: HelpCategory[] = [
+  {
+    id: "getting-started",
+    title: "Kom igång",
+    description: "Grunderna, din första klass och hur allt sparas.",
+    articles: [
+      {
+        id: "what-is-teachdesk",
+        title: "Vad är TeachDesk?",
+        summary:
+          "TeachDesk samlar prov, omprov, rättning och elevuppföljning på ett ställe. Det fungerar vid sidan av SchoolSoft, Vklass och Unikum i stället för att ersätta dem.",
+        details: [
+          "Översikten visar det som behöver din uppmärksamhet: omprov att boka, prov och uppgifter att rätta, och elever att följa upp.",
+        ],
+      },
+      {
+        id: "demo-data",
+        title: "Exempeldata eller dina egna klasser",
+        summary:
+          "Nya konton börjar med exempeldata — exempelklasser och exempelelever att utforska. Stäng av det under Inställningar → Visa exempeldata för att arbeta med dina egna klasser.",
+        details: [
+          "Exempeldatan finns bara i den här webbläsaren. Inget tas bort när du byter mellan exempeldatan och dina egna klasser.",
+          "Vill du börja om med exempeldatan väljer du Inställningar → Återställ exempeldata. Dina egna klasser påverkas inte.",
+        ],
+      },
+      {
+        id: "first-class",
+        title: "Lägg till din första klass",
+        summary: "Gå till Elever → Ny klass, ge klassen ett namn och klistra in elevlistan.",
+        steps: [
+          "Öppna Elever och klicka på Ny klass.",
+          "Skriv klassens namn, och ämne och sal om du vill.",
+          "Klistra in elevlistan, en elev per rad. Du kan kopiera den direkt från SchoolSoft, Excel eller Google Kalkylark.",
+          "Klicka på Skapa klassen. Eleverna läggs till direkt.",
+        ],
+        details: [
+          "Namn kan skrivas ”Förnamn Efternamn” eller ”Efternamn, Förnamn”, med en e-postadress på samma rad om du har en.",
+          `Gratisplanen har plats för ${FREE_CLASS_LIMIT} klasser; Pro har ingen gräns.`,
+        ],
+      },
+      {
+        id: "saving",
+        title: "Sparas mitt arbete?",
+        summary:
+          "Ja. Dina ändringar sparas automatiskt på ditt konto, så att de finns på alla enheter. Statusen bredvid sidans rubrik visar Sparat, Sparar… eller Inte sparat — försöker igen.",
+        details: [
+          "Utan internet fortsätter TeachDesk att försöka, och frågar innan du stänger fliken med osparade ändringar.",
+          "Om en kollega eller en annan enhet ändrade samma sak i samma stund laddas den senaste versionen, och du ombeds kontrollera din senaste ändring.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "exams",
+    title: "Prov och omprov",
+    description: "Skapa prov, markera närvaro och boka omprov.",
+    articles: [
+      {
+        id: "create-exam",
+        title: "Skapa ett prov",
+        summary:
+          "Gå till Prov → Nytt prov och följ tre korta steg: grunduppgifter, frågor och granskning.",
+        steps: [
+          "Fyll i provets namn, klass, datum, tid och sal.",
+          "Välj hur frågorna ska läggas till: skriv dem själv, importera ett befintligt prov (ladda upp en PDF eller ett foto, eller klistra in texten), eller återanvänd ett tidigare prov.",
+          "Kontrollera sammanfattningen, lägg till lärandemål om du vill och klicka på Skapa provet.",
+        ],
+        details: [
+          "Att importera ett befintligt prov ingår i Pro. Skriver du frågorna själv lägger du till dem under provets flik Frågor när provet har skapats.",
+          "Vill du att AI skriver ett nytt prov åt dig använder du Skapa prov med AI i stället.",
+        ],
+      },
+      {
+        id: "import-exam",
+        title: "Importera ett befintligt prov",
+        summary:
+          "Har du redan ett prov som PDF, foto eller text? Välj Importera ett befintligt prov under Prov → Nytt prov. AI gör om det till samma frågor i TeachDesk, med poäng, svar och bedömningskriterier.",
+        details: [
+          "Dina formuleringar behålls, och finns det ett facit i filen används det för svaren. Kontrollera frågorna innan du skapar provet; du kan ändra dem efteråt.",
+          "När provet finns i TeachDesk kan du rätta det, återanvända det och skapa en omprovsversion av det. Vill du i stället få ett nytt prov använder du Skapa prov med AI.",
+          "Att importera prov ingår i Pro.",
+        ],
+      },
+      {
+        id: "generate-exam",
+        title: "Skapa ett prov med AI",
+        summary:
+          "Gå till Prov → Skapa prov med AI. Beskriv provet med egna ord, lägg till material att utgå från, eller både och.",
+        steps: [
+          "Välj klass.",
+          "Beskriv provet, till exempel områden, längd och nivå. Eller släpp in ett tidigare prov, kursmaterial eller en lista (PDF, foto, CSV- eller textfil).",
+          "Klicka på Skapa prov. Efter ungefär en halv minut ser du frågorna: kontrollera dem, välj datum och klicka på Skapa provet.",
+        ],
+        details: [
+          "Med material skriver AI ett nytt prov i samma stil och på samma nivå; frågorna kopieras inte.",
+          "Att skapa prov med AI ingår i Pro. Du kan ändra alla frågor efteråt.",
+        ],
+      },
+      {
+        id: "write-questions",
+        title: "Skriv eller ändra frågor",
+        summary:
+          "Öppna provets flik Frågor. Klicka på Lägg till fråga för att skriva en ny, eller på Redigera för att ändra en.",
+        details: [
+          "Nya frågor läggs till i Version A, originalet. Provets totalpoäng följer frågorna.",
+        ],
+      },
+      {
+        id: "print-exam",
+        title: "Skriv ut ett prov eller spara det som PDF",
+        summary:
+          "Öppna provet och klicka på Skriv ut. Välj version och Elevens exemplar eller Facit, och klicka sedan på Skriv ut eller spara som PDF.",
+        details: [
+          "Elevens exemplar har rader för namn och klass och plats för varje svar. Facit visar varje frågas svar och bedömningskriterier. Båda är anpassade för A4 och skrivs på det språk TeachDesk är inställt på.",
+          "För en PDF väljer du Spara som PDF i utskriftsdialogen. Provet behöver ha frågor först.",
+        ],
+      },
+      {
+        id: "delete-exam",
+        title: "Ta bort ett prov",
+        summary:
+          "Klicka på papperskorgen på provets kort på sidan Prov, eller öppna provet och klicka på Ta bort provet. Du får bekräfta först.",
+        details: [
+          "När ett prov tas bort försvinner också dess frågor, versioner, resultat och omprov. Det går inte att ångra.",
+        ],
+      },
+      {
+        id: "attendance",
+        title: "Markera vilka som skrev provet",
+        summary:
+          "Öppna provets flik Närvaro och markera eleverna som var frånvarande. Klicka sedan på Markera de övriga … som närvarande, eller på Markera alla som närvarande om ingen var borta.",
+        details: [
+          "Elever som markeras som Frånvarande hamnar direkt i omprovskön. Du kan också markera varje elev som Närvarande, Frånvarande eller Ej markerad, en i taget.",
+          "Markerar du en elev som Närvarande senare — till exempel efter omprovet — försvinner eleven ur kön.",
+        ],
+      },
+      {
+        id: "schedule-retake",
+        title: "Boka ett omprov",
+        summary:
+          "Öppna provets flik Omprov och välj datum, tid och sal för varje elev som missade provet.",
+        details: [
+          "När flera elever behöver omprov kan du boka samma tid för alla högst upp under fliken Omprov. Använd Boka om för att flytta en enskild elev.",
+          "Bokade omprov syns i kalendern och i omprovskön på översikten.",
+          "När eleven har skrivit omprovet markerar du eleven som Närvarande under fliken Närvaro och fyller i resultatet.",
+        ],
+      },
+      {
+        id: "equivalent-version",
+        title: "Skapa en likvärdig omprovsversion med AI",
+        summary:
+          "Öppna provet och klicka på Skapa likvärdig version. AI skriver en ny version som prövar samma förmågor för samma poäng, med nya siffror och sammanhang.",
+        details: [
+          "Provet behöver ha frågor först. Du granskar varje fråga och godkänner versionen under fliken Versioner innan den används.",
+          `Gratisplanen har ${FREE_AI_PER_MONTH} omprov skapade med AI per månad. Pro och skollicenser har ingen gräns.`,
+        ],
+      },
+    ],
+  },
+  {
+    id: "grading",
+    title: "Rättning och resultat",
+    description: "Fyll i resultat och se hur eleverna ligger till.",
+    articles: [
+      {
+        id: "enter-results",
+        title: "Fyll i provresultat",
+        summary:
+          "Öppna provets flik Rättning och fyll i varje elevs resultat. Eleverna visas där när de är markerade som Närvarande.",
+        details: [
+          "Att rätta på översikten räknar prov utan resultat när provdagen har passerat, plus inlämnade uppgifter som väntar på bedömning.",
+          "Med Pro kan AI föreslå resultat utifrån elevernas färdiga prov: se Rätta prov med AI.",
+        ],
+      },
+      {
+        id: "grade-with-ai",
+        title: "Rätta prov med AI",
+        summary:
+          "Öppna provets flik Rättning och släpp in elevernas färdiga prov, en fil per elev (en PDF, eller ett foto för prov på en sida). AI föreslår poäng för varje fråga, med en motivering.",
+        steps: [
+          "Skanna eller fotografera varje elevs prov. Skanningsappar i mobilen kan göra en PDF per elev.",
+          "Släpp filerna under fliken Rättning. AI rättar ungefär tre prov åt gången, cirka en halv minut per prov, och hittar eleven via namnet på provet. Går det inte väljer du eleven själv. Stanna på fliken Rättning tills det är klart.",
+          "Under Att granska kontrollerar du varje elev: öppna Granska för att se svaren, ändra poängen där du inte håller med och klicka på Godkänn. Bara godkända resultat räknas.",
+        ],
+        details: [
+          "Svar som är svåra att läsa eller tvetydiga markeras med Kontrollera. AI rättar mot varje frågas förväntade svar och bedömningskriterier, så fyll i dem för bästa förslag.",
+          "När flera elever inte har något markerat med Kontrollera kan du godkänna alla på en gång med Godkänn … utan anmärkningar. Poäng du har ändrat behålls.",
+          "TeachDesk sparar inte de uppladdade filerna; de skickas bara för att läsas. Att rätta med AI ingår i Pro.",
+        ],
+      },
+      {
+        id: "gradebook",
+        title: "Resultat, export och analys",
+        summary:
+          "Sidan Resultat visar varje elevs resultat per prov. Exportera CSV laddar ner dem som en fil för Excel eller Google Kalkylark.",
+        details: [
+          "Analys visar snittresultatet för varje prov och vilka elever som behöver följas upp. Snitt och närvaro räknas fram ur resultaten och närvaron du fyller i.",
+        ],
+      },
+      {
+        id: "assignments",
+        title: "Uppgifter",
+        summary:
+          "Uppgifter kommer senare. Just nu hanterar TeachDesk prov, omprov, resultat och uppföljning; exempeldatan visar hur uppgifter kommer att se ut.",
+      },
+    ],
+  },
+  {
+    id: "students",
+    title: "Elever och uppföljning",
+    description: "Håll koll på vem som behöver vad.",
+    articles: [
+      {
+        id: "follow-up",
+        title: "Vad ”Behöver omprov” och ”Att följa upp” betyder",
+        summary: "På sidan Elever visar kolumnen Uppföljning vad varje elev har kvar att göra.",
+        details: [
+          "Behöver omprov: eleven missade ett prov och inget omprov är bokat än.",
+          "Omprov med datum: ett omprov är bokat.",
+          "Saknas: uppgifter som eleven inte har lämnat in.",
+          "I fas: inget väntar.",
+          "På översikten räknar Att följa upp alla elever med ett missat prov eller saknade uppgifter.",
+        ],
+      },
+      {
+        id: "remove-student",
+        title: "Ta bort en elev eller klass",
+        summary:
+          "På sidan Elever klickar du på papperskorgen bredvid en elev, eller väljer en klass och klickar på Ta bort klassen.",
+        details: [
+          "När en elev tas bort försvinner också elevens provresultat och omprov. När en klass tas bort försvinner dess elever, prov, omprov och uppgifter. Det går inte att ångra.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "schools",
+    title: "Skolor och kollegor",
+    description: "Gå med i din skola, dela klasser och bjud in kollegor.",
+    articles: [
+      {
+        id: "join-school",
+        title: "Gå med i din skola med en inbjudningslänk",
+        summary:
+          "Öppna länken du fick, logga in med e-postadressen som den skickades till och klicka på Gå med.",
+        details: [
+          "Bara den inbjudna adressen kan ta emot en inbjudan, så en vidarebefordrad länk fungerar inte för någon annan.",
+          "Inbjudningslänkar gäller i 14 dagar. Har din gått ut ber du skolans administratör om en ny.",
+        ],
+      },
+      {
+        id: "switch-workspace",
+        title: "Byt mellan din skola och dina egna klasser",
+        summary:
+          "Lärare på en skola har en meny för arbetsytor högst upp på sidan: välj din skola, Personlig eller Exempeldata.",
+        details: ["Skolans arbetsyta delas med de andra lärarna på skolan. Personlig är bara din."],
+      },
+      {
+        id: "invite-colleagues",
+        title: "Bjud in kollegor (för skolans administratörer)",
+        summary:
+          "Öppna Skola i sidomenyn, skriv en kollegas e-postadress och klicka på Skapa inbjudningslänk. Kopiera länken och skicka den till kollegan.",
+        details: [
+          "Varje kollega får en egen länk. Länkarna gäller i 14 dagar, och du kan förnya eller dra tillbaka dem.",
+          "Administratörer kan också se alla på skolan och ta bort lärare.",
+        ],
+      },
+      {
+        id: "pilot",
+        title: "Skolpiloter",
+        summary:
+          "Under en pilot har alla på skolan alla Pro-verktyg gratis. Sidan Skola visar när piloten tar slut.",
+        details: ["Vill ni fortsätta efter piloten kontaktar ni oss om en skollicens."],
+      },
+    ],
+  },
+  {
+    id: "account",
+    title: "Abonnemang och konto",
+    description: "Abonnemang, din profil och integritet.",
+    articles: [
+      {
+        id: "plans",
+        title: "Abonnemang och priser",
+        summary: `Alla nya konton får ${TRIAL_DAYS} dagar Pro gratis. Sedan har du gratisplanen kvar om du inte uppgraderar.`,
+        details: [
+          `Gratis: upp till ${FREE_CLASS_LIMIT} klasser och ${FREE_AI_PER_MONTH} omprov skapade med AI per månad.`,
+          `Pro: ${price(pro?.price)} per månad (eller ${price(pro?.yearlyPrice)} per år) — obegränsat antal klasser och omprov med AI, nya prov skapade med AI, och import av befintliga prov från PDF och foton.`,
+          "Skola: för hela skolor och kommuner, med betalning mot faktura. Kontakta oss för en offert.",
+          "För att byta abonnemang öppnar du kontomenyn (dina initialer uppe till höger) och väljer Abonnemang.",
+        ],
+      },
+      {
+        id: "language",
+        title: "Byt språk",
+        summary:
+          "TeachDesk finns på svenska och engelska. Byt under Inställningar → Språk, eller välj In English i kontomenyn (dina initialer uppe till höger).",
+        details: [
+          "På inloggningssidan byter du språk med länken uppe till höger. Valet sparas på den här enheten.",
+          "Utskrivna prov och AI:s kommentarer till dig följer språket du har valt.",
+        ],
+      },
+      {
+        id: "profile",
+        title: "Ändra namn, skola eller lösenord",
+        summary: "Ditt namn, din roll och din skola finns under Inställningar.",
+        details: [
+          "För att byta lösenord loggar du ut och klickar på Glömt lösenordet? på inloggningssidan. Loggar du in med Google hanteras lösenordet av Google.",
+        ],
+      },
+      {
+        id: "privacy",
+        title: "Integritet och dina elevers data",
+        summary: "Bara du — och kollegorna i skolans arbetsyta — kan se dina klasser och elever.",
+        details: [
+          "AI-funktionerna skickar bara det du väljer, som ett provs frågor eller proven du laddar upp för rättning, till vår AI-leverantör, och det används inte för att träna AI-modeller. TeachDesk sparar inte uppladdade prov.",
+          "Integritetspolicyn har alla detaljer.",
+        ],
+      },
+    ],
+  },
+];
+
+const categories: Record<Language, HelpCategory[]> = { en: english, sv: swedish };
+
+/** The help center's categories and articles in the given language. */
+export const helpCategories = (language: Language) => categories[language];
+
 export const SUPPORT_EMAIL = LEGAL.contactEmail;
 
 /** Articles matching a search, with the category each belongs to. */
-export function searchHelp(query: string) {
+export function searchHelp(query: string, language: Language) {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) return [];
-  return HELP_CATEGORIES.flatMap((category) =>
+  return categories[language].flatMap((category) =>
     category.articles
       .filter((article) => {
         const text = [
@@ -367,18 +706,20 @@ export function searchHelp(query: string) {
 }
 
 /** All articles as plain text, for the Ask AI assistant. */
-export function helpArticlesAsText() {
-  return HELP_CATEGORIES.map((category) =>
-    [
-      `## ${category.title}`,
-      ...category.articles.map((article) =>
-        [
-          `### ${article.title}`,
-          article.summary,
-          ...(article.steps ?? []).map((step, i) => `${i + 1}. ${step}`),
-          ...(article.details ?? []),
-        ].join("\n"),
-      ),
-    ].join("\n\n"),
-  ).join("\n\n");
+export function helpArticlesAsText(language: Language) {
+  return categories[language]
+    .map((category) =>
+      [
+        `## ${category.title}`,
+        ...category.articles.map((article) =>
+          [
+            `### ${article.title}`,
+            article.summary,
+            ...(article.steps ?? []).map((step, i) => `${i + 1}. ${step}`),
+            ...(article.details ?? []),
+          ].join("\n"),
+        ),
+      ].join("\n\n"),
+    )
+    .join("\n\n");
 }

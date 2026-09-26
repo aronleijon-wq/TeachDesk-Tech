@@ -5,8 +5,28 @@ import { Upload } from "lucide-react";
 import type { ReactNode } from "react";
 import { StatusPill } from "@/components/primitives";
 import { Label } from "@/components/ui/label";
+import { defineMessages, useMessages } from "@/lib/i18n";
+import { questionTerms } from "@/lib/question-terms";
 import type { QuestionDraft } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const messages = defineMessages({
+  en: {
+    summary: (questions: number, points: number) => `${questions} questions · ${points} points`,
+    ready: "Ready",
+    becomeVersionA: "These become Version A. You can edit any question after creating the exam.",
+    partOfPro: "This is part of Pro.",
+    seePlans: "See plans",
+  },
+  sv: {
+    summary: (questions, points) => `${questions} frågor · ${points} poäng`,
+    ready: "Klart",
+    becomeVersionA:
+      "Det här blir Version A. Du kan ändra alla frågor efter att provet har skapats.",
+    partOfPro: "Det här ingår i Pro.",
+    seePlans: "Se abonnemang",
+  },
+});
 
 /** A labelled form field. */
 export function Field({
@@ -75,13 +95,13 @@ export function ExamDraftPreview({
   warnings: string[];
 }) {
   const points = questions.reduce((sum, q) => sum + q.points, 0);
+  const t = useMessages(messages);
+  const terms = useMessages(questionTerms);
   return (
     <div className="rounded-md border border-border p-4 text-sm">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-medium">
-          {questions.length} questions · {points} points
-        </p>
-        <StatusPill tone="success">Ready</StatusPill>
+        <p className="font-medium">{t.summary(questions.length, points)}</p>
+        <StatusPill tone="success">{t.ready}</StatusPill>
       </div>
       {warnings.length > 0 && (
         <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
@@ -99,24 +119,23 @@ export function ExamDraftPreview({
             <span className="w-5 shrink-0 text-xs text-muted-foreground">{i + 1}.</span>
             <span className="flex-1 whitespace-pre-line">{q.prompt}</span>
             <span className="shrink-0 text-xs text-muted-foreground">
-              {q.points} p · {q.difficulty}
+              {q.points} p · {terms.difficulties[q.difficulty]}
             </span>
           </li>
         ))}
       </ol>
-      <p className="mt-3 text-xs text-muted-foreground">
-        These become Version A. You can edit any question after creating the exam.
-      </p>
+      <p className="mt-3 text-xs text-muted-foreground">{t.becomeVersionA}</p>
     </div>
   );
 }
 
 export function ProNote() {
+  const t = useMessages(messages);
   return (
     <p className="rounded-md bg-primary-soft/50 px-3 py-2 text-sm">
-      This is part of Pro.{" "}
+      {t.partOfPro}{" "}
       <Link to="/app/pricing" className="font-medium text-primary hover:underline">
-        See plans
+        {t.seePlans}
       </Link>
     </p>
   );

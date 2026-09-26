@@ -7,6 +7,7 @@ import * as z4 from "zod/v4";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { callClaude } from "./claude";
+import { defineMessages, readLanguage, type Language } from "./i18n";
 import { FREE_AI_PER_MONTH } from "./pricing";
 
 const MODEL = "claude-opus-5";
@@ -15,6 +16,49 @@ const MODEL = "claude-opus-5";
 // Shared helpers
 // ---------------------------------------------------------------------------
 
+// Messages for the teacher, in the language they use TeachDesk in.
+const messages = defineMessages({
+  en: {
+    checkPlanFailed: "Couldn't check your plan. Please try again.",
+    allowanceUsed: `You've used this month's ${FREE_AI_PER_MONTH} free AI retakes. Upgrade to Pro for unlimited retakes.`,
+    proOnly: (feature: string) => `${feature} is part of Pro. Upgrade to use it.`,
+    features: {
+      import: "Importing existing exams",
+      generate: "Generating exams with AI",
+      grade: "Grading with AI",
+    },
+    declined: "The AI declined this request. Try rewording or removing unusual content.",
+    incomplete: "The AI returned an incomplete result. Please try again.",
+    versionTooLong: "This exam is too long to generate in one go. Try splitting it into two exams.",
+    importTooLong: "This exam is too long to read in one go. Try splitting it into two parts.",
+    examTooLong: "The exam came out too long. Ask for a shorter exam, or use less material.",
+    paperTooLong: "This paper is too long to grade in one go. Try uploading it in parts.",
+    noAnswerFound: "No answer was found on the paper.",
+  },
+  sv: {
+    checkPlanFailed: "Det gick inte att kontrollera ditt abonnemang. Försök igen.",
+    allowanceUsed: `Du har använt månadens ${FREE_AI_PER_MONTH} gratis omprov med AI. Uppgradera till Pro för obegränsat antal.`,
+    proOnly: (feature) => `${feature} ingår i Pro. Uppgradera för att använda det.`,
+    features: {
+      import: "Att importera befintliga prov",
+      generate: "Att skapa prov med AI",
+      grade: "Att rätta med AI",
+    },
+    declined: "AI:n avböjde förfrågan. Formulera om den eller ta bort ovanligt innehåll.",
+    incomplete: "AI:n gav ett ofullständigt svar. Försök igen.",
+    versionTooLong: "Provet är för långt för att skapas på en gång. Dela upp det i två prov.",
+    importTooLong: "Provet är för långt för att läsas på en gång. Dela upp det i två delar.",
+    examTooLong: "Provet blev för långt. Be om ett kortare prov eller använd mindre material.",
+    paperTooLong: "Provet är för långt för att rättas på en gång. Ladda upp det i delar.",
+    noAnswerFound: "Inget svar hittades på provet.",
+  },
+});
+
+type Messages = (typeof messages)["en"];
+
+/** The language AI writes its notes to the teacher in. */
+const LANGUAGE_NAME: Record<Language, string> = { sv: "Swedish", en: "English" };
+
 // ---------------------------------------------------------------------------
 // Plans: the database decides what the signed-in teacher may use
 // ---------------------------------------------------------------------------
@@ -22,22 +66,18 @@ const MODEL = "claude-opus-5";
 type TeacherDatabase = SupabaseClient<Database>;
 
 /** Stops a free-plan teacher who has used this month's AI allowance. */
-async function checkAiAllowance(db: TeacherDatabase) {
+async function checkAiAllowance(db: TeacherDatabase, t: Messages) {
   const { data, error } = await db.rpc("ai_generations_left");
-  if (error) throw new Error("Couldn't check your plan. Please try again.");
+  if (error) throw new Error(t.checkPlanFailed);
   const left = data as number | null; // null means unlimited (Pro)
-  if (left !== null && left <= 0) {
-    throw new Error(
-      `You've used this month's ${FREE_AI_PER_MONTH} free AI retakes. Upgrade to Pro for unlimited retakes.`,
-    );
-  }
+  if (left !== null && left <= 0) throw new Error(t.allowanceUsed);
 }
 
 /** Stops teachers without Pro (paid, trial or through their school). */
-async function requirePro(db: TeacherDatabase, feature: string) {
+async function requirePro(db: TeacherDatabase, feature: keyof Messages["features"], t: Messages) {
   const { data, error } = await db.rpc("has_pro_access");
-  if (error) throw new Error("Couldn't check your plan. Please try again.");
-  if (!data) throw new Error(`${feature} is part of Pro. Upgrade to use it.`);
+  if (error) throw new Error(t.checkPlanFailed);
+  if (!data) throw new Error(t.proOnly(t.features[feature]));
 }
 
 /** Counts a finished generation; a failed count never costs the teacher their result. */
@@ -51,6 +91,7 @@ async function runStructured<T>(
   schema: z4.ZodType<T>,
   content: string | BetaContentBlockParam[],
   tooLongMessage: string,
+  t: Messages,
 ): Promise<T> {
   const response = await callClaude((client) =>
     client.beta.messages.parse({
@@ -63,12 +104,9 @@ async function runStructured<T>(
     }),
   );
 
-  if (response.stop_reason === "refusal") {
-    throw new Error("The AI declined this request. Try rewording or removing unusual content.");
-  }
+  if (response.stop_reason === "refusal") throw new Error(t.declined);
   if (response.stop_reason === "max_tokens") throw new Error(tooLongMessage);
-  if (!response.parsed_output)
-    throw new Error("The AI returned an incomplete result. Please try again.");
+  if (!response.parsed_output) throw new Error(t.incomplete);
   return response.parsed_output;
 }
 
@@ -126,7 +164,8 @@ export const generateEquivalentVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }): Promise<GenerateResult> => {
-    await checkAiAllowance(context.supabase);
+    const t = messages[readLanguage()];
+    await checkAiAllowance(context.supabase, t);
     const instruction = [
       `You are an experienced ${data.subject} teacher writing ${data.versionLabel} of the exam "${data.examTitle}".`,
       "This version is a retake for students who missed the original, so it must be fair: a student who could solve",
@@ -149,11 +188,7 @@ export const generateEquivalentVersion = createServerFn({ method: "POST" })
       JSON.stringify(data.questions),
     ].join("\n");
 
-    const result = await runStructured(
-      GenerateOutput,
-      instruction,
-      "This exam is too long to generate in one go. Try splitting it into two exams.",
-    );
+    const result = await runStructured(GenerateOutput, instruction, t.versionTooLong, t);
     await recordAiUse(context.supabase);
     return result;
   });
@@ -214,7 +249,9 @@ export const extractExamQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ExtractInput.parse(input))
   .handler(async ({ data, context }): Promise<ExamDraft> => {
-    await requirePro(context.supabase, "Importing existing exams");
+    const language = readLanguage();
+    const t = messages[language];
+    await requirePro(context.supabase, "import", t);
     const instruction = [
       `Below is an existing ${data.subject} exam${data.examTitle ? ` called "${data.examTitle}"` : ""}, written by a teacher.`,
       "Extract every question into structured form so it can be used in an exam tool.",
@@ -228,7 +265,8 @@ export const extractExamQuestions = createServerFn({ method: "POST" })
       "  learning objectives in objectives.",
       "- In warnings, list anything the teacher should double-check, one short sentence each: unreadable or",
       "  ambiguous parts, and every question whose points you estimated (name the question number).",
-      "  Leave the list empty if there is nothing to flag.",
+      `  Write the warnings in ${LANGUAGE_NAME[language]}, the teacher's language. Leave the list empty`,
+      "  if there is nothing to flag.",
       "- If the content is not an exam at all, return no questions and explain why in warnings.",
     ].join("\n");
 
@@ -237,11 +275,7 @@ export const extractExamQuestions = createServerFn({ method: "POST" })
       { type: "text" as const, text: instruction },
     ];
 
-    const result = await runStructured(
-      ExamDraftOutput,
-      content,
-      "This exam is too long to read in one go. Try splitting it into two parts.",
-    );
+    const result = await runStructured(ExamDraftOutput, content, t.importTooLong, t);
     await recordAiUse(context.supabase);
     return result;
   });
@@ -279,7 +313,9 @@ export const generateExam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GenerateExamInput.parse(input))
   .handler(async ({ data, context }): Promise<GeneratedExam> => {
-    await requirePro(context.supabase, "Generating exams with AI");
+    const language = readLanguage();
+    const t = messages[language];
+    await requirePro(context.supabase, "generate", t);
     const material = materialBlocks(
       data.material?.text && `Material:\n${data.material.text}`,
       data.material?.file,
@@ -309,12 +345,14 @@ export const generateExam = createServerFn({ method: "POST" })
       "- Give the exam a short title, the minutes students need (durationMin) and its learning objectives.",
       "- In warnings, note anything the teacher should check before using the exam, one short sentence",
       "  each, or leave it empty. If the material can't be read or doesn't help, say so there.",
+      `  Write the warnings in ${LANGUAGE_NAME[language]}, the teacher's language.`,
     ].join("\n");
 
     const result = await runStructured(
       GeneratedExamOutput,
       [...material, { type: "text" as const, text: instruction }],
-      "The exam came out too long. Ask for a shorter exam, or use less material.",
+      t.examTooLong,
+      t,
     );
     await recordAiUse(context.supabase);
     return result;
@@ -381,7 +419,9 @@ export const gradePaper = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GradePaperInput.parse(input))
   .handler(async ({ data, context }): Promise<GradedPaper> => {
-    await requirePro(context.supabase, "Grading with AI");
+    const language = readLanguage();
+    const t = messages[language];
+    await requirePro(context.supabase, "grade", t);
     const instruction = [
       `You are an experienced ${data.subject || "subject"} teacher at a Swedish school, suggesting points for one`,
       `student's finished exam "${data.examTitle}". The student's paper is attached (scanned or photographed).`,
@@ -391,13 +431,14 @@ export const gradePaper = createServerFn({ method: "POST" })
       "- answer: what the student wrote, in short (at most about 300 characters; for long answers, the key parts).",
       "- points: from 0 up to the question's points, following the grading criteria. Give partial credit where",
       "  the criteria allow it; half points are fine. An unanswered question gets 0.",
-      "- reason: one short sentence explaining the points, in the language of the exam.",
+      `- reason: one short sentence explaining the points, in ${LANGUAGE_NAME[language]} (the teacher's language).`,
       "- unsure: true if the handwriting is hard to read, the answer is ambiguous, or the paper doesn't show the",
       "  question clearly.",
       "",
       "Also give studentName: the student's name as written on the paper, or an empty string if there is none.",
       "In warnings, note anything the teacher should know, one short sentence each: unreadable or missing pages,",
-      "or a paper that doesn't seem to be this exam. Leave it empty if there is nothing.",
+      `or a paper that doesn't seem to be this exam. Write them in ${LANGUAGE_NAME[language]}, and leave the list`,
+      "empty if there is nothing.",
       "The teacher reviews every suggestion before it counts, so be fair and exact rather than generous.",
       "",
       "Questions:",
@@ -407,7 +448,8 @@ export const gradePaper = createServerFn({ method: "POST" })
     const result = await runStructured(
       GradedPaperOutput,
       [...materialBlocks(undefined, data.paper), { type: "text" as const, text: instruction }],
-      "This paper is too long to grade in one go. Try uploading it in parts.",
+      t.paperTooLong,
+      t,
     );
 
     // Every question gets a suggestion, with points the question can actually give.
@@ -420,7 +462,7 @@ export const gradePaper = createServerFn({ method: "POST" })
           answer: found?.answer.slice(0, 500) ?? "",
           points: found ? withinPoints(found.points, q.points) : 0,
           maxPoints: q.points,
-          reason: found?.reason ?? "No answer was found on the paper.",
+          reason: found?.reason ?? t.noAnswerFound,
           unsure: found?.unsure ?? true,
         };
       }),

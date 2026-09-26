@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { extractExamQuestions, type ExamDraft } from "@/lib/exam-ai.functions";
+import { defineMessages, useLanguage, useMessages } from "@/lib/i18n";
 import { readPickedFile, type PickedFile } from "@/lib/picked-file";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -29,30 +30,146 @@ import { cn } from "@/lib/utils";
 /** Where the new exam's questions come from. */
 type Source = "write" | "upload" | "reuse";
 
-const SOURCES: { id: Source; icon: LucideIcon; title: string; description: string; pro?: true }[] =
-  [
-    {
-      id: "write",
-      icon: PenLine,
-      title: "Write the questions yourself",
-      description: "Add them on the exam's Questions tab after creating it.",
-    },
-    {
-      id: "upload",
-      icon: Upload,
-      title: "Import an existing exam",
-      description: "Upload a PDF or photo, or paste the text. AI turns it into the same questions.",
-      pro: true,
-    },
-    {
-      id: "reuse",
-      icon: BookCopy,
-      title: "Reuse an earlier exam",
-      description: "Start from the questions of an exam you've made before.",
-    },
-  ];
+const SOURCES: { id: Source; icon: LucideIcon; pro?: true }[] = [
+  { id: "write", icon: PenLine },
+  { id: "upload", icon: Upload, pro: true },
+  { id: "reuse", icon: BookCopy },
+];
 
-const STEPS = ["Basics", "Questions", "Review"];
+const messages = defineMessages({
+  en: {
+    sources: {
+      write: {
+        title: "Write the questions yourself",
+        description: "Add them on the exam's Questions tab after creating it.",
+      },
+      upload: {
+        title: "Import an existing exam",
+        description:
+          "Upload a PDF or photo, or paste the text. AI turns it into the same questions.",
+      },
+      reuse: {
+        title: "Reuse an earlier exam",
+        description: "Start from the questions of an exam you've made before.",
+      },
+    } satisfies Record<Source, { title: string; description: string }>,
+    steps: ["Basics", "Questions", "Review"],
+    unreadable: "Couldn't read that file.",
+    noQuestionsFound: "No questions were found in that content.",
+    importFailed: "Couldn't read the exam. Please try again.",
+    untitled: "Untitled exam",
+    created: "Exam created",
+    createdWithQuestions: (n: number) => `${n} questions in Version A.`,
+    createdEmpty: "Add its questions on the exam's Questions tab.",
+    title: "New exam",
+    description: "Three short steps. You can change everything later.",
+    examTitle: "Exam title",
+    examTitlePlaceholder: "Derivatives — Exam 2",
+    subject: "Subject",
+    class: "Class",
+    noClasses: "No classes yet",
+    addClassFirst: "Add your class on the Students page first.",
+    date: "Date",
+    startTime: "Start time",
+    duration: "Duration (minutes)",
+    room: "Room",
+    totalPoints: "Total points",
+    generateTitle: "Generate a new exam with AI",
+    generateText: "Describe it, or base it on an earlier exam or other material.",
+    pasteText: "Paste the exam text",
+    pastePlaceholder: "1. Differentiate f(x) = 3x² + 5x − 2. (3 p)\n2. ...",
+    dropPrompt: "…or drop a file here",
+    dropHint: "PDF, photo or text file · max 10 MB · Word: save as PDF first",
+    importing: "Importing your exam…",
+    importAgain: "Import again",
+    importQuestions: "Import the questions",
+    noReusable: "None of your exams have questions yet. Choose another way to start.",
+    startFrom: "Exam to start from",
+    chooseExam: "Choose an exam",
+    rows: {
+      title: "Title",
+      class: "Class",
+      date: "Date",
+      duration: "Duration",
+      questions: "Questions",
+    },
+    minutes: (n: string) => `${n} min`,
+    questionCount: (n: number, points: string) => `${n} (${points} points)`,
+    noneYet: "None yet — add them after creating the exam",
+    objectives: "Learning objectives (one per line)",
+    objectivesPlaceholder: "Apply the chain rule\nAnalyse functions with derivatives",
+    cancel: "Cancel",
+    back: "Back",
+    continue: "Continue",
+    create: "Create exam",
+  },
+  sv: {
+    sources: {
+      write: {
+        title: "Skriv frågorna själv",
+        description: "Lägg till dem under provets flik Frågor när provet har skapats.",
+      },
+      upload: {
+        title: "Importera ett befintligt prov",
+        description:
+          "Ladda upp en PDF eller ett foto, eller klistra in texten. AI gör om det till samma frågor.",
+      },
+      reuse: {
+        title: "Återanvänd ett tidigare prov",
+        description: "Utgå från frågorna i ett prov du har gjort tidigare.",
+      },
+    },
+    steps: ["Grunduppgifter", "Frågor", "Granska"],
+    unreadable: "Det gick inte att läsa filen.",
+    noQuestionsFound: "Inga frågor hittades i innehållet.",
+    importFailed: "Det gick inte att läsa provet. Försök igen.",
+    untitled: "Namnlöst prov",
+    created: "Provet har skapats",
+    createdWithQuestions: (n) => `${n} frågor i Version A.`,
+    createdEmpty: "Lägg till frågorna under provets flik Frågor.",
+    title: "Nytt prov",
+    description: "Tre korta steg. Du kan ändra allt senare.",
+    examTitle: "Provets namn",
+    examTitlePlaceholder: "Derivator — prov 2",
+    subject: "Ämne",
+    class: "Klass",
+    noClasses: "Inga klasser än",
+    addClassFirst: "Lägg först till din klass på sidan Elever.",
+    date: "Datum",
+    startTime: "Starttid",
+    duration: "Skrivtid (minuter)",
+    room: "Sal",
+    totalPoints: "Totalpoäng",
+    generateTitle: "Skapa ett nytt prov med AI",
+    generateText: "Beskriv det, eller utgå från ett tidigare prov eller annat material.",
+    pasteText: "Klistra in provets text",
+    pastePlaceholder: "1. Derivera f(x) = 3x² + 5x − 2. (3 p)\n2. ...",
+    dropPrompt: "…eller släpp en fil här",
+    dropHint: "PDF, foto eller textfil · max 10 MB · Word: spara som PDF först",
+    importing: "Importerar ditt prov…",
+    importAgain: "Importera igen",
+    importQuestions: "Importera frågorna",
+    noReusable: "Inget av dina prov har frågor än. Välj ett annat sätt att börja.",
+    startFrom: "Prov att utgå från",
+    chooseExam: "Välj ett prov",
+    rows: {
+      title: "Namn",
+      class: "Klass",
+      date: "Datum",
+      duration: "Skrivtid",
+      questions: "Frågor",
+    },
+    minutes: (n) => `${n} min`,
+    questionCount: (n, points) => `${n} (${points} poäng)`,
+    noneYet: "Inga än — lägg till dem när provet har skapats",
+    objectives: "Lärandemål (ett per rad)",
+    objectivesPlaceholder: "Använda kedjeregeln\nAnalysera funktioner med derivata",
+    cancel: "Avbryt",
+    back: "Tillbaka",
+    continue: "Fortsätt",
+    create: "Skapa provet",
+  },
+});
 
 const lines = (text: string) =>
   text
@@ -77,6 +194,8 @@ export function NewExamDialog({
   onCreated: (id: string) => void;
 }) {
   const { classes, exams, profile, createExam } = useStore();
+  const { language } = useLanguage();
+  const t = useMessages(messages);
   const hasPro = profile.access.level === "pro";
   const firstClass = classes[0];
 
@@ -134,7 +253,7 @@ export function NewExamDialog({
     setDraft(null);
     if (!picked) return;
     try {
-      const read = await readPickedFile(picked);
+      const read = await readPickedFile(picked, language);
       // Text goes into the paste box, so the teacher can see and tidy it.
       if (read.kind === "text") {
         setPastedText(read.text);
@@ -143,7 +262,7 @@ export function NewExamDialog({
         setFile(read);
       }
     } catch (e) {
-      setDraftError(e instanceof Error ? e.message : "Couldn't read that file.");
+      setDraftError(e instanceof Error ? e.message : t.unreadable);
     }
   };
 
@@ -160,12 +279,12 @@ export function NewExamDialog({
         },
       });
       if (result.questions.length === 0) {
-        setDraftError(result.warnings.join(" ") || "No questions were found in that content.");
+        setDraftError(result.warnings.join(" ") || t.noQuestionsFound);
       } else {
         startFrom(result);
       }
     } catch (e) {
-      setDraftError(e instanceof Error ? e.message : "Couldn't read the exam. Please try again.");
+      setDraftError(e instanceof Error ? e.message : t.importFailed);
     } finally {
       setReading(false);
     }
@@ -189,7 +308,7 @@ export function NewExamDialog({
     const questions = draft?.questions ?? [];
     const id = createExam(
       {
-        title: form.title.trim() || "Untitled exam",
+        title: form.title.trim() || t.untitled,
         subject: form.subject,
         classId: form.classId,
         date: form.date,
@@ -201,10 +320,8 @@ export function NewExamDialog({
       },
       questions,
     );
-    toast.success("Exam created", {
-      description: questions.length
-        ? `${questions.length} questions in Version A.`
-        : "Add its questions on the exam's Questions tab.",
+    toast.success(t.created, {
+      description: questions.length ? t.createdWithQuestions(questions.length) : t.createdEmpty,
     });
     onOpenChange(false);
     onCreated(id);
@@ -214,12 +331,12 @@ export function NewExamDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>New exam</DialogTitle>
-          <DialogDescription>Three short steps. You can change everything later.</DialogDescription>
+          <DialogTitle>{t.title}</DialogTitle>
+          <DialogDescription>{t.description}</DialogDescription>
         </DialogHeader>
 
         <ol className="flex flex-wrap items-center gap-2 text-xs">
-          {STEPS.map((name, i) => (
+          {t.steps.map((name, i) => (
             <li key={name} className="flex items-center gap-2">
               <span
                 className={cn(
@@ -236,7 +353,7 @@ export function NewExamDialog({
               <span className={cn(i === step ? "font-medium" : "text-muted-foreground")}>
                 {name}
               </span>
-              {i < STEPS.length - 1 && <span className="text-border">—</span>}
+              {i < t.steps.length - 1 && <span className="text-border">—</span>}
             </li>
           ))}
         </ol>
@@ -244,17 +361,17 @@ export function NewExamDialog({
         <div className="mt-2 space-y-4">
           {step === 0 && (
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Exam title" className="sm:col-span-2">
+              <Field label={t.examTitle} className="sm:col-span-2">
                 <Input
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
-                  placeholder="Derivatives — Exam 2"
+                  placeholder={t.examTitlePlaceholder}
                 />
               </Field>
-              <Field label="Subject">
+              <Field label={t.subject}>
                 <Input value={form.subject} onChange={(e) => set("subject", e.target.value)} />
               </Field>
-              <Field label="Class">
+              <Field label={t.class}>
                 <Select
                   value={form.classId}
                   onValueChange={(id) => {
@@ -268,7 +385,7 @@ export function NewExamDialog({
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="No classes yet" />
+                    <SelectValue placeholder={t.noClasses} />
                   </SelectTrigger>
                   <SelectContent>
                     {classes.map((c) => (
@@ -279,12 +396,10 @@ export function NewExamDialog({
                   </SelectContent>
                 </Select>
                 {classes.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Add your class on the Students page first.
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t.addClassFirst}</p>
                 )}
               </Field>
-              <Field label="Date">
+              <Field label={t.date}>
                 <Input
                   type="date"
                   required
@@ -292,14 +407,14 @@ export function NewExamDialog({
                   onChange={(e) => set("date", e.target.value)}
                 />
               </Field>
-              <Field label="Start time">
+              <Field label={t.startTime}>
                 <Input
                   type="time"
                   value={form.time}
                   onChange={(e) => set("time", e.target.value)}
                 />
               </Field>
-              <Field label="Duration (minutes)">
+              <Field label={t.duration}>
                 <Input
                   type="number"
                   min={10}
@@ -307,10 +422,10 @@ export function NewExamDialog({
                   onChange={(e) => set("duration", e.target.value)}
                 />
               </Field>
-              <Field label="Room">
+              <Field label={t.room}>
                 <Input value={form.room} onChange={(e) => set("room", e.target.value)} />
               </Field>
-              <Field label="Total points">
+              <Field label={t.totalPoints}>
                 <Input
                   type="number"
                   min={1}
@@ -328,14 +443,15 @@ export function NewExamDialog({
                   <SourceOption
                     key={option.id}
                     {...option}
+                    {...t.sources[option.id]}
                     active={source === option.id}
                     onSelect={() => chooseSource(option.id)}
                   />
                 ))}
                 <SourceOption
                   icon={Sparkles}
-                  title="Generate a new exam with AI"
-                  description="Describe it, or base it on an earlier exam or other material."
+                  title={t.generateTitle}
+                  description={t.generateText}
                   pro
                   active={false}
                   onSelect={onGenerateWithAi}
@@ -346,7 +462,7 @@ export function NewExamDialog({
 
               {source === "upload" && !needsPro && (
                 <div className="space-y-3">
-                  <Field label="Paste the exam text">
+                  <Field label={t.pasteText}>
                     <Textarea
                       rows={6}
                       value={pastedText}
@@ -354,13 +470,13 @@ export function NewExamDialog({
                         setPastedText(e.target.value);
                         setDraft(null);
                       }}
-                      placeholder={"1. Differentiate f(x) = 3x² + 5x − 2. (3 p)\n2. ..."}
+                      placeholder={t.pastePlaceholder}
                     />
                   </Field>
                   <DropZone
                     fileName={file?.name}
-                    prompt="…or drop a file here"
-                    hint="PDF, photo or text file · max 10 MB · Word: save as PDF first"
+                    prompt={t.dropPrompt}
+                    hint={t.dropHint}
                     onFiles={([picked]) => void pickFile(picked)}
                   />
                   <Button
@@ -373,25 +489,19 @@ export function NewExamDialog({
                     ) : (
                       <Sparkles className="size-4" />
                     )}
-                    {reading
-                      ? "Importing your exam…"
-                      : draft
-                        ? "Import again"
-                        : "Import the questions"}
+                    {reading ? t.importing : draft ? t.importAgain : t.importQuestions}
                   </Button>
                 </div>
               )}
 
               {source === "reuse" &&
                 (reusable.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    None of your exams have questions yet. Choose another way to start.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t.noReusable}</p>
                 ) : (
-                  <Field label="Exam to start from">
+                  <Field label={t.startFrom}>
                     <Select onValueChange={reuse}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose an exam" />
+                        <SelectValue placeholder={t.chooseExam} />
                       </SelectTrigger>
                       <SelectContent>
                         {reusable.map((e) => (
@@ -412,28 +522,27 @@ export function NewExamDialog({
           {step === 2 && (
             <div className="space-y-4">
               <dl className="grid gap-3 rounded-md border border-border p-4 text-sm sm:grid-cols-2">
-                <Row label="Title" value={form.title.trim() || "Untitled exam"} />
-                <Row label="Class" value={classes.find((c) => c.id === form.classId)?.name ?? ""} />
-                <Row label="Date" value={`${form.date} ${form.time}`} />
+                <Row label={t.rows.title} value={form.title.trim() || t.untitled} />
                 <Row
-                  label="Duration"
-                  value={[`${form.duration} min`, form.room].filter(Boolean).join(" · ")}
+                  label={t.rows.class}
+                  value={classes.find((c) => c.id === form.classId)?.name ?? ""}
+                />
+                <Row label={t.rows.date} value={`${form.date} ${form.time}`} />
+                <Row
+                  label={t.rows.duration}
+                  value={[t.minutes(form.duration), form.room].filter(Boolean).join(" · ")}
                 />
                 <Row
-                  label="Questions"
-                  value={
-                    draft
-                      ? `${draft.questions.length} (${form.points} points)`
-                      : "None yet — add them after creating the exam"
-                  }
+                  label={t.rows.questions}
+                  value={draft ? t.questionCount(draft.questions.length, form.points) : t.noneYet}
                 />
               </dl>
-              <Field label="Learning objectives (one per line)">
+              <Field label={t.objectives}>
                 <Textarea
                   rows={4}
                   value={form.objectives}
                   onChange={(e) => set("objectives", e.target.value)}
-                  placeholder={"Apply the chain rule\nAnalyse functions with derivatives"}
+                  placeholder={t.objectivesPlaceholder}
                 />
               </Field>
             </div>
@@ -445,14 +554,14 @@ export function NewExamDialog({
             variant="ghost"
             onClick={() => (step === 0 ? onOpenChange(false) : setStep(step - 1))}
           >
-            {step === 0 ? "Cancel" : "Back"}
+            {step === 0 ? t.cancel : t.back}
           </Button>
-          {step < STEPS.length - 1 ? (
+          {step < t.steps.length - 1 ? (
             <Button onClick={() => setStep(step + 1)} disabled={!ready[step] || reading}>
-              Continue
+              {t.continue}
             </Button>
           ) : (
-            <Button onClick={create}>Create exam</Button>
+            <Button onClick={create}>{t.create}</Button>
           )}
         </DialogFooter>
       </DialogContent>
