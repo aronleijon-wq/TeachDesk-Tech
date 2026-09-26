@@ -153,7 +153,7 @@ function Problem() {
 }
 
 const FEATURES = [
-  { icon: BookOpen, title: "Exams", body: "Write exams yourself, read in an existing one from a PDF or photo, or generate one with AI. Track attendance and results in one view." },
+  { icon: BookOpen, title: "Exams", body: "Write exams yourself, import an existing one from a PDF or photo, or generate one with AI. Track attendance and results in one view." },
   { icon: Repeat, title: "Equivalent retakes", body: "Turn an existing exam into a genuinely equivalent version for students who need a retake." },
   { icon: FileCheck2, title: "Grading", body: "Enter each student's score and see every result in one gradebook, ready to export to Excel." },
   { icon: Users, title: "Student follow-up", body: "See which students missed an exam, still need a retake or have missing work — without tracking it by hand." },
@@ -378,7 +378,7 @@ function Teachers() {
   );
 }
 
-const AI_EXAMPLES = ["Equivalent retake versions", "Generating new exams", "Reading exams from PDFs and photos", "Answering questions about TeachDesk"];
+const AI_EXAMPLES = ["Equivalent retake versions", "Generating new exams", "Importing exams from PDFs and photos", "Answering questions about TeachDesk"];
 
 function AI() {
   return (

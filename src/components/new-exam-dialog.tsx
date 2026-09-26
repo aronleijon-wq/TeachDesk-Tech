@@ -40,8 +40,8 @@ const SOURCES: { id: Source; icon: LucideIcon; title: string; description: strin
     {
       id: "upload",
       icon: Upload,
-      title: "Use an existing exam as it is",
-      description: "Paste it, or upload a PDF or photo. AI reads the questions.",
+      title: "Import an existing exam",
+      description: "Upload a PDF or photo, or paste the text. AI turns it into the same questions.",
       pro: true,
     },
     {
@@ -374,10 +374,10 @@ export function NewExamDialog({
                       <Sparkles className="size-4" />
                     )}
                     {reading
-                      ? "Reading your exam…"
+                      ? "Importing your exam…"
                       : draft
-                        ? "Read the exam again"
-                        : "Read the questions"}
+                        ? "Import again"
+                        : "Import the questions"}
                   </Button>
                 </div>
               )}
