@@ -243,3 +243,45 @@ test("questions written by the teacher make up Version A, and the exam's points 
   );
   assert.equal(exam.totalPoints, 8);
 });
+
+test("a new exam expects the whole class, and its questions become Version A", () => {
+  const ws = classWithExam();
+  const details = {
+    title: "Integraler",
+    subject: "Matematik",
+    classId: newClass.id,
+    date: "2099-02-01",
+    time: "10:00",
+    durationMin: 60,
+    room: "B214",
+    totalPoints: 40,
+    objectives: ["Beräkna integraler"],
+  };
+  const question = {
+    type: "calculation" as const,
+    topic: "Integraler",
+    skill: "",
+    difficulty: "Easy" as const,
+    points: 3,
+    prompt: "Beräkna ∫ 2x dx.",
+    expectedAnswer: "x² + C",
+    gradingCriteria: "",
+    objective: "",
+  };
+
+  const empty = rules.examFor(ws, "e2", details, []);
+  assert.equal(empty.versions.length, 0);
+  assert.equal(empty.totalPoints, 40);
+  assert.equal(empty.attendance.length, 3);
+
+  const withQuestions = rules.examFor(ws, "e2", details, [question, { ...question, points: 5 }]);
+  assert.equal(withQuestions.versions[0]!.label, "Version A");
+  assert.deepEqual(
+    withQuestions.versions[0]!.questions.map((q) => [q.id, q.number]),
+    [
+      ["e2-q1", 1],
+      ["e2-q2", 2],
+    ],
+  );
+  assert.equal(withQuestions.totalPoints, 8);
+});

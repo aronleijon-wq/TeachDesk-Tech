@@ -41,8 +41,8 @@ const tools: {
     icon: Sparkles,
     title: "Generate a new exam",
     description:
-      "Questions written from your topics and learning objectives, ready for you to review and edit.",
-    where: "Exams → AI generate exam",
+      "Describe the exam in your own words, or add an earlier exam, course material or a list — AI writes a new exam in that style.",
+    where: "Exams → Generate exam with AI",
     to: "/app/exams",
     plan: "Pro",
   },

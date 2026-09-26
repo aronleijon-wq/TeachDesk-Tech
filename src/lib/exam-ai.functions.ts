@@ -164,23 +164,38 @@ export const generateEquivalentVersion = createServerFn({ method: "POST" })
 
 const MAX_FILE_BASE64_CHARS = 14_000_000; // ~10 MB file
 
+/** A PDF or photo, base64-encoded. */
+const ExamFile = z.object({
+  mediaType: z.enum(["application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif"]),
+  data: z.string().max(MAX_FILE_BASE64_CHARS),
+});
+
+/** Text and/or a file from the teacher, as content Claude can read. */
+function materialBlocks(text: string | undefined, file: z.infer<typeof ExamFile> | undefined) {
+  const blocks: BetaContentBlockParam[] = [];
+  if (file) {
+    blocks.push(
+      file.mediaType === "application/pdf"
+        ? {
+            type: "document",
+            source: { type: "base64", media_type: "application/pdf", data: file.data },
+          }
+        : {
+            type: "image",
+            source: { type: "base64", media_type: file.mediaType, data: file.data },
+          },
+    );
+  }
+  if (text?.trim()) blocks.push({ type: "text", text });
+  return blocks;
+}
+
 const ExtractInput = z
   .object({
     subject: z.string(),
     examTitle: z.string(),
     text: z.string().max(200_000).optional(),
-    file: z
-      .object({
-        mediaType: z.enum([
-          "application/pdf",
-          "image/png",
-          "image/jpeg",
-          "image/webp",
-          "image/gif",
-        ]),
-        data: z.string().max(MAX_FILE_BASE64_CHARS),
-      })
-      .optional(),
+    file: ExamFile.optional(),
   })
   .refine((d) => Boolean(d.text?.trim()) || Boolean(d.file), {
     message: "Paste the exam text or choose a file.",
@@ -217,22 +232,10 @@ export const extractExamQuestions = createServerFn({ method: "POST" })
       "- If the content is not an exam at all, return no questions and explain why in warnings.",
     ].join("\n");
 
-    const content: BetaContentBlockParam[] = [];
-    if (data.file) {
-      content.push(
-        data.file.mediaType === "application/pdf"
-          ? {
-              type: "document",
-              source: { type: "base64", media_type: "application/pdf", data: data.file.data },
-            }
-          : {
-              type: "image",
-              source: { type: "base64", media_type: data.file.mediaType, data: data.file.data },
-            },
-      );
-    }
-    if (data.text?.trim()) content.push({ type: "text", text: `Exam text:\n${data.text}` });
-    content.push({ type: "text", text: instruction });
+    const content = [
+      ...materialBlocks(data.text && `Exam text:\n${data.text}`, data.file),
+      { type: "text" as const, text: instruction },
+    ];
 
     const result = await runStructured(
       ExamDraftOutput,
@@ -244,50 +247,74 @@ export const extractExamQuestions = createServerFn({ method: "POST" })
   });
 
 // ---------------------------------------------------------------------------
-// Generate a new exam from topics and learning objectives
+// Generate a new exam from a description and/or material to base it on
 // ---------------------------------------------------------------------------
 
-const GenerateExamInput = z.object({
-  subject: z.string().max(200),
-  examTitle: z.string().max(200),
-  topics: z.string().max(2000),
-  objectives: z.array(z.string().max(500)).max(20),
-  difficulty: z.enum(["Easy", "Mixed", "Hard"]),
-  totalPoints: z.number().int().min(1).max(200),
-  durationMin: z.number().int().min(10).max(300),
+const GenerateExamInput = z
+  .object({
+    /** What the teacher wants, in their own words. */
+    description: z.string().max(4000),
+    /** The class's subject, if known. */
+    subject: z.string().max(200),
+    /** An earlier exam, course material or a list to base the exam on. */
+    material: z
+      .object({ text: z.string().max(200_000).optional(), file: ExamFile.optional() })
+      .optional(),
+  })
+  .refine((d) => Boolean(d.description.trim() || d.material?.text?.trim() || d.material?.file), {
+    message: "Describe the exam, or add material to base it on.",
+  });
+
+const GeneratedExamOutput = z4.object({
+  title: z4.string(),
+  durationMin: z4.number(),
+  questions: z4.array(QuestionOutput),
+  objectives: z4.array(z4.string()),
+  warnings: z4.array(z4.string()),
 });
+
+export type GeneratedExam = z4.infer<typeof GeneratedExamOutput>;
 
 export const generateExam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GenerateExamInput.parse(input))
-  .handler(async ({ data, context }): Promise<ExamDraft> => {
+  .handler(async ({ data, context }): Promise<GeneratedExam> => {
     await requirePro(context.supabase, "Generating exams with AI");
-    const difficulty =
-      data.difficulty === "Mixed"
-        ? "a mix of easy, medium and hard questions"
-        : `mostly ${data.difficulty.toLowerCase()} questions`;
+    const material = materialBlocks(
+      data.material?.text && `Material:\n${data.material.text}`,
+      data.material?.file,
+    );
+    const description = data.description.trim();
     const instruction = [
-      `Write a ${data.subject} exam called "${data.examTitle}" for students at a Swedish school.`,
-      `Topics: ${data.topics.trim() || "choose them from the title and the learning objectives"}.`,
-      data.objectives.length > 0
-        ? `Learning objectives to test:\n${data.objectives.map((o) => `- ${o}`).join("\n")}`
-        : "No learning objectives were given: choose 3 to 5 that fit the title and topics.",
-      `Difficulty: ${difficulty}.`,
-      `Students have ${data.durationMin} minutes, and the points must add up to exactly ${data.totalPoints}.`,
+      `You are an experienced teacher at a Swedish school, writing a new exam${data.subject ? ` in ${data.subject}` : ""}.`,
+      description
+        ? `The teacher's description of the exam:\n"""\n${description}\n"""`
+        : "The teacher gave no description: base the exam on the material.",
+      ...(material.length > 0
+        ? [
+            "",
+            "The teacher also attached material to base the exam on (above): for example an earlier exam,",
+            "course material or a list. Write a NEW exam in the same style, subject, level and scope, with",
+            "the same kinds of questions and a similar difficulty and length. Don't copy its questions.",
+          ]
+        : []),
       "",
-      "- Write in the language of the title and topics (Swedish unless they are in English).",
+      "- Follow the description. Where it says nothing, choose sensibly: about 60 minutes, 20 to 40",
+      "  points, and a mix of easy, medium and hard questions.",
+      "- Write in the language of the description, or of the material if there's no description:",
+      "  Swedish unless it's in English.",
       "- Every question must be solvable and unambiguous, with clean values.",
       "- For each question give its type, topic, skill, difficulty, points, the question text, a concise",
       "  correct answer, short grading criteria and the learning objective it tests.",
-      "- List the exam's learning objectives in objectives.",
+      "- Give the exam a short title, the minutes students need (durationMin) and its learning objectives.",
       "- In warnings, note anything the teacher should check before using the exam, one short sentence",
-      "  each, or leave it empty.",
+      "  each, or leave it empty. If the material can't be read or doesn't help, say so there.",
     ].join("\n");
 
     const result = await runStructured(
-      ExamDraftOutput,
-      instruction,
-      "The exam came out too long. Try fewer topics or fewer points.",
+      GeneratedExamOutput,
+      [...material, { type: "text" as const, text: instruction }],
+      "The exam came out too long. Ask for a shorter exam, or use less material.",
     );
     await recordAiUse(context.supabase);
     return result;

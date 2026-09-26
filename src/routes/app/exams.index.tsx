@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState, PageHeader, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
 import { useStore } from "@/lib/store";
+import { GenerateExamDialog } from "@/components/generate-exam-dialog";
 import { NewExamDialog } from "@/components/new-exam-dialog";
 import { cn } from "@/lib/utils";
 import { examStage, type ExamStage } from "@/lib/workspace";
@@ -34,9 +35,10 @@ function ExamsPage() {
   const { exams, retakes, classById, classSize } = useStore();
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
   const [query, setQuery] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [aiMode, setAiMode] = useState(false);
+  // Which way of creating an exam is open, if any.
+  const [creating, setCreating] = useState<"manual" | "ai" | null>(null);
   const navigate = useNavigate();
+  const openExam = (id: string) => void navigate({ to: "/app/exams/$examId", params: { examId: id } });
 
   const visible = useMemo(() => {
     return exams.filter((e) => {
@@ -69,10 +71,10 @@ function ExamsPage() {
         subtitle="Create, manage and track your exams."
         actions={
           <>
-            <Button variant="outline" onClick={() => { setAiMode(true); setDialogOpen(true); }}>
-              <Sparkles className="size-4" /> AI generate exam
+            <Button variant="outline" onClick={() => setCreating("ai")}>
+              <Sparkles className="size-4" /> Generate exam with AI
             </Button>
-            <Button onClick={() => { setAiMode(false); setDialogOpen(true); }}>
+            <Button onClick={() => setCreating("manual")}>
               <Plus className="size-4" /> New exam
             </Button>
           </>
@@ -110,7 +112,7 @@ function ExamsPage() {
           icon={BookOpen}
           title="No exams match this filter"
           description="Try another filter, or create a new exam to get started."
-          action={<Button onClick={() => { setAiMode(false); setDialogOpen(true); }}><Plus className="size-4" /> New exam</Button>}
+          action={<Button onClick={() => setCreating("manual")}><Plus className="size-4" /> New exam</Button>}
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -153,13 +155,16 @@ function ExamsPage() {
       )}
 
       {/* Mounted only while open, so every new exam starts from an empty form. */}
-      {dialogOpen && (
+      {creating === "manual" && (
         <NewExamDialog
           open
-          onOpenChange={setDialogOpen}
-          aiFirst={aiMode}
-          onCreated={(id) => navigate({ to: "/app/exams/$examId", params: { examId: id } })}
+          onOpenChange={(open) => !open && setCreating(null)}
+          onGenerateWithAi={() => setCreating("ai")}
+          onCreated={openExam}
         />
+      )}
+      {creating === "ai" && (
+        <GenerateExamDialog open onOpenChange={(open) => !open && setCreating(null)} onCreated={openExam} />
       )}
     </div>
   );
