@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { FollowUp } from "@/components/follow-up";
 import { PageHeader, Panel, StatCard } from "@/components/primitives";
 import { useStore } from "@/lib/store";
 
@@ -88,13 +89,17 @@ function Analytics() {
       <Panel className="mt-4" title="Students needing follow-up">
         <ul className="divide-y divide-border text-sm">
           {students
-            .filter((s) => s.missingWork > 0)
+            .map((s) => ({ student: s, stats: studentStats(s) }))
+            .filter(({ stats }) => !stats.upToDate)
             .slice(0, 8)
-            .map((s) => (
-              <li key={s.id} className="flex items-center justify-between py-2">
+            .map(({ student: s, stats }) => (
+              <li key={s.id} className="flex items-center justify-between gap-2 py-2">
                 <span className="font-medium">{s.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {s.missingWork} missing · {studentStats(s).average != null ? `${studentStats(s).average}% average` : "no results yet"}
+                <span className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {stats.average != null ? `${stats.average}% average` : "no results yet"}
+                  </span>
+                  <FollowUp stats={stats} />
                 </span>
               </li>
             ))}

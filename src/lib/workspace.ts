@@ -214,12 +214,15 @@ export function removeClass(ws: Workspace, classId: string): Workspace {
 export const classSize = (ws: Workspace, classId: string) =>
   ws.students.filter((s) => s.classId === classId).length;
 
-/** A student's average and attendance: fixed figures for demo students, otherwise from their exam results. */
+/**
+ * A student's average and attendance (fixed figures for demo students, otherwise from their
+ * exam results), and what they still have to do: retakes for missed exams and missing work.
+ */
 export function studentStats(ws: Workspace, student: Student) {
   const records = ws.exams.flatMap((e) =>
     e.attendance
       .filter((a) => a.studentId === student.id)
-      .map((a) => ({ ...a, total: e.totalPoints })),
+      .map((a) => ({ ...a, examId: e.id, total: e.totalPoints })),
   );
   const scored = records.filter((r) => r.score != null && r.total > 0);
   const held = records.filter((r) => r.status !== "pending");
@@ -233,8 +236,32 @@ export function studentStats(ws: Workspace, student: Student) {
     (held.length
       ? Math.round((held.filter((r) => r.status === "completed").length / held.length) * 100)
       : undefined);
-  return { average, attendanceRate, missingWork: student.missingWork };
+
+  // Every exam the student missed needs a retake until they're marked present. Its retake
+  // is either booked (has a date) or still to schedule.
+  const retakesNeeded = records
+    .filter((r) => r.status === "absent")
+    .map((r) => ws.retakes.find((t) => t.examId === r.examId && t.studentId === student.id))
+    .filter((t) => t?.status !== "completed");
+  const retakeDates = retakesNeeded
+    .flatMap((t) => (t?.status === "scheduled" && t.date ? [t.date] : []))
+    .sort();
+  const retakesToSchedule = retakesNeeded.length - retakeDates.length;
+
+  return {
+    average,
+    attendanceRate,
+    missingWork: student.missingWork,
+    /** Missed exams whose retake hasn't been booked yet. */
+    retakesToSchedule,
+    /** Dates of booked retakes, soonest first. */
+    retakeDates,
+    /** Nothing missed, no retakes waiting and no missing work. */
+    upToDate: student.missingWork === 0 && retakesToSchedule === 0 && retakeDates.length === 0,
+  };
 }
+
+export type StudentStats = ReturnType<typeof studentStats>;
 
 // --- Calendar -----------------------------------------------------------------
 
