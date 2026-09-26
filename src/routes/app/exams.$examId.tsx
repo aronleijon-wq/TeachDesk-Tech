@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
 import { GenerateVersionDialog } from "@/components/generate-version-dialog";
+import { GradeWithAi } from "@/components/grade-with-ai";
 import { AddQuestion, QuestionCard } from "@/components/question-editor";
 import { useStore } from "@/lib/store";
 import { newId } from "@/lib/workspace";
@@ -253,14 +254,20 @@ function ExamDetail() {
           </Panel>
         </TabsContent>
 
-        <TabsContent value="grading" className="mt-4">
-          <Panel title="Grading" description="Enter each student's score. Students appear here once they're marked present.">
+        <TabsContent value="grading" className="mt-4 space-y-4">
+          <GradeWithAi exam={exam} />
+          <Panel title="Scores" description="Enter each student's score, or approve AI's suggestions above. Students appear here once they're marked present.">
             <ul className="divide-y divide-border">
               {exam.attendance.filter((a) => a.status === "completed").map((a) => (
                 <li key={a.studentId} className="flex items-center justify-between gap-3 py-2">
-                  <span className="text-sm font-medium">{studentById(a.studentId)?.name}</span>
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    {studentById(a.studentId)?.name}
+                    {a.aiGrading?.approved && <StatusPill tone="primary">AI-assisted</StatusPill>}
+                  </span>
                   <span className="flex items-center gap-2">
                     <Input
+                      // A new score (e.g. an approved AI grading) resets the box.
+                      key={a.score ?? "none"}
                       type="number"
                       min={0}
                       max={exam.totalPoints}

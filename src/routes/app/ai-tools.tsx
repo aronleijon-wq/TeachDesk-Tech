@@ -1,5 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileSearch, MessageSquareText, Repeat, Sparkles, type LucideIcon } from "lucide-react";
+import {
+  ClipboardCheck,
+  FileSearch,
+  MessageSquareText,
+  Repeat,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { PageHeader, Panel, StatusPill } from "@/components/primitives";
 import { FREE_AI_PER_MONTH } from "@/lib/pricing";
 
@@ -10,7 +17,7 @@ export const Route = createFileRoute("/app/ai-tools")({
       {
         name: "description",
         content:
-          "The AI tools in TeachDesk: equivalent retakes, new exams, importing existing exams and help.",
+          "The AI tools in TeachDesk: equivalent retakes, new exams, importing exams, grading suggestions and help.",
       },
       { property: "og:title", content: "AI Tools — TeachDesk" },
       { property: "og:description", content: "The AI tools in TeachDesk." },
@@ -56,6 +63,15 @@ const tools: {
     plan: "Pro",
   },
   {
+    icon: ClipboardCheck,
+    title: "Grade tests with AI",
+    description:
+      "Upload the students' finished tests. AI suggests points for every question with a reason, and you approve each student.",
+    where: "Open an exam → Grading",
+    to: "/app/exams",
+    plan: "Pro",
+  },
+  {
     icon: MessageSquareText,
     title: "Ask TeachDesk AI",
     description: "Quick answers about how TeachDesk works, in Swedish or English.",
@@ -65,11 +81,7 @@ const tools: {
   },
 ];
 
-const comingLater = [
-  "Grading suggestions for open answers",
-  "Rubric drafts for assignments",
-  "Written summaries of class results",
-];
+const comingLater = ["Rubric drafts for assignments", "Written summaries of class results"];
 
 function AiTools() {
   return (
@@ -102,12 +114,13 @@ function AiTools() {
           <li>AI runs on TeachDesk's servers, using Claude from Anthropic.</li>
           <li>
             Nothing AI makes is used until you've looked at it: generated questions are yours to
-            edit, and retake versions need your approval.
+            edit, and retake versions and suggested points need your approval.
           </li>
-          <li>AI never sets or changes a grade.</li>
+          <li>AI never sets a score on its own. You decide every grade.</li>
           <li>
-            Only what you choose is sent — like the exam you're working on — and it isn't used to
-            train AI models.
+            Only what you choose is sent — like the exam you're working on, or the tests you upload
+            for grading — and it isn't used to train AI models. TeachDesk doesn't keep the uploaded
+            tests.
           </li>
         </ul>
       </Panel>

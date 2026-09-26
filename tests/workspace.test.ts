@@ -285,3 +285,41 @@ test("a new exam expects the whole class, and its questions become Version A", (
   );
   assert.equal(withQuestions.totalPoints, 8);
 });
+
+test("AI grading counts only once approved, with the teacher's points", () => {
+  let ws = classWithExam();
+  const [sara, leo] = ws.students;
+  ws = rules.setAttendance(ws, "exam-1", leo!.id, "absent");
+  const grading = {
+    versionId: "v-a",
+    fileName: "leo.pdf",
+    gradedAt: "2099-01-11T10:00:00Z",
+    questions: [
+      { number: 1, answer: "12x", points: 2, maxPoints: 2, reason: "Rätt.", unsure: false },
+      { number: 2, answer: "?", points: 1, maxPoints: 4, reason: "Svårläst.", unsure: true },
+    ],
+    warnings: [],
+    approved: false,
+  };
+  const record = (id: string) => ws.exams[0]!.attendance.find((a) => a.studentId === id)!;
+
+  ws = rules.suggestGrading(ws, "exam-1", leo!.id, grading);
+  assert.equal(record(leo!.id).score, undefined);
+  assert.equal(record(leo!.id).status, "absent");
+
+  // The teacher raises question 2 to 3 points and approves: Leo took it, so his retake is done.
+  ws = rules.approveGrading(ws, "exam-1", leo!.id, [2, 3]);
+  assert.equal(record(leo!.id).score, 5);
+  assert.equal(record(leo!.id).status, "completed");
+  assert.equal(record(leo!.id).aiGrading?.approved, true);
+  assert.equal(record(leo!.id).versionId, "v-a");
+  assert.equal(ws.retakes.length, 0);
+
+  // Discarding removes a suggestion; a score entered by hand replaces an AI grading.
+  ws = rules.suggestGrading(ws, "exam-1", sara!.id, grading);
+  ws = rules.discardGrading(ws, "exam-1", sara!.id);
+  assert.equal(record(sara!.id).aiGrading, undefined);
+  ws = rules.setScore(ws, "exam-1", leo!.id, 4);
+  assert.equal(record(leo!.id).aiGrading, undefined);
+  assert.equal(record(leo!.id).score, 4);
+});

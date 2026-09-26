@@ -54,6 +54,30 @@ export interface Attendance {
   status: AttendanceStatus;
   score?: number | undefined;
   versionId?: string | undefined;
+  /** AI's suggested grading of the student's paper; it only counts once the teacher approves it. */
+  aiGrading?: AiGrading | undefined;
+}
+
+/** AI's suggested points for one student's paper, question by question. */
+export interface AiGrading {
+  /** The version of the exam the paper was graded against. */
+  versionId: string;
+  /** The uploaded file, so the teacher can find the paper. */
+  fileName: string;
+  /** When AI graded it (ISO time). */
+  gradedAt: string;
+  questions: {
+    number: number;
+    /** What the student wrote, in short. */
+    answer: string;
+    points: number;
+    maxPoints: number;
+    reason: string;
+    /** Hard to read or ambiguous: worth a closer look. */
+    unsure: boolean;
+  }[];
+  warnings: string[];
+  approved: boolean;
 }
 
 export interface Retake {
