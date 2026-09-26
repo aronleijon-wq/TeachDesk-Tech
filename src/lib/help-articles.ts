@@ -134,6 +134,16 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         ],
       },
       {
+        id: "print-exam",
+        title: "Print an exam or save it as a PDF",
+        summary:
+          "Open the exam and click Print. Choose the version, and the student copy or the answer key, then click Print or save as PDF.",
+        details: [
+          "The student copy has lines for the name and class and room for every answer. The answer key (facit) shows each question's answer and grading criteria. Both are laid out for A4, with the headings in Swedish.",
+          "For a PDF, choose Save as PDF in the print dialog. The exam needs its questions first.",
+        ],
+      },
+      {
         id: "delete-exam",
         title: "Delete an exam",
         summary:
@@ -146,9 +156,9 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         id: "attendance",
         title: "Mark who was at the exam",
         summary:
-          "Open the exam and use the Attendance tab to mark each student Present, Absent or Pending.",
+          "Open the exam's Attendance tab and mark the students who were absent. Then click Mark the other … present, or Mark everyone present if nobody was away.",
         details: [
-          "Students marked Absent go straight into the retake queue.",
+          "Students marked Absent go straight into the retake queue. You can also mark each student Present, Absent or Pending one by one.",
           "Marking a student Present later — for example after their retake — takes them out of the queue.",
         ],
       },
@@ -158,6 +168,7 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         summary:
           "Open the exam's Retakes tab and choose a date, time and room for each student who missed it.",
         details: [
+          "When several students need a retake, book one slot for all of them at the top of the Retakes tab. Use Reschedule to move a single student.",
           "Booked retakes show in the calendar and in the dashboard's retake queue.",
           "When the student has taken the retake, mark them Present on the Attendance tab and enter their score.",
         ],
@@ -201,6 +212,7 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         ],
         details: [
           "Answers that are hard to read or ambiguous are marked Check. AI grades against each question's expected answer and grading criteria, so fill those in for the best suggestions.",
+          "When several students have nothing marked Check, approve them all at once with Approve … with nothing to check. Points you've changed are kept.",
           "TeachDesk doesn't keep the uploaded files; they're only sent to be read. Grading with AI is part of Pro.",
         ],
       },

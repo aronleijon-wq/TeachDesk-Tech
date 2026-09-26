@@ -31,6 +31,7 @@ import { Route as AppAdminIndexRouteImport } from './routes/app/admin.index'
 import { Route as AppAdminSchoolsRouteImport } from './routes/app/admin.schools'
 import { Route as AppExamsIndexRouteImport } from './routes/app/exams.index'
 import { Route as AppExamsExamIdRouteImport } from './routes/app/exams.$examId'
+import { Route as AppPrintExamIdRouteImport } from './routes/app/print.$examId'
 import { Route as AppStudentsIndexRouteImport } from './routes/app/students.index'
 import { Route as AppStudentsStudentIdRouteImport } from './routes/app/students.$studentId'
 
@@ -144,6 +145,11 @@ const AppExamsExamIdRoute = AppExamsExamIdRouteImport.update({
   path: '/exams/$examId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPrintExamIdRoute = AppPrintExamIdRouteImport.update({
+  id: '/print/$examId',
+  path: '/print/$examId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppStudentsIndexRoute = AppStudentsIndexRouteImport.update({
   id: '/students/',
   path: '/students/',
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/app/admin/schools': typeof AppAdminSchoolsRoute
   '/app/exams/$examId': typeof AppExamsExamIdRoute
+  '/app/print/$examId': typeof AppPrintExamIdRoute
   '/app/students/$studentId': typeof AppStudentsStudentIdRoute
   '/app/admin/': typeof AppAdminIndexRoute
   '/app/exams/': typeof AppExamsIndexRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/app/admin/schools': typeof AppAdminSchoolsRoute
   '/app/exams/$examId': typeof AppExamsExamIdRoute
+  '/app/print/$examId': typeof AppPrintExamIdRoute
   '/app/students/$studentId': typeof AppStudentsStudentIdRoute
   '/app/admin': typeof AppAdminIndexRoute
   '/app/exams': typeof AppExamsIndexRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/app/admin/schools': typeof AppAdminSchoolsRoute
   '/app/exams/$examId': typeof AppExamsExamIdRoute
+  '/app/print/$examId': typeof AppPrintExamIdRoute
   '/app/students/$studentId': typeof AppStudentsStudentIdRoute
   '/app/admin/': typeof AppAdminIndexRoute
   '/app/exams/': typeof AppExamsIndexRoute
@@ -256,6 +265,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/admin/schools'
     | '/app/exams/$examId'
+    | '/app/print/$examId'
     | '/app/students/$studentId'
     | '/app/admin/'
     | '/app/exams/'
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/admin/schools'
     | '/app/exams/$examId'
+    | '/app/print/$examId'
     | '/app/students/$studentId'
     | '/app/admin'
     | '/app/exams'
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/admin/schools'
     | '/app/exams/$examId'
+    | '/app/print/$examId'
     | '/app/students/$studentId'
     | '/app/admin/'
     | '/app/exams/'
@@ -480,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExamsExamIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/print/$examId': {
+      id: '/app/print/$examId'
+      path: '/print/$examId'
+      fullPath: '/app/print/$examId'
+      preLoaderRoute: typeof AppPrintExamIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/students/': {
       id: '/app/students/'
       path: '/students'
@@ -510,6 +529,7 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppAdminSchoolsRoute: typeof AppAdminSchoolsRoute
   AppExamsExamIdRoute: typeof AppExamsExamIdRoute
+  AppPrintExamIdRoute: typeof AppPrintExamIdRoute
   AppStudentsStudentIdRoute: typeof AppStudentsStudentIdRoute
   AppAdminIndexRoute: typeof AppAdminIndexRoute
   AppExamsIndexRoute: typeof AppExamsIndexRoute
@@ -529,6 +549,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppAdminSchoolsRoute: AppAdminSchoolsRoute,
   AppExamsExamIdRoute: AppExamsExamIdRoute,
+  AppPrintExamIdRoute: AppPrintExamIdRoute,
   AppStudentsStudentIdRoute: AppStudentsStudentIdRoute,
   AppAdminIndexRoute: AppAdminIndexRoute,
   AppExamsIndexRoute: AppExamsIndexRoute,

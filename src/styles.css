@@ -226,3 +226,15 @@
   .reveal { opacity: 1; transform: none; transition: none; }
   .td-float, .td-fill, .td-in, .td-dash { animation: none; }
 }
+
+/* Printed pages (e.g. exams): A4 with even margins on white; the app's menus are hidden with print:hidden. */
+@page {
+  size: A4;
+  margin: 16mm;
+}
+
+@media print {
+  body {
+    background-color: #fff;
+  }
+}

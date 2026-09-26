@@ -177,10 +177,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={120}>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-background print:bg-white">
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-30 hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 md:flex",
+            "fixed inset-y-0 left-0 z-30 hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 md:flex print:hidden",
             collapsed ? "w-16" : "w-60",
           )}
         >
@@ -222,8 +222,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        <div className={cn("flex min-w-0 flex-1 flex-col transition-[padding] duration-200", collapsed ? "md:pl-16" : "md:pl-60")}>
-          <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-surface/90 px-4 backdrop-blur">
+        <div className={cn("flex min-w-0 flex-1 flex-col transition-[padding] duration-200 print:pl-0", collapsed ? "md:pl-16" : "md:pl-60")}>
+          <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-surface/90 px-4 backdrop-blur print:hidden">
             <Button
               variant="ghost"
               size="icon"
@@ -327,11 +327,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="min-w-0 flex-1 px-4 pb-24 pt-6 md:px-8 md:pb-10">{children}</main>
+          <main className="min-w-0 flex-1 px-4 pb-24 pt-6 md:px-8 md:pb-10 print:p-0">{children}</main>
         </div>
 
         {/* Mobile bottom navigation */}
-        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-surface md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-surface md:hidden print:hidden">
           {nav.slice(0, 5).map((item) => (
             <Link
               key={item.to}

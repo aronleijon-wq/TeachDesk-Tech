@@ -336,3 +336,36 @@ test("deleting an exam removes its results and retakes, and nothing else", () =>
   assert.equal(ws.students.length, 3);
   assert.equal(ws.classes.length, 1);
 });
+
+test("after tapping the absent students, the rest can be marked present in one go", () => {
+  let ws = classWithExam();
+  const [sara, leo, william] = ws.students;
+  ws = rules.setAttendance(ws, "exam-1", leo!.id, "absent");
+  ws = rules.markRestPresent(ws, "exam-1");
+  const status = (id: string) => ws.exams[0]!.attendance.find((a) => a.studentId === id)!.status;
+  assert.deepEqual(
+    [status(sara!.id), status(leo!.id), status(william!.id)],
+    ["completed", "absent", "completed"],
+  );
+  assert.equal(ws.retakes.length, 1);
+});
+
+test("one retake slot can be booked for several students", () => {
+  let ws = classWithExam();
+  const [, leo, william] = ws.students;
+  ws = rules.setAttendance(ws, "exam-1", leo!.id, "absent");
+  ws = rules.setAttendance(ws, "exam-1", william!.id, "absent");
+  const slot = { date: "2099-01-20", time: "14:00", room: "B214" };
+  ws = rules.scheduleRetakes(
+    ws,
+    ws.retakes.map((r) => r.id),
+    slot,
+  );
+  assert.deepEqual(
+    ws.retakes.map((r) => [r.status, r.date, r.room]),
+    [
+      ["scheduled", "2099-01-20", "B214"],
+      ["scheduled", "2099-01-20", "B214"],
+    ],
+  );
+});
