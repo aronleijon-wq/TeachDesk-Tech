@@ -198,3 +198,48 @@ test("the dashboard counts held exams without results, retakes to book and stude
   assert.equal(summary.openRetakes.length, 1);
   assert.equal(summary.studentsToFollowUp.length, 1);
 });
+
+test("questions written by the teacher make up Version A, and the exam's points follow them", () => {
+  let ws = classWithExam();
+  const question = (id: string, points: number) => ({
+    id,
+    number: 0,
+    type: "short-answer" as const,
+    topic: "Derivator",
+    skill: "",
+    difficulty: "Medium" as const,
+    points,
+    prompt: `Fråga ${id}`,
+    expectedAnswer: "",
+    gradingCriteria: "",
+    objective: "",
+  });
+
+  ws = rules.addQuestion(ws, "exam-1", question("q1", 4));
+  ws = rules.addQuestion(ws, "exam-1", question("q2", 6));
+  let exam = ws.exams[0]!;
+  assert.equal(exam.versions.length, 1);
+  assert.equal(exam.versions[0]!.label, "Version A");
+  assert.deepEqual(
+    exam.versions[0]!.questions.map((q) => [q.id, q.number]),
+    [
+      ["q1", 1],
+      ["q2", 2],
+    ],
+  );
+  assert.equal(exam.totalPoints, 10);
+
+  ws = rules.updateQuestion(ws, "exam-1", exam.versions[0]!.id, {
+    ...question("q2", 8),
+    number: 2,
+  });
+  assert.equal(ws.exams[0]!.totalPoints, 12);
+
+  ws = rules.removeQuestion(ws, "exam-1", "q1");
+  exam = ws.exams[0]!;
+  assert.deepEqual(
+    exam.versions[0]!.questions.map((q) => [q.id, q.number]),
+    [["q2", 1]],
+  );
+  assert.equal(exam.totalPoints, 8);
+});

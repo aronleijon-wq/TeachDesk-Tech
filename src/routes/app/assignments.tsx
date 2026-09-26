@@ -1,41 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Sparkles } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
+import { ClipboardList } from "lucide-react";
+import { EmptyState, PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/app/assignments")({
   head: () => ({
     meta: [
       { title: "Assignments — TeachDesk" },
-      { name: "description", content: "Track submissions, grading queues and rubrics for every assignment." },
+      { name: "description", content: "Submissions and what's left to grade for each assignment." },
       { property: "og:title", content: "Assignments — TeachDesk" },
-      { property: "og:description", content: "Submissions, grading queues and rubrics." },
+      { property: "og:description", content: "Submissions and what's left to grade." },
     ],
   }),
   component: AssignmentsPage,
 });
 
-const demoRubric = [
-  { criterion: "Method and reasoning", points: 8, descriptor: "Chooses a suitable method and motivates each step." },
-  { criterion: "Mathematical accuracy", points: 6, descriptor: "Calculations are correct and clearly presented." },
-  { criterion: "Communication", points: 4, descriptor: "Uses correct notation and explains the answer." },
-  { criterion: "Interpretation", points: 2, descriptor: "Relates the result back to the original problem." },
-];
-
 function AssignmentsPage() {
-  const { assignments, setRubric, classById } = useStore();
-  const [busy, setBusy] = useState<string | null>(null);
+  const { assignments, classById } = useStore();
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader
-        title="Assignments"
-        subtitle="Submissions, grading queues and rubrics."
-        actions={<Button onClick={() => toast.info("Assignment builder opens from a class")}> <Plus className="size-4" /> New assignment</Button>}
-      />
+      <PageHeader title="Assignments" subtitle="Submissions and what's left to grade." />
+
+      {assignments.length === 0 && (
+        <EmptyState
+          icon={ClipboardList}
+          title="Assignments are coming later"
+          description="For now TeachDesk handles exams, retakes, results and follow-up. You can see how assignments will look in the demo (Settings → Show demo data)."
+        />
+      )}
 
       <div className="space-y-3">
         {assignments.map((a) => (
@@ -50,21 +43,7 @@ function AssignmentsPage() {
               </div>
               <div className="flex items-center gap-2">
                 {a.toGrade > 0 && <StatusPill tone="warning">{a.toGrade} to grade</StatusPill>}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={busy === a.id}
-                  onClick={() => {
-                    setBusy(a.id);
-                    setTimeout(() => {
-                      setRubric(a.id, demoRubric);
-                      setBusy(null);
-                      toast.success("Rubric drafted", { description: "Review and edit before using it for grading." });
-                    }, 900);
-                  }}
-                >
-                  <Sparkles className="size-4" /> {busy === a.id ? "Drafting..." : "Create rubric"}
-                </Button>
+
               </div>
             </div>
 

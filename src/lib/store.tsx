@@ -82,8 +82,9 @@ interface StoreValue extends Workspace {
   addExam: Bound<typeof rules.addExam>;
   addVersion: Bound<typeof rules.addVersion>;
   approveVersion: Bound<typeof rules.approveVersion>;
+  addQuestion: Bound<typeof rules.addQuestion>;
+  removeQuestion: Bound<typeof rules.removeQuestion>;
   updateQuestion: Bound<typeof rules.updateQuestion>;
-  setRubric: Bound<typeof rules.setRubric>;
   addStudents: Bound<typeof rules.addStudents>;
   removeStudent: Bound<typeof rules.removeStudent>;
   removeClass: Bound<typeof rules.removeClass>;
@@ -273,8 +274,9 @@ function WorkspaceStore({
       addExam: bind(rules.addExam),
       addVersion: bind(rules.addVersion),
       approveVersion: bind(rules.approveVersion),
+      addQuestion: bind(rules.addQuestion),
+      removeQuestion: bind(rules.removeQuestion),
       updateQuestion: bind(rules.updateQuestion),
-      setRubric: bind(rules.setRubric),
       addStudents: bind(rules.addStudents),
       removeStudent: bind(rules.removeStudent),
       removeClass: bind(rules.removeClass),

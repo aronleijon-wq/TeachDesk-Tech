@@ -49,9 +49,8 @@ export const PLANS: Plan[] = [
     features: [
       { label: "Unlimited classes" },
       { label: "Unlimited AI-generated retakes" },
-      { label: "Import existing exams from text, PDF or photo" },
-      { label: "Rubrics and analytics" },
-      { label: "Exports", comingSoon: true },
+      { label: "Generate new exams with AI" },
+      { label: "Read existing exams from text, PDF or photo" },
     ],
   },
   {
@@ -64,8 +63,8 @@ export const PLANS: Plan[] = [
       { label: "Pro for every teacher" },
       { label: "Invoice billing and a data processing agreement" },
       { label: "Onboarding for your staff" },
-      { label: "Shared exam library", comingSoon: true },
-      { label: "Admin roles and school system integrations", comingSoon: true },
+      { label: "A shared workspace with admin roles for your school" },
+      { label: "School system integrations", comingSoon: true },
     ],
   },
 ];

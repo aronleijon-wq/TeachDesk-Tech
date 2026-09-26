@@ -87,14 +87,24 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         id: "create-exam",
         title: "Create an exam",
         summary:
-          "Go to Exams → New exam and follow the five steps: basics, source, assessment, review and publish.",
+          "Go to Exams → New exam and follow four short steps: basics, questions, details and review.",
         steps: [
           "Enter the title, class, date, time and room.",
-          "Choose where the questions come from: write them yourself, use an existing exam (paste it, or upload a PDF or photo), or generate them with AI.",
-          "Set up the assessment, review the questions and publish.",
+          "Choose how to add the questions: write them yourself, use an existing exam (paste it, or upload a PDF or photo), generate them with AI, or reuse an earlier exam.",
+          "Add learning objectives, check the summary and click Create exam.",
         ],
         details: [
-          "Reading an existing exam from a PDF, photo or pasted text uses AI to find the questions, and is part of Pro.",
+          "Reading an existing exam and generating a new one with AI are part of Pro.",
+          "If you write the questions yourself, add them on the exam's Questions tab after creating it.",
+        ],
+      },
+      {
+        id: "write-questions",
+        title: "Write or change questions",
+        summary:
+          "Open the exam's Questions tab. Click Add question to write a new one, or Edit to change one.",
+        details: [
+          "New questions are added to Version A, the original. The exam's total points follow its questions.",
         ],
       },
       {
@@ -121,9 +131,9 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         id: "equivalent-version",
         title: "Make an equivalent retake version with AI",
         summary:
-          "On the exam's Versions tab, generate a new version that tests the same skills for the same points, with new numbers and contexts.",
+          "Open the exam and click Generate equivalent version. AI writes a new version that tests the same skills for the same points, with new numbers and contexts.",
         details: [
-          "You review every question and approve the version before it's used.",
+          "The exam needs its questions first. You review every question and approve the version on the Versions tab before it's used.",
           `The free plan includes ${FREE_AI_PER_MONTH} AI-generated retakes per month. Pro and school plans have no limit.`,
         ],
       },
@@ -144,19 +154,19 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         ],
       },
       {
+        id: "gradebook",
+        title: "Gradebook, export and analytics",
+        summary:
+          "The Gradebook shows every student's result per exam. Export CSV downloads it as a file for Excel or Google Sheets.",
+        details: [
+          "Analytics shows the average result of each exam and which students need follow-up. Averages and attendance are worked out from the scores and attendance you enter.",
+        ],
+      },
+      {
         id: "assignments",
         title: "Assignments",
         summary:
-          "The Assignments page shows each assignment's submissions and how many are left to grade.",
-      },
-      {
-        id: "gradebook",
-        title: "Gradebook and analytics",
-        summary:
-          "The Gradebook shows results per student and exam. Analytics shows how classes are doing and which students need follow-up.",
-        details: [
-          "Averages and attendance are worked out from the scores and attendance you enter.",
-        ],
+          "Assignments are coming later. For now TeachDesk handles exams, retakes, results and follow-up; the demo shows how assignments will look.",
       },
     ],
   },
@@ -243,7 +253,7 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         summary: `Every new account gets ${TRIAL_DAYS} days of Pro for free. Afterwards you keep the free plan unless you upgrade.`,
         details: [
           `Free: up to ${FREE_CLASS_LIMIT} classes and ${FREE_AI_PER_MONTH} AI-generated retakes per month.`,
-          `Pro: ${proPrice}${proYearly} — unlimited classes and AI retakes, and reading existing exams from PDFs and photos.`,
+          `Pro: ${proPrice}${proYearly} — unlimited classes and AI retakes, generating new exams with AI, and reading existing exams from PDFs and photos.`,
           "Enterprise: for whole schools and municipalities, with invoice billing. Contact us for a quote.",
           "To change plan, open the account menu (your initials, top right) and choose Plan.",
         ],

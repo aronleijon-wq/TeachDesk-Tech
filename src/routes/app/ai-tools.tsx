@@ -1,69 +1,74 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ClipboardCheck,
-  FileSearch,
-  ListChecks,
-  MessageSquareText,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { FileSearch, MessageSquareText, Repeat, Sparkles, type LucideIcon } from "lucide-react";
 import { PageHeader, Panel, StatusPill } from "@/components/primitives";
+import { FREE_AI_PER_MONTH } from "@/lib/pricing";
 
 export const Route = createFileRoute("/app/ai-tools")({
   head: () => ({
     meta: [
       { title: "AI Tools — TeachDesk" },
-      { name: "description", content: "AI assistance placed inside the teaching workflow: equivalent exams, rubrics, grading suggestions and summaries." },
+      {
+        name: "description",
+        content:
+          "The AI tools in TeachDesk: equivalent retakes, new exams, reading existing exams and help.",
+      },
       { property: "og:title", content: "AI Tools — TeachDesk" },
-      { property: "og:description", content: "AI assistance inside the teaching workflow." },
+      { property: "og:description", content: "The AI tools in TeachDesk." },
     ],
   }),
   component: AiTools,
 });
 
-const tools = [
+const tools: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  /** Where the tool is in the app. */
+  where: string;
+  to: "/app/exams" | "/app/help";
+  plan: string;
+}[] = [
+  {
+    icon: Repeat,
+    title: "Equivalent retake version",
+    description:
+      "A new version of an exam that tests the same skills for the same points, with new numbers and contexts.",
+    where: "Open an exam → Generate equivalent version",
+    to: "/app/exams",
+    plan: `Free: ${FREE_AI_PER_MONTH} per month · Pro: unlimited`,
+  },
   {
     icon: Sparkles,
-    title: "Generate equivalent exam",
-    description: "Create Version B of an exam that tests the same skills with new numbers and contexts.",
+    title: "Generate a new exam",
+    description:
+      "Questions written from your topics and learning objectives, ready for you to review and edit.",
+    where: "Exams → AI generate exam",
     to: "/app/exams",
-    live: true,
+    plan: "Pro",
   },
   {
     icon: FileSearch,
-    title: "Analyse uploaded exam",
-    description: "Extract questions, topics, points, difficulty and objectives from a PDF or document.",
+    title: "Read an existing exam",
+    description:
+      "Turns a PDF, a photo or pasted text into questions with points, topics, answers and grading criteria.",
+    where: "Exams → New exam → Use an existing exam",
     to: "/app/exams",
-    live: false,
-  },
-  {
-    icon: ListChecks,
-    title: "Create rubric",
-    description: "Draft a criteria-based rubric for an assignment, ready for your edits.",
-    to: "/app/assignments",
-    live: false,
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Suggest grading",
-    description: "Propose points for open answers with a motivation. You confirm every grade.",
-    to: "/app/gradebook",
-    live: false,
+    plan: "Pro",
   },
   {
     icon: MessageSquareText,
-    title: "Summarise class results",
-    description: "A short written summary of how a class performed and what to reteach.",
-    to: "/app/analytics",
-    live: false,
+    title: "Ask TeachDesk AI",
+    description: "Quick answers about how TeachDesk works, in Swedish or English.",
+    where: "Help",
+    to: "/app/help",
+    plan: "Every plan",
   },
-  {
-    icon: Users,
-    title: "Find students needing follow-up",
-    description: "Surface students with missing work, absences or falling results.",
-    to: "/app/students",
-    live: false,
-  },
+];
+
+const comingLater = [
+  "Grading suggestions for open answers",
+  "Rubric drafts for assignments",
+  "Written summaries of class results",
 ];
 
 function AiTools() {
@@ -71,32 +76,47 @@ function AiTools() {
     <div className="mx-auto max-w-5xl">
       <PageHeader
         title="AI Tools"
-        subtitle="Assistance placed inside your workflow — never a chatbot in the way."
+        subtitle="AI that does the repetitive work — you review everything it makes."
       />
 
       <div className="grid gap-3 md:grid-cols-2">
-        {tools.map((t) => (
+        {tools.map((tool) => (
           <Link
-            key={t.title}
-            to={t.to}
-            className="rounded-lg border border-border bg-surface p-4 shadow-card transition-all hover:border-primary/40 hover:shadow-panel"
+            key={tool.title}
+            to={tool.to}
+            className="flex flex-col rounded-lg border border-border bg-surface p-4 shadow-card transition-all hover:border-primary/40 hover:shadow-panel"
           >
             <div className="flex items-start justify-between gap-2">
-              <t.icon className="size-4 text-primary" />
-              {t.live ? <StatusPill tone="success">Live AI</StatusPill> : <StatusPill>Demo preview</StatusPill>}
+              <tool.icon className="size-4 text-primary" />
+              <StatusPill tone="primary">{tool.plan}</StatusPill>
             </div>
-            <p className="mt-3 text-sm font-semibold">{t.title}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{t.description}</p>
+            <p className="mt-3 text-sm font-semibold">{tool.title}</p>
+            <p className="mt-1 flex-1 text-sm text-muted-foreground">{tool.description}</p>
+            <p className="mt-3 text-xs font-medium text-muted-foreground">{tool.where}</p>
           </Link>
         ))}
       </div>
 
       <Panel className="mt-6" title="How AI is used here">
         <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>Equivalent exam generation runs on a real model, server-side, with your key never leaving the server.</li>
-          <li>Every generated version and every suggested grade requires teacher approval before it counts.</li>
-          <li>Tools marked “Demo preview” use seeded demo content and are clearly separated from production AI.</li>
-          <li>Student data is never used to train models.</li>
+          <li>AI runs on TeachDesk's servers, using Claude from Anthropic.</li>
+          <li>
+            Nothing AI makes is used until you've looked at it: generated questions are yours to
+            edit, and retake versions need your approval.
+          </li>
+          <li>AI never sets or changes a grade.</li>
+          <li>
+            Only what you choose is sent — like the exam you're working on — and it isn't used to
+            train AI models.
+          </li>
+        </ul>
+      </Panel>
+
+      <Panel className="mt-4" title="Coming later">
+        <ul className="space-y-1 text-sm text-muted-foreground">
+          {comingLater.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
         </ul>
       </Panel>
     </div>

@@ -1,7 +1,6 @@
 // Rules for changing a workspace. Every function is pure: it takes a workspace
 // and returns a new one, so the store can apply it to whichever workspace is active.
 import type {
-  Assignment,
   AttendanceStatus,
   CalendarEvent,
   ClassGroup,
@@ -100,29 +99,62 @@ export const approveVersion = (ws: Workspace, examId: string, versionId: string)
     versions: e.versions.map((v) => (v.id === versionId ? { ...v, approved: true } : v)),
   }));
 
+/**
+ * Sets the questions of an exam's original version (Version A), creating it for an exam that
+ * has none yet. Questions are numbered in order, and the exam's points follow them.
+ */
+function withOriginalQuestions(exam: Exam, questions: Question[]): Exam {
+  const [original, ...others] = exam.versions;
+  const version: ExamVersion = original ?? {
+    id: `${exam.id}-a`,
+    label: "Version A",
+    origin: "original",
+    createdAt: todayIso(),
+    approved: true,
+    questions: [],
+  };
+  const numbered = questions.map((q, i) => ({ ...q, number: i + 1 }));
+  const points = numbered.reduce((sum, q) => sum + q.points, 0);
+  return {
+    ...exam,
+    totalPoints: points || exam.totalPoints,
+    versions: [{ ...version, questions: numbered }, ...others],
+  };
+}
+
+/** Adds a question at the end of the exam's original version. */
+export const addQuestion = (ws: Workspace, examId: string, question: Question): Workspace =>
+  mapExam(ws, examId, (e) =>
+    withOriginalQuestions(e, [...(e.versions[0]?.questions ?? []), question]),
+  );
+
+/** Removes a question from the exam's original version. */
+export const removeQuestion = (ws: Workspace, examId: string, questionId: string): Workspace =>
+  mapExam(ws, examId, (e) =>
+    withOriginalQuestions(
+      e,
+      (e.versions[0]?.questions ?? []).filter((q) => q.id !== questionId),
+    ),
+  );
+
 export const updateQuestion = (
   ws: Workspace,
   examId: string,
   versionId: string,
   question: Question,
 ): Workspace =>
-  mapExam(ws, examId, (e) => ({
-    ...e,
-    versions: e.versions.map((v) =>
-      v.id === versionId
-        ? { ...v, questions: v.questions.map((q) => (q.id === question.id ? question : q)) }
-        : v,
-    ),
-  }));
-
-export const setRubric = (
-  ws: Workspace,
-  assignmentId: string,
-  rubric: NonNullable<Assignment["rubric"]>,
-): Workspace => ({
-  ...ws,
-  assignments: ws.assignments.map((a) => (a.id === assignmentId ? { ...a, rubric } : a)),
-});
+  mapExam(ws, examId, (e) => {
+    const replace = (questions: Question[]) =>
+      questions.map((q) => (q.id === question.id ? question : q));
+    const [original] = e.versions;
+    if (original?.id === versionId) return withOriginalQuestions(e, replace(original.questions));
+    return {
+      ...e,
+      versions: e.versions.map((v) =>
+        v.id === versionId ? { ...v, questions: replace(v.questions) } : v,
+      ),
+    };
+  });
 
 // --- Classes and students -----------------------------------------------------
 
@@ -280,6 +312,19 @@ export const isHeld = (exam: Exam, today: string) =>
   exam.date < today ||
   exam.attendance.some((a) => a.status !== "pending");
 
+/** Papers without a result: everyone at the exam who wasn't absent and has no score yet. */
+const ungradedPapers = (exam: Exam) =>
+  exam.attendance.filter((a) => a.status !== "absent" && a.score == null).length;
+
+export type ExamStage = "draft" | "upcoming" | "needs-grading" | "completed";
+
+/** Where an exam is: a draft, not held yet, held with results still to enter, or done. */
+export function examStage(exam: Exam, today = todayIso()): ExamStage {
+  if (exam.status === "draft") return "draft";
+  if (!isHeld(exam, today)) return "upcoming";
+  return ungradedPapers(exam) > 0 ? "needs-grading" : "completed";
+}
+
 const sum = (numbers: number[]) => numbers.reduce((total, n) => total + n, 0);
 
 /** Everything waiting for the teacher: exams and work to grade, retakes to book, students to follow up. */
@@ -289,13 +334,9 @@ export function attentionSummary(ws: Workspace, today = todayIso()) {
     .filter((e) => !isHeld(e, today))
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 
-  // Papers without a result: everyone at a held exam who wasn't absent and has no score yet.
   const examsToGrade = exams
     .filter((e) => isHeld(e, today))
-    .map((exam) => ({
-      exam,
-      papers: exam.attendance.filter((a) => a.status !== "absent" && a.score == null).length,
-    }))
+    .map((exam) => ({ exam, papers: ungradedPapers(exam) }))
     .filter(({ papers }) => papers > 0);
   const assignmentsToGrade = ws.assignments.filter((a) => a.toGrade > 0);
 

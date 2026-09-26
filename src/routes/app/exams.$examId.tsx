@@ -1,15 +1,15 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, Check, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Check, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { PageHeader, Panel, ProgressBar, StatusPill, formatDate } from "@/components/primitives";
 import { GenerateVersionDialog } from "@/components/generate-version-dialog";
-import type { Question } from "@/lib/types";
+import { AddQuestion, QuestionCard } from "@/components/question-editor";
 import { useStore } from "@/lib/store";
+import { newId } from "@/lib/workspace";
 
 export const Route = createFileRoute("/app/exams/$examId")({
   head: () => ({
@@ -25,8 +25,19 @@ export const Route = createFileRoute("/app/exams/$examId")({
 
 function ExamDetail() {
   const { examId } = Route.useParams();
-  const { exams, retakes, setAttendance, setScore, scheduleRetake, updateQuestion, approveVersion, classById, studentById } =
-    useStore();
+  const {
+    exams,
+    retakes,
+    setAttendance,
+    setScore,
+    scheduleRetake,
+    addQuestion,
+    removeQuestion,
+    updateQuestion,
+    approveVersion,
+    classById,
+    studentById,
+  } = useStore();
   const exam = exams.find((e) => e.id === examId);
   const [genOpen, setGenOpen] = useState(false);
   const [activeVersion, setActiveVersion] = useState(0);
@@ -38,6 +49,8 @@ function ExamDetail() {
   const absent = exam.attendance.filter((a) => a.status === "absent");
   const examRetakes = retakes.filter((r) => r.examId === exam.id);
   const version = exam.versions[activeVersion];
+  // Questions are written and removed on the original version; generated ones are only edited.
+  const onOriginal = activeVersion === 0;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -49,7 +62,7 @@ function ExamDetail() {
         title={exam.title}
         subtitle={`${klass?.name} · ${formatDate(exam.date)} · ${exam.time} · ${exam.room} · ${exam.totalPoints} points`}
         actions={
-          <Button onClick={() => setGenOpen(true)} disabled={exam.versions.length === 0}>
+          <Button onClick={() => setGenOpen(true)} disabled={!exam.versions[0]?.questions.length}>
             <Sparkles className="size-4" /> Generate equivalent version
           </Button>
         }
@@ -91,22 +104,37 @@ function ExamDetail() {
           </Panel>
         </TabsContent>
 
-        <TabsContent value="questions" className="mt-4">
-          {!version ? (
-            <Panel><p className="text-sm text-muted-foreground">This exam has no version yet.</p></Panel>
+        <TabsContent value="questions" className="mt-4 space-y-3">
+          {!version?.questions.length && (
+            <Panel>
+              <p className="text-sm text-muted-foreground">
+                No questions yet. Add the exam's questions here; then you can also generate an equivalent version for
+                retakes.
+              </p>
+            </Panel>
+          )}
+          {version?.questions.map((q) => (
+            <QuestionCard
+              key={q.id}
+              question={q}
+              onSave={(updated) => {
+                updateQuestion(exam.id, version.id, updated);
+                toast.success("Question updated");
+              }}
+              {...(onOriginal ? { onRemove: () => removeQuestion(exam.id, q.id) } : {})}
+            />
+          ))}
+          {onOriginal ? (
+            <AddQuestion
+              onAdd={(draft) => {
+                addQuestion(exam.id, { ...draft, id: newId("question"), number: 0 });
+                toast.success("Question added");
+              }}
+            />
           ) : (
-            <div className="space-y-3">
-              {version.questions.map((q) => (
-                <QuestionEditor
-                  key={q.id}
-                  question={q}
-                  onSave={(updated) => {
-                    updateQuestion(exam.id, version.id, updated);
-                    toast.success("Question updated");
-                  }}
-                />
-              ))}
-            </div>
+            <p className="text-xs text-muted-foreground">
+              You're looking at {version?.label}. To add or remove questions, choose Version A on the Versions tab.
+            </p>
           )}
         </TabsContent>
 
@@ -268,65 +296,6 @@ function Metric({ label, value }: { label: string; value: number }) {
     <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
       <p className="label-xs">{label}</p>
       <p className="stat-number mt-1">{value}</p>
-    </div>
-  );
-}
-
-function QuestionEditor({ question, onSave }: { question: Question; onSave: (q: Question) => void }) {
-  const [draft, setDraft] = useState(question);
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="label-xs">Question {question.number} · {question.topic}</p>
-          <p className="mt-1 text-sm">{question.prompt}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {question.points} points · {question.difficulty} · {question.skill} · {question.objective}
-          </p>
-        </div>
-        <Button size="sm" variant="ghost" onClick={() => setOpen((v) => !v)}>
-          {open ? <X className="size-4" /> : "Edit"}
-        </Button>
-      </div>
-
-      {open && (
-        <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
-          <Textarea
-            className="sm:col-span-2"
-            rows={2}
-            value={draft.prompt}
-            onChange={(e) => setDraft({ ...draft, prompt: e.target.value })}
-          />
-          <Input value={draft.topic} onChange={(e) => setDraft({ ...draft, topic: e.target.value })} placeholder="Topic" />
-          <Input value={draft.skill} onChange={(e) => setDraft({ ...draft, skill: e.target.value })} placeholder="Skill" />
-          <Input
-            type="number"
-            value={draft.points}
-            onChange={(e) => setDraft({ ...draft, points: Number(e.target.value) })}
-            placeholder="Points"
-          />
-          <Input value={draft.difficulty} onChange={(e) => setDraft({ ...draft, difficulty: e.target.value as Question["difficulty"] })} placeholder="Difficulty" />
-          <Textarea
-            className="sm:col-span-2"
-            rows={2}
-            value={draft.expectedAnswer}
-            onChange={(e) => setDraft({ ...draft, expectedAnswer: e.target.value })}
-            placeholder="Expected answer"
-          />
-          <Textarea
-            className="sm:col-span-2"
-            rows={2}
-            value={draft.gradingCriteria}
-            onChange={(e) => setDraft({ ...draft, gradingCriteria: e.target.value })}
-            placeholder="Grading criteria"
-          />
-          <div className="sm:col-span-2">
-            <Button size="sm" onClick={() => { onSave(draft); setOpen(false); }}>Save question</Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
