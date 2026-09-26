@@ -50,7 +50,7 @@ export const PLANS: Plan[] = [
       { label: "Unlimited classes" },
       { label: "Unlimited AI-generated retakes" },
       { label: "Generate new exams with AI" },
-      { label: "Read existing exams from text, PDF or photo" },
+      { label: "Import your own exams from PDF, photo or text" },
     ],
   },
   {

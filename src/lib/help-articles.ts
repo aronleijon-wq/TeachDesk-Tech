@@ -90,12 +90,23 @@ export const HELP_CATEGORIES: HelpCategory[] = [
           "Go to Exams → New exam and follow three short steps: basics, questions and review.",
         steps: [
           "Enter the title, class, date, time and room.",
-          "Choose how to add the questions: write them yourself, use an existing exam as it is (paste it, or upload a PDF or photo), or reuse an earlier exam.",
+          "Choose how to add the questions: write them yourself, import an existing exam (upload a PDF or photo, or paste the text), or reuse an earlier exam.",
           "Check the summary, add learning objectives if you like, and click Create exam.",
         ],
         details: [
-          "Reading an existing exam is part of Pro. If you write the questions yourself, add them on the exam's Questions tab after creating it.",
+          "Importing an existing exam is part of Pro. If you write the questions yourself, add them on the exam's Questions tab after creating it.",
           "To have AI write a new exam for you, use Generate exam with AI instead.",
+        ],
+      },
+      {
+        id: "import-exam",
+        title: "Import an existing exam",
+        summary:
+          "Already have an exam as a PDF, a photo or text? In Exams → New exam, choose Import an existing exam. AI turns it into the same questions in TeachDesk, with points, answers and grading criteria.",
+        details: [
+          "Your wording is kept, and an answer key in the file is used for the answers. Check the questions before creating the exam; you can edit them afterwards.",
+          "Once the exam is in TeachDesk you can grade it, reuse it and make a retake version of it. To get a new exam instead, use Generate exam with AI.",
+          "Importing exams is part of Pro.",
         ],
       },
       {
@@ -268,7 +279,7 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         summary: `Every new account gets ${TRIAL_DAYS} days of Pro for free. Afterwards you keep the free plan unless you upgrade.`,
         details: [
           `Free: up to ${FREE_CLASS_LIMIT} classes and ${FREE_AI_PER_MONTH} AI-generated retakes per month.`,
-          `Pro: ${proPrice}${proYearly} — unlimited classes and AI retakes, generating new exams with AI, and reading existing exams from PDFs and photos.`,
+          `Pro: ${proPrice}${proYearly} — unlimited classes and AI retakes, generating new exams with AI, and importing existing exams from PDFs and photos.`,
           "Enterprise: for whole schools and municipalities, with invoice billing. Contact us for a quote.",
           "To change plan, open the account menu (your initials, top right) and choose Plan.",
         ],

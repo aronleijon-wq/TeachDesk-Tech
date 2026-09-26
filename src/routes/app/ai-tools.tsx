@@ -10,7 +10,7 @@ export const Route = createFileRoute("/app/ai-tools")({
       {
         name: "description",
         content:
-          "The AI tools in TeachDesk: equivalent retakes, new exams, reading existing exams and help.",
+          "The AI tools in TeachDesk: equivalent retakes, new exams, importing existing exams and help.",
       },
       { property: "og:title", content: "AI Tools — TeachDesk" },
       { property: "og:description", content: "The AI tools in TeachDesk." },
@@ -48,10 +48,10 @@ const tools: {
   },
   {
     icon: FileSearch,
-    title: "Read an existing exam",
+    title: "Import an existing exam",
     description:
-      "Turns a PDF, a photo or pasted text into questions with points, topics, answers and grading criteria.",
-    where: "Exams → New exam → Use an existing exam",
+      "Already have an exam as a PDF, a photo or text? AI turns it into the same questions in TeachDesk, with points, answers and grading criteria.",
+    where: "Exams → New exam → Import an existing exam",
     to: "/app/exams",
     plan: "Pro",
   },
