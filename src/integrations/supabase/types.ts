@@ -26,6 +26,24 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage: {
+        Row: {
+          generations: number
+          month: string
+          user_id: string
+        }
+        Insert: {
+          generations?: number
+          month: string
+          user_id: string
+        }
+        Update: {
+          generations?: number
+          month?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       demo_requests: {
         Row: {
           created_at: string
@@ -59,53 +77,20 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      help_usage: {
         Row: {
-          name: string
-          plan: string
-          role: string
-          school: string
-          show_demo: boolean
-          trial_ends_at: string
-          updated_at: string
+          day: string
+          questions: number
           user_id: string
         }
         Insert: {
-          name?: string
-          plan?: string
-          role?: string
-          school?: string
-          show_demo?: boolean
-          trial_ends_at?: string
-          updated_at?: string
+          day: string
+          questions?: number
           user_id: string
         }
         Update: {
-          name?: string
-          plan?: string
-          role?: string
-          school?: string
-          show_demo?: boolean
-          trial_ends_at?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      ai_usage: {
-        Row: {
-          generations: number
-          month: string
-          user_id: string
-        }
-        Insert: {
-          generations?: number
-          month: string
-          user_id: string
-        }
-        Update: {
-          generations?: number
-          month?: string
+          day?: string
+          questions?: number
           user_id?: string
         }
         Relationships: []
@@ -207,6 +192,39 @@ export type Database = {
           name?: string
           pilot_ends_at?: string | null
           status?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          name: string
+          plan: string
+          role: string
+          school: string
+          show_demo: boolean
+          trial_ends_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          name?: string
+          plan?: string
+          role?: string
+          school?: string
+          show_demo?: boolean
+          trial_ends_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          name?: string
+          plan?: string
+          role?: string
+          school?: string
+          show_demo?: boolean
+          trial_ends_at?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
